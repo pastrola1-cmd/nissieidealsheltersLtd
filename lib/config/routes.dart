@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:ppn/core/enums/enums.dart';
+import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/screens/shells/admin_shell.dart';
 import 'package:ppn/screens/shells/partner_shell.dart';
 import 'package:ppn/screens/shells/buyer_shell.dart';
 import 'package:ppn/screens/auth/login_screen.dart';
 import 'package:ppn/screens/auth/signup_screen.dart';
+import 'package:ppn/screens/auth/awaiting_approval_screen.dart';
+import 'package:ppn/screens/auth/profile_completion_screen.dart';
 import 'package:ppn/screens/placeholders/placeholder_screen.dart';
 
 /// Navigation key for the root navigator (used by full-screen routes like auth).
@@ -18,19 +23,110 @@ final _partnerShellNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'partner');
 final _buyerShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'buyer');
 
+/// Helper class to bridge Stream changes to GoRouter's refreshListenable.
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+/// Helper function to route authenticated users to their default dashboard.
+String _getDefaultRouteForRole(UserRole role) {
+  switch (role) {
+    case UserRole.admin:
+    case UserRole.platformAdmin:
+      return '/admin/dashboard';
+    case UserRole.partner:
+      return '/partner/dashboard';
+    case UserRole.buyer:
+      return '/buyer/browse';
+  }
+}
+
 /// Provides the application's [GoRouter] instance via Riverpod.
-///
-/// Route structure:
-/// - `/login` and `/signup` — authentication screens (no shell)
-/// - `/admin/*` — admin role shell with bottom navigation
-/// - `/partner/*` — partner role shell with bottom navigation
-/// - `/buyer/*` — buyer role shell with bottom navigation
-///
-/// Redirect logic is intentionally omitted; the initial location is `/login`.
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
+    refreshListenable: GoRouterRefreshStream(
+      ref.watch(authProvider.notifier).stream,
+    ),
+    redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      final loggingIn = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/signup';
+
+      // ── Redirect to login if not authenticated ──
+      if (!authState.isAuthenticated) {
+        return loggingIn ? null : '/login';
+      }
+
+      final profile = authState.profile;
+      if (profile == null) {
+        return null;
+      }
+
+      // ── Redirect to profile completion if details are missing ──
+      final needName = profile.fullName == null || profile.fullName!.isEmpty;
+      final needPhone = profile.phone == null || profile.phone!.isEmpty;
+      if (needName || needPhone) {
+        if (state.matchedLocation != '/profile-completion') {
+          return '/profile-completion';
+        }
+        return null;
+      }
+
+      // If they are fully completed but on profile completion page, send them to dashboard
+      if (state.matchedLocation == '/profile-completion') {
+        return _getDefaultRouteForRole(profile.role);
+      }
+
+      // ── Redirect pending partners to awaiting approval screen ──
+      if (profile.role == UserRole.partner &&
+          profile.status == PartnerStatus.pending) {
+        if (state.matchedLocation != '/partner/awaiting-approval') {
+          return '/partner/awaiting-approval';
+        }
+        return null;
+      }
+
+      // ── Redirect approved partners away from awaiting approval ──
+      if (profile.role == UserRole.partner &&
+          profile.status == PartnerStatus.approved &&
+          state.matchedLocation == '/partner/awaiting-approval') {
+        return '/partner/dashboard';
+      }
+
+      // ── If already logged in, prevent going to auth screens ──
+      if (loggingIn) {
+        return _getDefaultRouteForRole(profile.role);
+      }
+
+      // ── Guard role-based paths ──
+      final location = state.matchedLocation;
+      if (location.startsWith('/admin') &&
+          profile.role != UserRole.admin &&
+          profile.role != UserRole.platformAdmin) {
+        return _getDefaultRouteForRole(profile.role);
+      }
+      if (location.startsWith('/partner') && profile.role != UserRole.partner) {
+        return _getDefaultRouteForRole(profile.role);
+      }
+      if (location.startsWith('/buyer') && profile.role != UserRole.buyer) {
+        return _getDefaultRouteForRole(profile.role);
+      }
+
+      return null;
+    },
     routes: [
       // ── Auth routes (no shell) ──────────────────────────────────────────
       GoRoute(
@@ -42,6 +138,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/signup',
         name: 'signup',
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: '/partner/awaiting-approval',
+        name: 'awaitingApproval',
+        builder: (context, state) => const AwaitingApprovalScreen(),
+      ),
+      GoRoute(
+        path: '/profile-completion',
+        name: 'profileCompletion',
+        builder: (context, state) => const ProfileCompletionScreen(),
       ),
 
       // ── Admin shell ─────────────────────────────────────────────────────

@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/constants/app_strings.dart';
+import 'package:ppn/core/enums/enums.dart';
+import 'package:ppn/providers/auth_provider.dart';
 
 /// Sign-up screen for PPN.
-///
-/// Collects the user's full name, email, phone, password, and desired role
-/// (Partner or Buyer). Validation structure is in place via [Form] but
-/// authentication is not yet wired — the button shows a snackbar placeholder.
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
 enum _UserRole { partner, buyer }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -36,7 +35,7 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
+  Future<void> _handleSignup() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (_selectedRole == null) {
@@ -49,17 +48,32 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sign-up coming soon…'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    final role = _selectedRole == _UserRole.partner ? UserRole.partner : UserRole.buyer;
+
+    final success = await ref.read(authProvider.notifier).signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          fullName: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          role: role,
+        );
+
+    if (!success && mounted) {
+      final errorMessage = ref.read(authProvider).errorMessage ?? 'Sign-up failed';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -236,21 +250,23 @@ class _SignupScreenState extends State<SignupScreen> {
                 SizedBox(
                   width: double.infinity,
                   height: 52,
-                  child: ElevatedButton(
-                    onPressed: _handleSignup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.textOnAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: 0,
-                      textStyle: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    child: const Text(AppStrings.signUp),
-                  ),
+                  child: authState.isLoading
+                      ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                      : ElevatedButton(
+                          onPressed: _handleSignup,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: AppColors.textOnAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 0,
+                            textStyle: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text(AppStrings.signUp),
+                        ),
                 ),
                 const SizedBox(height: 24),
 
