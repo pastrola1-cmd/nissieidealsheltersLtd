@@ -15,6 +15,9 @@ import 'package:ppn/screens/auth/profile_completion_screen.dart';
 import 'package:ppn/screens/admin/company_profile_screen.dart';
 import 'package:ppn/screens/admin/admin_settings_screen.dart';
 import 'package:ppn/screens/admin/admin_dashboard_screen.dart';
+import 'package:ppn/screens/admin/admin_properties_screen.dart';
+import 'package:ppn/screens/admin/property_form_screen.dart';
+import 'package:ppn/screens/shared/property_detail_screen.dart';
 import 'package:ppn/screens/placeholders/placeholder_screen.dart';
 
 /// Navigation key for the root navigator (used by full-screen routes like auth).
@@ -162,6 +165,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'adminSettings',
         builder: (context, state) => const AdminSettingsScreen(),
       ),
+      GoRoute(
+        path: '/properties/:id',
+        name: 'propertyDetail',
+        builder: (context, state) => PropertyDetailScreen(
+          propertyId: state.pathParameters['id']!,
+        ),
+      ),
 
       // ── Admin shell ─────────────────────────────────────────────────────
       StatefulShellRoute.indexedStack(
@@ -183,8 +193,21 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/admin/properties',
                 name: 'adminProperties',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Admin Properties'),
+                builder: (context, state) => const AdminPropertiesScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: 'adminPropertyAdd',
+                    builder: (context, state) => const PropertyFormScreen(),
+                  ),
+                  GoRoute(
+                    path: 'edit/:id',
+                    name: 'adminPropertyEdit',
+                    builder: (context, state) => PropertyFormScreen(
+                      propertyId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
