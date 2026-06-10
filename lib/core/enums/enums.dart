@@ -151,3 +151,21 @@ enum CommissionType {
     );
   }
 }
+
+/// Transaction status
+enum TransactionStatus {
+  pending('pending', 'Pending'),
+  completed('completed', 'Completed'),
+  rejected('rejected', 'Rejected');
+
+  const TransactionStatus(this.value, this.label);
+  final String value;
+  final String label;
+
+  static TransactionStatus fromString(String value) {
+    return TransactionStatus.values.firstWhere(
+      (s) => s.value == value,
+      orElse: () => TransactionStatus.completed,
+    );
+  }
+}

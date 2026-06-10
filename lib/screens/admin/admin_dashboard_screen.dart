@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ppn/core/constants/app_colors.dart';
+import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/providers/company_provider.dart';
+import 'package:ppn/providers/partner_provider.dart';
+import 'package:ppn/providers/property_provider.dart';
 
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
@@ -136,13 +139,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                 children: [
                   _buildStatCard(
                     title: 'Total Listings',
-                    value: '0',
+                    value: ref.watch(propertyProvider).properties.length.toString(),
                     icon: Icons.home_work_outlined,
                     color: AppColors.accent,
                   ),
                   _buildStatCard(
                     title: 'Active Partners',
-                    value: '0',
+                    value: ref.watch(partnerProvider).partners.where((p) => p.status == PartnerStatus.approved).length.toString(),
                     icon: Icons.handshake_outlined,
                     color: Colors.purple,
                   ),
@@ -211,6 +214,51 @@ class AdminDashboardScreen extends ConsumerWidget {
                         subtitle: const Text('Edit profile, update password, and avatar'),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () => context.push('/admin/settings'),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.calendar_today_rounded, color: Colors.teal),
+                        ),
+                        title: const Text('Manage Property Inspections', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Confirm, complete, or cancel bookings'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.push('/admin/inspections'),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.currency_exchange_rounded, color: Colors.amber),
+                        ),
+                        title: const Text('Manage Commissions & Payouts', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Approve or dispute partner payout ledger'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.push('/admin/commissions'),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrange.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.account_balance_wallet_outlined, color: Colors.deepOrange),
+                        ),
+                        title: const Text('Manage Withdrawal Requests', style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Approve, mark paid, or reject partner withdrawals'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.push('/admin/withdrawals'),
                       ),
                     ],
                   ),

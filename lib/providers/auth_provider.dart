@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
@@ -6,6 +7,7 @@ import 'package:ppn/config/supabase_config.dart';
 import 'package:ppn/providers/auth_state.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/core/enums/enums.dart';
+import 'package:ppn/models/models.dart';
 
 
 /// Riverpod NotifierProvider for authentication state management.
@@ -161,6 +163,52 @@ class AuthNotifier extends Notifier<AuthState> {
     final currentUser = _client.auth.currentUser;
     if (currentUser != null) {
       await _fetchProfile(currentUser.id);
+    }
+  }
+
+  /// Updates the profile (name, phone, avatar) for the currently authenticated user.
+  Future<bool> updateProfile({
+    required String fullName,
+    required String phone,
+    Uint8List? avatarBytes,
+    String? avatarName,
+  }) async {
+    final profile = state.profile;
+    if (profile == null) return false;
+
+    state = state.copyWith(isLoading: true);
+    try {
+      String? newAvatarUrl = profile.avatarUrl;
+
+      if (avatarBytes != null && avatarName != null) {
+        final ext = avatarName.split('.').last;
+        final path = 'avatars/${profile.id}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        newAvatarUrl = await _supabaseService.uploadFile(
+          'company-assets',
+          path,
+          avatarBytes,
+          mimeType: 'image/$ext',
+        );
+      }
+
+      final updatedData = await _supabaseService.update('profiles', profile.id, {
+        'full_name': fullName,
+        'phone': phone,
+        'avatar_url': newAvatarUrl,
+      });
+
+      state = AuthState(
+        profile: Profile.fromJson(updatedData),
+        isAuthenticated: true,
+        isLoading: false,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString(),
+      );
+      return false;
     }
   }
 }

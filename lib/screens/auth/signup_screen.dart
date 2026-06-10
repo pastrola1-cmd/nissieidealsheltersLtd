@@ -5,6 +5,7 @@ import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/constants/app_strings.dart';
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/providers/auth_provider.dart';
+import 'package:ppn/providers/lead_provider.dart';
 
 /// Sign-up screen for PPN.
 class SignupScreen extends ConsumerStatefulWidget {
@@ -58,7 +59,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           role: role,
         );
 
-    if (!success && mounted) {
+    if (success && mounted) {
+      if (role == UserRole.buyer) {
+        final buyerId = ref.read(authProvider).profile?.id;
+        if (buyerId != null) {
+          await ref.read(leadProvider.notifier).checkAndCreateReferralLead(
+                buyerId: buyerId,
+                buyerName: _nameController.text.trim(),
+                buyerPhone: _phoneController.text.trim(),
+                buyerEmail: _emailController.text.trim(),
+              );
+        }
+      }
+    } else if (!success && mounted) {
       final errorMessage = ref.read(authProvider).errorMessage ?? 'Sign-up failed';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -12,6 +12,9 @@ class Profile {
   final String? avatarUrl;
   final String? referralCode;
   final PartnerStatus status;
+  final String? bankName;
+  final String? accountNumber;
+  final String? accountName;
   final DateTime createdAt;
 
   const Profile({
@@ -24,6 +27,9 @@ class Profile {
     this.avatarUrl,
     this.referralCode,
     required this.status,
+    this.bankName,
+    this.accountNumber,
+    this.accountName,
     required this.createdAt,
   });
 
@@ -38,6 +44,9 @@ class Profile {
       avatarUrl: json['avatar_url'] as String?,
       referralCode: json['referral_code'] as String?,
       status: PartnerStatus.fromString(json['status'] as String),
+      bankName: json['bank_name'] as String?,
+      accountNumber: json['account_number'] as String?,
+      accountName: json['account_name'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -53,6 +62,9 @@ class Profile {
       'avatar_url': avatarUrl,
       'referral_code': referralCode,
       'status': status.value,
+      'bank_name': bankName,
+      'account_number': accountNumber,
+      'account_name': accountName,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -67,6 +79,9 @@ class Profile {
     String? avatarUrl,
     String? referralCode,
     PartnerStatus? status,
+    String? bankName,
+    String? accountNumber,
+    String? accountName,
     DateTime? createdAt,
   }) {
     return Profile(
@@ -79,6 +94,9 @@ class Profile {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       referralCode: referralCode ?? this.referralCode,
       status: status ?? this.status,
+      bankName: bankName ?? this.bankName,
+      accountNumber: accountNumber ?? this.accountNumber,
+      accountName: accountName ?? this.accountName,
       createdAt: createdAt ?? this.createdAt,
     );
   }

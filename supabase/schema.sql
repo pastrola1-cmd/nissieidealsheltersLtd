@@ -31,6 +31,9 @@ CREATE TABLE public.profiles (
   avatar_url TEXT,
   referral_code TEXT UNIQUE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','suspended')),
+  bank_name TEXT,
+  account_number TEXT,
+  account_name TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -121,6 +124,7 @@ CREATE TABLE public.transactions (
   amount NUMERIC NOT NULL CHECK (amount >= 0),
   balance_after NUMERIC,
   description TEXT,
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'rejected')),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -175,7 +179,8 @@ CREATE OR REPLACE FUNCTION public.get_partner_balance(p_partner_id UUID)
 RETURNS NUMERIC AS $$
   SELECT COALESCE(SUM(
     CASE WHEN type = 'credit' THEN amount
-         WHEN type IN ('debit','withdrawal') THEN -amount
+         WHEN type = 'debit' THEN -amount
+         WHEN type = 'withdrawal' AND status != 'rejected' THEN -amount
     END
   ), 0)
   FROM public.transactions

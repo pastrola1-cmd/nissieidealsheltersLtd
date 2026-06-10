@@ -11,6 +11,7 @@ class Transaction {
   final double amount;
   final double? balanceAfter;
   final String? description;
+  final TransactionStatus status;
   final DateTime createdAt;
 
   const Transaction({
@@ -22,6 +23,7 @@ class Transaction {
     required this.amount,
     this.balanceAfter,
     this.description,
+    this.status = TransactionStatus.completed,
     required this.createdAt,
   });
 
@@ -35,6 +37,9 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       balanceAfter: json['balance_after'] != null ? (json['balance_after'] as num).toDouble() : null,
       description: json['description'] as String?,
+      status: json['status'] != null
+          ? TransactionStatus.fromString(json['status'] as String)
+          : TransactionStatus.completed,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -49,6 +54,7 @@ class Transaction {
       'amount': amount,
       'balance_after': balanceAfter,
       'description': description,
+      'status': status.value,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -62,6 +68,7 @@ class Transaction {
     double? amount,
     double? balanceAfter,
     String? description,
+    TransactionStatus? status,
     DateTime? createdAt,
   }) {
     return Transaction(
@@ -73,6 +80,7 @@ class Transaction {
       amount: amount ?? this.amount,
       balanceAfter: balanceAfter ?? this.balanceAfter,
       description: description ?? this.description,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
     );
   }

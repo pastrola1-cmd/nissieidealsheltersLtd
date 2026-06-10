@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ppn/config/supabase_config.dart';
+import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/models/models.dart';
 
 /// Provider for the base SupabaseService.
@@ -129,5 +130,207 @@ class SupabaseService {
       fileOptions: FileOptions(contentType: mimeType, upsert: true),
     );
     return storage.getPublicUrl(path);
+  }
+
+  /// Fetches all profiles with a specific role and optional company filter.
+  Future<List<Profile>> getProfilesByRole(UserRole role, {String? companyId}) async {
+    var query = _client.from('profiles').select().eq('role', role.value);
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    final response = await query.order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Profile.fromJson(json))
+        .toList();
+  }
+
+  /// Updates a profile status (and optionally referral code).
+  Future<Profile> updateProfileStatus(
+    String profileId,
+    PartnerStatus status, {
+    String? referralCode,
+  }) async {
+    final Map<String, dynamic> data = {'status': status.value};
+    if (referralCode != null) {
+      data['referral_code'] = referralCode;
+    }
+    final response = await update('profiles', profileId, data);
+    return Profile.fromJson(response);
+  }
+
+  /// Resolves a profile using its unique referral code.
+  Future<Profile?> getProfileByReferralCode(String code) async {
+    final data = await _client.from('profiles').select().eq('referral_code', code).maybeSingle();
+    return data != null ? Profile.fromJson(data) : null;
+  }
+
+  /// Logs a referral link click.
+  Future<void> logReferralClick({
+    required String referralCode,
+    required String propertyId,
+    String? partnerId,
+    String? userAgent,
+    String? ipAddress,
+  }) async {
+    await _client.from('referral_clicks').insert({
+      'referral_code': referralCode,
+      'property_id': propertyId,
+      'partner_id': partnerId,
+      'user_agent': userAgent,
+      'ip_address': ipAddress,
+    });
+  }
+
+  /// Inserts a new lead and returns it as a type-safe Lead model.
+  Future<Lead> createLead(Map<String, dynamic> data) async {
+    final response = await insert('leads', data);
+    return Lead.fromJson(response);
+  }
+
+  /// Updates a lead's pipeline stage and notes.
+  Future<Lead> updateLeadStage(String leadId, LeadStage stage, {String? notes}) async {
+    final Map<String, dynamic> data = {
+      'stage': stage.value,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (notes != null) {
+      data['notes'] = notes;
+    }
+    final response = await update('leads', leadId, data);
+    return Lead.fromJson(response);
+  }
+
+  /// Fetches inspections with optional filtering by company, buyer, or partner.
+  Future<List<Inspection>> getInspections({
+    String? companyId,
+    String? buyerId,
+    String? partnerId,
+  }) async {
+    var query = _client.from('inspections').select();
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    if (buyerId != null) {
+      query = query.eq('buyer_id', buyerId);
+    }
+    if (partnerId != null) {
+      query = query.eq('partner_id', partnerId);
+    }
+    final response = await query;
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Inspection.fromJson(json))
+        .toList();
+  }
+
+  /// Inserts a new inspection and returns it as a type-safe Inspection model.
+  Future<Inspection> createInspection(Map<String, dynamic> data) async {
+    final response = await insert('inspections', data);
+    return Inspection.fromJson(response);
+  }
+
+  /// Updates an inspection's status and notes.
+  Future<Inspection> updateInspectionStatus(
+    String inspectionId,
+    InspectionStatus status, {
+    String? notes,
+  }) async {
+    final Map<String, dynamic> data = {
+      'status': status.value,
+    };
+    if (notes != null) {
+      data['notes'] = notes;
+    }
+    final response = await update('inspections', inspectionId, data);
+    return Inspection.fromJson(response);
+  }
+
+  /// Fetches commissions with optional company and partner filtering.
+  Future<List<Commission>> getCommissions({String? companyId, String? partnerId}) async {
+    var query = _client.from('commissions').select();
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    if (partnerId != null) {
+      query = query.eq('partner_id', partnerId);
+    }
+    final response = await query;
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Commission.fromJson(json))
+        .toList();
+  }
+
+  /// Records a new pending commission.
+  Future<Commission> createCommission(Map<String, dynamic> data) async {
+    final response = await insert('commissions', data);
+    return Commission.fromJson(response);
+  }
+
+  /// Updates a commission's status, record approved details.
+  Future<Commission> updateCommissionStatus(
+    String commissionId,
+    CommissionStatus status, {
+    String? approvedBy,
+  }) async {
+    final Map<String, dynamic> data = {
+      'status': status.value,
+    };
+    if (approvedBy != null) {
+      data['approved_by'] = approvedBy;
+      data['approved_at'] = DateTime.now().toIso8601String();
+    }
+    final response = await update('commissions', commissionId, data);
+    return Commission.fromJson(response);
+  }
+
+  /// Fetches transaction logs with optional company and partner filtering.
+  Future<List<Transaction>> getTransactions({String? companyId, String? partnerId}) async {
+    var query = _client.from('transactions').select();
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    if (partnerId != null) {
+      query = query.eq('partner_id', partnerId);
+    }
+    final response = await query;
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Transaction.fromJson(json))
+        .toList();
+  }
+
+  /// Updates a partner's bank details.
+  Future<Profile> updateProfileBankDetails(
+    String profileId, {
+    required String bankName,
+    required String accountNumber,
+    required String accountName,
+  }) async {
+    final Map<String, dynamic> data = {
+      'bank_name': bankName,
+      'account_number': accountNumber,
+      'account_name': accountName,
+    };
+    final response = await update('profiles', profileId, data);
+    return Profile.fromJson(response);
+  }
+
+  /// Updates a transaction's status.
+  Future<Transaction> updateTransactionStatus(
+    String transactionId,
+    TransactionStatus status,
+  ) async {
+    final Map<String, dynamic> data = {
+      'status': status.value,
+    };
+    final response = await update('transactions', transactionId, data);
+    return Transaction.fromJson(response);
+  }
+
+  /// Calls the public.get_partner_balance function via RPC.
+  Future<double> getPartnerBalance(String partnerId) async {
+    final response = await _client.rpc(
+      'get_partner_balance',
+      params: {'p_partner_id': partnerId},
+    );
+    return (response as num).toDouble();
   }
 }

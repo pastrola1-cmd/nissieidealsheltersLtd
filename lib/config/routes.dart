@@ -19,6 +19,21 @@ import 'package:ppn/screens/admin/admin_properties_screen.dart';
 import 'package:ppn/screens/admin/property_form_screen.dart';
 import 'package:ppn/screens/shared/property_detail_screen.dart';
 import 'package:ppn/screens/placeholders/placeholder_screen.dart';
+import 'package:ppn/screens/admin/partner_list_screen.dart';
+import 'package:ppn/screens/admin/partner_detail_screen.dart';
+import 'package:ppn/screens/partner/partner_profile_screen.dart';
+import 'package:ppn/screens/admin/lead_list_screen.dart';
+import 'package:ppn/screens/admin/lead_detail_screen.dart';
+import 'package:ppn/screens/admin/manual_lead_screen.dart';
+import 'package:ppn/screens/partner/partner_lead_screen.dart';
+import 'package:ppn/screens/buyer/buyer_inspections_screen.dart';
+import 'package:ppn/screens/buyer/book_inspection_screen.dart';
+import 'package:ppn/screens/buyer/inspection_confirmation_screen.dart';
+import 'package:ppn/screens/admin/admin_inspections_screen.dart';
+import 'package:ppn/screens/partner/partner_inspections_screen.dart';
+import 'package:ppn/screens/partner/earnings_screen.dart';
+import 'package:ppn/screens/admin/admin_commissions_screen.dart';
+import 'package:ppn/screens/admin/admin_withdrawals_screen.dart';
 
 /// Navigation key for the root navigator (used by full-screen routes like auth).
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -73,7 +88,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Redirect to login if not authenticated ──
       if (!authState.isAuthenticated) {
-        return loggingIn ? null : '/login';
+        final isPropertyDetail = state.matchedLocation.startsWith('/properties/');
+        return (loggingIn || isPropertyDetail) ? null : '/login';
       }
 
       final profile = authState.profile;
@@ -166,11 +182,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminSettingsScreen(),
       ),
       GoRoute(
+        path: '/partner/profile',
+        name: 'partnerProfile',
+        builder: (context, state) => const PartnerProfileScreen(),
+      ),
+      GoRoute(
         path: '/properties/:id',
         name: 'propertyDetail',
-        builder: (context, state) => PropertyDetailScreen(
-          propertyId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final refCode = state.uri.queryParameters['ref'];
+          return PropertyDetailScreen(
+            propertyId: id,
+            referralCode: refCode,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/admin/inspections',
+        name: 'adminInspections',
+        builder: (context, state) => const AdminInspectionsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/commissions',
+        name: 'adminCommissions',
+        builder: (context, state) => const AdminCommissionsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/withdrawals',
+        name: 'adminWithdrawals',
+        builder: (context, state) => const AdminWithdrawalsScreen(),
+      ),
+      GoRoute(
+        path: '/partner/inspections',
+        name: 'partnerInspections',
+        builder: (context, state) => const PartnerInspectionsScreen(),
       ),
 
       // ── Admin shell ─────────────────────────────────────────────────────
@@ -216,8 +262,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/admin/partners',
                 name: 'adminPartners',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Admin Partners'),
+                builder: (context, state) => const PartnerListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    name: 'adminPartnerDetail',
+                    builder: (context, state) => PartnerDetailScreen(
+                      partnerId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -226,8 +280,22 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/admin/leads',
                 name: 'adminLeads',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Admin Leads'),
+                builder: (context, state) => const LeadListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: 'adminLeadAdd',
+                    builder: (context, state) => const ManualLeadScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    name: 'adminLeadDetail',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return LeadDetailScreen(leadId: id);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -265,8 +333,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/partner/leads',
                 name: 'partnerLeads',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Partner Leads'),
+                builder: (context, state) => const PartnerLeadScreen(),
               ),
             ],
           ),
@@ -275,8 +342,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/partner/earnings',
                 name: 'partnerEarnings',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Partner Earnings'),
+                builder: (context, state) => const EarningsScreen(),
               ),
             ],
           ),
@@ -304,8 +370,31 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/buyer/inspections',
                 name: 'buyerInspections',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'My Inspections'),
+                builder: (context, state) => const BuyerInspectionsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'book',
+                    name: 'buyerInspectionBook',
+                    builder: (context, state) {
+                      final propertyId = state.uri.queryParameters['propertyId']!;
+                      return BookInspectionScreen(propertyId: propertyId);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'confirm',
+                    name: 'buyerInspectionConfirm',
+                    builder: (context, state) {
+                      final date = state.uri.queryParameters['date']!;
+                      final time = state.uri.queryParameters['time']!;
+                      final propTitle = state.uri.queryParameters['propTitle']!;
+                      return InspectionConfirmationScreen(
+                        date: date,
+                        time: time,
+                        propTitle: propTitle,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

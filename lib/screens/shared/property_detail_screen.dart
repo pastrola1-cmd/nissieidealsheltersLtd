@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -15,8 +16,13 @@ import 'package:ppn/services/supabase_service.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
+  final String? referralCode;
 
-  const PropertyDetailScreen({super.key, required this.propertyId});
+  const PropertyDetailScreen({
+    super.key,
+    required this.propertyId,
+    this.referralCode,
+  });
 
   @override
   ConsumerState<PropertyDetailScreen> createState() => _PropertyDetailScreenState();
@@ -32,6 +38,33 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
   void initState() {
     super.initState();
     _loadProperty();
+    _handleReferral();
+  }
+
+  Future<void> _handleReferral() async {
+    final code = widget.referralCode;
+    if (code == null || code.isEmpty) return;
+
+    try {
+      // 1. Store referral code persistently in secure storage
+      const secureStorage = FlutterSecureStorage();
+      await secureStorage.write(key: 'last_referral_code', value: code);
+      await secureStorage.write(key: 'last_referral_property_id', value: widget.propertyId);
+
+      // 2. Resolve partner profile from referral code
+      final service = ref.read(supabaseServiceProvider);
+      final partner = await service.getProfileByReferralCode(code);
+
+      // 3. Log referral link click in DB
+      await service.logReferralClick(
+        referralCode: code,
+        propertyId: widget.propertyId,
+        partnerId: partner?.id,
+        userAgent: kIsWeb ? 'Web Browser' : 'Mobile App',
+      );
+    } catch (e) {
+      debugPrint('Error processing referral click: $e');
+    }
   }
 
   @override
@@ -533,6 +566,72 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                  ],
+
+                  // ── Buyer CTA Action Panel ──
+                  if (userProfile == null) ...[
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.1)),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Interested in this property?',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Sign up or log in to schedule an inspection with one of our verified partners.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () => context.push('/signup'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 0,
+                              ),
+                              child: const Text('Get Started & Book Inspection', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (userProfile.role == UserRole.buyer) ...[
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          context.push('/buyer/inspections/book?propertyId=${property.id}');
+                        },
+                        icon: const Icon(Icons.calendar_month_rounded),
+                        label: const Text('Schedule Property Inspection', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
