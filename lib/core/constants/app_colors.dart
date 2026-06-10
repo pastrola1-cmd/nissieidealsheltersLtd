@@ -1,0 +1,89 @@
+import 'package:flutter/material.dart';
+
+/// PPN Brand Color System
+/// Designed for real estate — trust, professionalism, energy
+class AppColors {
+  AppColors._();
+
+  // ── Primary Brand ──
+  static const Color primary = Color(0xFF1A1A2E);
+  static const Color primaryLight = Color(0xFF16213E);
+  static const Color primaryDark = Color(0xFF0F0F1A);
+
+  // ── Accent ──
+  static const Color accent = Color(0xFFE94560);
+  static const Color accentLight = Color(0xFFFF6B81);
+  static const Color accentDark = Color(0xFFC23152);
+
+  // ── Secondary ──
+  static const Color secondary = Color(0xFF0F3460);
+  static const Color secondaryLight = Color(0xFF1A4A7A);
+
+  // ── Success / Green ──
+  static const Color success = Color(0xFF10B981);
+  static const Color successLight = Color(0xFFD1FAE5);
+  static const Color successDark = Color(0xFF059669);
+
+  // ── Warning / Yellow ──
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color warningLight = Color(0xFFFEF3C7);
+  static const Color warningDark = Color(0xFFD97706);
+
+  // ── Error / Red ──
+  static const Color error = Color(0xFFEF4444);
+  static const Color errorLight = Color(0xFFFEE2E2);
+  static const Color errorDark = Color(0xFFDC2626);
+
+  // ── Info / Blue ──
+  static const Color info = Color(0xFF3B82F6);
+  static const Color infoLight = Color(0xFFDBEAFE);
+
+  // ── Neutrals ──
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF8F9FC);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceVariant = Color(0xFFF1F5F9);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color borderLight = Color(0xFFF1F5F9);
+  static const Color divider = Color(0xFFE2E8F0);
+
+  // ── Text ──
+  static const Color textPrimary = Color(0xFF1A1A2E);
+  static const Color textSecondary = Color(0xFF64748B);
+  static const Color textTertiary = Color(0xFF94A3B8);
+  static const Color textOnPrimary = Color(0xFFFFFFFF);
+  static const Color textOnAccent = Color(0xFFFFFFFF);
+
+  // ── Lead Stage Colors ──
+  static const Color stageNew = Color(0xFF3B82F6);
+  static const Color stageContacted = Color(0xFF8B5CF6);
+  static const Color stageInspection = Color(0xFFF59E0B);
+  static const Color stageNegotiation = Color(0xFFF97316);
+  static const Color stageClosed = Color(0xFF10B981);
+  static const Color stageLost = Color(0xFFEF4444);
+
+  // ── Commission Status Colors ──
+  static const Color commissionPending = Color(0xFFF59E0B);
+  static const Color commissionApproved = Color(0xFF10B981);
+  static const Color commissionPaid = Color(0xFF3B82F6);
+  static const Color commissionDisputed = Color(0xFFEF4444);
+
+  // ── Gradients ──
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [primary, secondary],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [accent, accentLight],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient successGradient = LinearGradient(
+    colors: [success, Color(0xFF34D399)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+}
