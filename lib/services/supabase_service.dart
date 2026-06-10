@@ -1,7 +1,14 @@
+import 'dart:typed_data';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ppn/config/supabase_config.dart';
 import 'package:ppn/models/models.dart';
+
+/// Provider for the base SupabaseService.
+final supabaseServiceProvider = Provider<SupabaseService>((ref) {
+  return SupabaseService();
+});
 
 /// Base service providing common CRUD operations against Supabase tables.
 ///
@@ -106,5 +113,21 @@ class SupabaseService {
     return List<Map<String, dynamic>>.from(response)
         .map((json) => Lead.fromJson(json))
         .toList();
+  }
+
+  /// Uploads a file (bytes) to a Supabase Storage bucket and returns its public URL.
+  Future<String> uploadFile(
+    String bucket,
+    String path,
+    Uint8List bytes, {
+    String? mimeType,
+  }) async {
+    final storage = _client.storage.from(bucket);
+    await storage.uploadBinary(
+      path,
+      bytes,
+      fileOptions: FileOptions(contentType: mimeType, upsert: true),
+    );
+    return storage.getPublicUrl(path);
   }
 }

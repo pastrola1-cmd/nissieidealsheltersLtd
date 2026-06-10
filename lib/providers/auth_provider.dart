@@ -7,10 +7,6 @@ import 'package:ppn/providers/auth_state.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/core/enums/enums.dart';
 
-/// Provider for the base SupabaseService.
-final supabaseServiceProvider = Provider<SupabaseService>((ref) {
-  return SupabaseService();
-});
 
 /// Riverpod NotifierProvider for authentication state management.
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {

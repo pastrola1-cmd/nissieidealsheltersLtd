@@ -12,6 +12,9 @@ import 'package:ppn/screens/auth/login_screen.dart';
 import 'package:ppn/screens/auth/signup_screen.dart';
 import 'package:ppn/screens/auth/awaiting_approval_screen.dart';
 import 'package:ppn/screens/auth/profile_completion_screen.dart';
+import 'package:ppn/screens/admin/company_profile_screen.dart';
+import 'package:ppn/screens/admin/admin_settings_screen.dart';
+import 'package:ppn/screens/admin/admin_dashboard_screen.dart';
 import 'package:ppn/screens/placeholders/placeholder_screen.dart';
 
 /// Navigation key for the root navigator (used by full-screen routes like auth).
@@ -149,6 +152,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'profileCompletion',
         builder: (context, state) => const ProfileCompletionScreen(),
       ),
+      GoRoute(
+        path: '/admin/company-profile',
+        name: 'adminCompanyProfile',
+        builder: (context, state) => const CompanyProfileScreen(),
+      ),
+      GoRoute(
+        path: '/admin/settings',
+        name: 'adminSettings',
+        builder: (context, state) => const AdminSettingsScreen(),
+      ),
 
       // ── Admin shell ─────────────────────────────────────────────────────
       StatefulShellRoute.indexedStack(
@@ -161,8 +174,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/admin/dashboard',
                 name: 'adminDashboard',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Admin Dashboard'),
+                builder: (context, state) => const AdminDashboardScreen(),
               ),
             ],
           ),
