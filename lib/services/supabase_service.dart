@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:ppn/config/supabase_config.dart';
+import 'package:ppn/models/models.dart';
 
 /// Base service providing common CRUD operations against Supabase tables.
 ///
@@ -70,5 +71,40 @@ class SupabaseService {
   /// Deletes the row identified by [id] from [table].
   Future<void> delete(String table, String id) async {
     await _client.from(table).delete().eq('id', id);
+  }
+
+  // ─── Type-Safe Helpers ───
+
+  /// Fetches properties with optional company filtering.
+  Future<List<Property>> getProperties({String? companyId}) async {
+    final list = await getAll('properties', companyId: companyId);
+    return list.map((json) => Property.fromJson(json)).toList();
+  }
+
+  /// Fetches a single property by ID.
+  Future<Property?> getProperty(String id) async {
+    final data = await getById('properties', id);
+    return data != null ? Property.fromJson(data) : null;
+  }
+
+  /// Fetches a single profile by ID.
+  Future<Profile?> getProfile(String id) async {
+    final data = await getById('profiles', id);
+    return data != null ? Profile.fromJson(data) : null;
+  }
+
+  /// Fetches leads with optional company and partner filters.
+  Future<List<Lead>> getLeads({String? companyId, String? partnerId}) async {
+    var query = _client.from('leads').select();
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    if (partnerId != null) {
+      query = query.eq('partner_id', partnerId);
+    }
+    final response = await query;
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Lead.fromJson(json))
+        .toList();
   }
 }
