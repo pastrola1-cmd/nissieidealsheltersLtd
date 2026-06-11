@@ -520,7 +520,11 @@ class SupabaseService {
     final userId = response as String;
     
     // 2. Trigger the password reset invitation email
-    await _client.auth.resetPasswordForEmail(email);
+    try {
+      await _client.auth.resetPasswordForEmail(email);
+    } catch (e) {
+      print('Warning: Could not send password reset email to $email: $e');
+    }
     
     return userId;
   }
