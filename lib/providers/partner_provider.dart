@@ -34,24 +34,27 @@ class PartnerState {
 /// Riverpod Notifier that manages loading and changing status of partners.
 class PartnerNotifier extends Notifier<PartnerState> {
   late final SupabaseService _supabaseService;
+  String? _loadedCompanyId;
 
   @override
   PartnerState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
-    _initialize();
-    return const PartnerState();
-  }
+    
+    final authState = ref.watch(authProvider);
+    final profile = authState.profile;
 
-  void _initialize() {
-    // Listen to authentication status changes to load/clear partners (only for admins)
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      final profile = next.profile;
-      if (profile != null && (profile.role == UserRole.admin || profile.role == UserRole.platformAdmin)) {
-        loadPartners(profile.companyId);
-      } else {
-        state = const PartnerState();
+    if (profile != null && (profile.role == UserRole.admin || profile.role == UserRole.platformAdmin)) {
+      final companyId = profile.companyId;
+      if (_loadedCompanyId != companyId) {
+        _loadedCompanyId = companyId;
+        Future.microtask(() => loadPartners(companyId));
+        return const PartnerState(isLoading: true);
       }
-    }, fireImmediately: true);
+      return state;
+    } else {
+      _loadedCompanyId = null;
+      return const PartnerState();
+    }
   }
 
   /// Load all partner profiles for a given company.

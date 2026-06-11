@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/partner_provider.dart';
+import 'package:ppn/widgets/shimmer_loading.dart';
+import 'package:ppn/widgets/empty_state.dart';
 
 class PartnerListScreen extends ConsumerStatefulWidget {
   const PartnerListScreen({super.key});
@@ -18,10 +21,12 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
   final _searchController = TextEditingController();
   String _selectedStatusFilter = 'All'; // 'All', 'Pending', 'Approved', 'Rejected', 'Suspended'
   String _searchQuery = '';
+  Timer? _debounceTimer;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -61,7 +66,10 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
         centerTitle: false,
       ),
       body: state.isLoading && state.partners.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          ? const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: ShimmerList(),
+            )
           : RefreshIndicator(
               onRefresh: () async {
                 // Read current user profile to refresh partner list
@@ -241,8 +249,13 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
         TextField(
           controller: _searchController,
           onChanged: (val) {
-            setState(() {
-              _searchQuery = val.trim().toLowerCase();
+            if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              }
             });
           },
           decoration: InputDecoration(
@@ -451,41 +464,18 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.people_outline_rounded,
-                size: 64,
-                color: AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No partners found',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try changing your status filters or check back later.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.people_outline_rounded,
+      title: 'No partners found',
+      description: 'Try changing your status filters or check back later.',
+      actionLabel: 'Reset Filters',
+      onActionPressed: () {
+        _searchController.clear();
+        setState(() {
+          _searchQuery = '';
+          _selectedStatusFilter = 'All';
+        });
+      },
     );
   }
 }

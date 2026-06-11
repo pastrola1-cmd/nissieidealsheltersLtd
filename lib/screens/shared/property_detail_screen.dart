@@ -17,11 +17,13 @@ import 'package:ppn/services/supabase_service.dart';
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
   final String? referralCode;
+  final String? campaignId;
 
   const PropertyDetailScreen({
     super.key,
     required this.propertyId,
     this.referralCode,
+    this.campaignId,
   });
 
   @override
@@ -43,25 +45,34 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
 
   Future<void> _handleReferral() async {
     final code = widget.referralCode;
-    if (code == null || code.isEmpty) return;
+    final campaignId = widget.campaignId;
 
     try {
-      // 1. Store referral code persistently in secure storage
       const secureStorage = FlutterSecureStorage();
-      await secureStorage.write(key: 'last_referral_code', value: code);
-      await secureStorage.write(key: 'last_referral_property_id', value: widget.propertyId);
 
-      // 2. Resolve partner profile from referral code
-      final service = ref.read(supabaseServiceProvider);
-      final partner = await service.getProfileByReferralCode(code);
+      if (code != null && code.isNotEmpty) {
+        // 1. Store referral code persistently in secure storage
+        await secureStorage.write(key: 'last_referral_code', value: code);
+        await secureStorage.write(key: 'last_referral_property_id', value: widget.propertyId);
 
-      // 3. Log referral link click in DB
-      await service.logReferralClick(
-        referralCode: code,
-        propertyId: widget.propertyId,
-        partnerId: partner?.id,
-        userAgent: kIsWeb ? 'Web Browser' : 'Mobile App',
-      );
+        // 2. Resolve partner profile from referral code
+        final service = ref.read(supabaseServiceProvider);
+        final partner = await service.getProfileByReferralCode(code);
+
+        // 3. Log referral link click in DB
+        await service.logReferralClick(
+          referralCode: code,
+          propertyId: widget.propertyId,
+          partnerId: partner?.id,
+          userAgent: kIsWeb ? 'Web Browser' : 'Mobile App',
+        );
+      }
+
+      if (campaignId != null && campaignId.isNotEmpty) {
+        await secureStorage.write(key: 'last_referral_campaign_id', value: campaignId);
+      } else {
+        await secureStorage.delete(key: 'last_referral_campaign_id');
+      }
     } catch (e) {
       debugPrint('Error processing referral click: $e');
     }
@@ -189,6 +200,10 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     final isUserAdmin = userProfile?.role == UserRole.admin || userProfile?.role == UserRole.platformAdmin;
     final isUserPartner = userProfile?.role == UserRole.partner;
     final canSeeCommission = isUserAdmin || isUserPartner;
+    final canGenerateCampaign = userProfile?.role == UserRole.admin ||
+        userProfile?.role == UserRole.platformAdmin ||
+        userProfile?.role == UserRole.manager ||
+        userProfile?.role == UserRole.marketer;
 
     Color statusColor;
     switch (property.status) {
@@ -512,6 +527,68 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // ── Campaign Generator card (Admins, Managers, Marketers) ──
+                  if (canGenerateCampaign) ...[
+                    Card(
+                      color: AppColors.surface,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.auto_awesome_rounded, color: AppColors.accent, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Marketing Intelligence',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Generate high-converting, rule-based marketing copy tailored for Facebook, Instagram, WhatsApp, and LinkedIn targeting specified local buyer segments.',
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.5),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  final role = userProfile?.role.value;
+                                  context.push('/$role/campaigns/generator?propertyId=${property.id}');
+                                },
+                                icon: const Icon(Icons.campaign_rounded, size: 16),
+                                label: const Text('Launch Campaign Generator'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accent,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
                             ),
                           ],
                         ),

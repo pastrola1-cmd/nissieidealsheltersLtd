@@ -15,6 +15,8 @@ class Profile {
   final String? bankName;
   final String? accountNumber;
   final String? accountName;
+  final String? fcmToken;
+  final String? managerId;
   final DateTime createdAt;
 
   const Profile({
@@ -30,6 +32,8 @@ class Profile {
     this.bankName,
     this.accountNumber,
     this.accountName,
+    this.fcmToken,
+    this.managerId,
     required this.createdAt,
   });
 
@@ -47,6 +51,8 @@ class Profile {
       bankName: json['bank_name'] as String?,
       accountNumber: json['account_number'] as String?,
       accountName: json['account_name'] as String?,
+      fcmToken: json['fcm_token'] as String?,
+      managerId: json['manager_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -65,6 +71,8 @@ class Profile {
       'bank_name': bankName,
       'account_number': accountNumber,
       'account_name': accountName,
+      'fcm_token': fcmToken,
+      'manager_id': managerId,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -82,6 +90,8 @@ class Profile {
     String? bankName,
     String? accountNumber,
     String? accountName,
+    String? fcmToken,
+    String? managerId,
     DateTime? createdAt,
   }) {
     return Profile(
@@ -97,6 +107,8 @@ class Profile {
       bankName: bankName ?? this.bankName,
       accountNumber: accountNumber ?? this.accountNumber,
       accountName: accountName ?? this.accountName,
+      fcmToken: fcmToken ?? this.fcmToken,
+      managerId: managerId ?? this.managerId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

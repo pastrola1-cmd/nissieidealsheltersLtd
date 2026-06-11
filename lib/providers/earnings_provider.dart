@@ -41,24 +41,26 @@ class EarningsState {
 
 class EarningsNotifier extends Notifier<EarningsState> {
   late final SupabaseService _supabaseService;
+  String? _loadedProfileId;
 
   @override
   EarningsState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
-    _initialize();
-    return const EarningsState();
-  }
+    
+    final authState = ref.watch(authProvider);
+    final profile = authState.profile;
 
-  void _initialize() {
-    // Listen to auth state to load balance/earnings automatically
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      final profile = next.profile;
-      if (profile != null) {
-        loadEarnings();
-      } else {
-        state = const EarningsState();
+    if (profile != null) {
+      if (_loadedProfileId != profile.id) {
+        _loadedProfileId = profile.id;
+        Future.microtask(() => loadEarnings());
+        return const EarningsState(isLoading: true);
       }
-    }, fireImmediately: true);
+      return state;
+    } else {
+      _loadedProfileId = null;
+      return const EarningsState();
+    }
   }
 
   /// Loads earnings, commissions, transactions, and wallet balance.

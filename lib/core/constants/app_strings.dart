@@ -3,9 +3,9 @@ class AppStrings {
   AppStrings._();
 
   // ── App ──
-  static const String appName = 'PPN';
-  static const String appFullName = 'Property Partner Network';
-  static const String appTagline = 'Real Estate Sales & Commission System';
+  static const String appName = 'ScaleWealth';
+  static const String appFullName = 'ScaleWealth Estate';
+  static const String appTagline = 'Premium Real Estate & Partnership Network';
   static const String companyName = 'ScaleWealthEstate';
 
   // ── Auth ──

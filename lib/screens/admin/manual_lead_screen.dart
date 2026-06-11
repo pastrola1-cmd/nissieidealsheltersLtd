@@ -8,6 +8,9 @@ import 'package:ppn/providers/lead_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/partner_provider.dart';
 
+import 'package:ppn/providers/auth_provider.dart';
+import 'package:ppn/widgets/merge_dialog.dart';
+
 class ManualLeadScreen extends ConsumerStatefulWidget {
   const ManualLeadScreen({super.key});
 
@@ -52,7 +55,72 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
     }
 
     setState(() => _isSaving = true);
-    final success = await ref.read(leadProvider.notifier).createLead(
+
+    // ── Duplicate Check ──
+    final notifier = ref.read(leadProvider.notifier);
+    final duplicate = await notifier.checkDuplicateLead(
+      _buyerPhoneController.text.trim(),
+      _buyerEmailController.text.trim(),
+    );
+
+    if (duplicate != null) {
+      setState(() => _isSaving = false);
+      if (!mounted) return;
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogCtx) => MergeDialog(
+          existingLead: duplicate,
+          newName: _buyerNameController.text.trim(),
+          newPhone: _buyerPhoneController.text.trim(),
+          newEmail: _buyerEmailController.text.trim().isEmpty ? null : _buyerEmailController.text.trim(),
+          newNotes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          onViewExisting: () {
+            final authState = ref.read(authProvider);
+            final role = authState.profile?.role;
+            String detailRoute = '/admin/leads/${duplicate.id}';
+            if (role == UserRole.manager) {
+              detailRoute = '/manager/leads/${duplicate.id}';
+            } else if (role == UserRole.marketer) {
+              detailRoute = '/marketer/leads/${duplicate.id}';
+            }
+            context.push(detailRoute);
+          },
+          onMerge: (mergedNotes) async {
+            setState(() => _isSaving = true);
+            final success = await ref.read(leadProvider.notifier).updateStage(
+                  duplicate.id,
+                  duplicate.stage,
+                  notes: mergedNotes,
+                );
+            if (mounted) {
+              setState(() => _isSaving = false);
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Lead details merged successfully!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                context.pop(); // Go back from ManualLeadScreen
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to merge lead details.'),
+                    backgroundColor: AppColors.error,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }
+          },
+        ),
+      );
+      return;
+    }
+
+    final success = await notifier.createLead(
           propertyId: _selectedPropertyId!,
           buyerName: _buyerNameController.text.trim(),
           buyerPhone: _buyerPhoneController.text.trim(),

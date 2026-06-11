@@ -4,6 +4,8 @@ library;
 /// User roles in the system
 enum UserRole {
   admin('admin', 'Admin'),
+  manager('manager', 'Manager'),
+  marketer('marketer', 'Marketer / Agent'),
   partner('partner', 'Partner'),
   buyer('buyer', 'Buyer'),
   platformAdmin('platform_admin', 'Platform Admin');

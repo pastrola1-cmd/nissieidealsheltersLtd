@@ -16,6 +16,7 @@ class Property {
   final String? createdBy;
   final CommissionType commissionType;
   final double commissionValue;
+  final String? targetAudience;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -33,6 +34,7 @@ class Property {
     this.createdBy,
     required this.commissionType,
     required this.commissionValue,
+    this.targetAudience,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -52,6 +54,7 @@ class Property {
       createdBy: json['created_by'] as String?,
       commissionType: CommissionType.fromString(json['commission_type'] as String? ?? 'percentage'),
       commissionValue: (json['commission_value'] as num? ?? 5.0).toDouble(),
+      targetAudience: json['target_audience'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -72,6 +75,7 @@ class Property {
       'created_by': createdBy,
       'commission_type': commissionType.value,
       'commission_value': commissionValue,
+      'target_audience': targetAudience,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -91,6 +95,7 @@ class Property {
     String? createdBy,
     CommissionType? commissionType,
     double? commissionValue,
+    Object? targetAudience = const Object(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -108,6 +113,9 @@ class Property {
       createdBy: createdBy ?? this.createdBy,
       commissionType: commissionType ?? this.commissionType,
       commissionValue: commissionValue ?? this.commissionValue,
+      targetAudience: targetAudience == const Object()
+          ? this.targetAudience
+          : (targetAudience as String?),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

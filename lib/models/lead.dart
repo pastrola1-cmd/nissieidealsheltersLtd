@@ -14,6 +14,9 @@ class Lead {
   final String sourceChannel;
   final LeadStage stage;
   final String? notes;
+  final String? assignedAgentId;
+  final String? leadFingerprint;
+  final String? campaignId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,6 +32,9 @@ class Lead {
     required this.sourceChannel,
     required this.stage,
     this.notes,
+    this.assignedAgentId,
+    this.leadFingerprint,
+    this.campaignId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -46,6 +52,9 @@ class Lead {
       sourceChannel: json['source_channel'] as String? ?? 'whatsapp',
       stage: LeadStage.fromString(json['stage'] as String),
       notes: json['notes'] as String?,
+      assignedAgentId: json['assigned_agent_id'] as String?,
+      leadFingerprint: json['lead_fingerprint'] as String?,
+      campaignId: json['campaign_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -64,6 +73,9 @@ class Lead {
       'source_channel': sourceChannel,
       'stage': stage.value,
       'notes': notes,
+      'assigned_agent_id': assignedAgentId,
+      'lead_fingerprint': leadFingerprint,
+      'campaign_id': campaignId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -81,6 +93,9 @@ class Lead {
     String? sourceChannel,
     LeadStage? stage,
     String? notes,
+    String? assignedAgentId,
+    String? leadFingerprint,
+    String? campaignId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -96,6 +111,9 @@ class Lead {
       sourceChannel: sourceChannel ?? this.sourceChannel,
       stage: stage ?? this.stage,
       notes: notes ?? this.notes,
+      assignedAgentId: assignedAgentId ?? this.assignedAgentId,
+      leadFingerprint: leadFingerprint ?? this.leadFingerprint,
+      campaignId: campaignId ?? this.campaignId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

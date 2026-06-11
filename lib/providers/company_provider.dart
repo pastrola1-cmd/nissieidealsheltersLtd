@@ -30,24 +30,26 @@ class CompanyState {
 
 class CompanyNotifier extends Notifier<CompanyState> {
   late final SupabaseService _supabaseService;
+  String? _loadedCompanyId;
 
   @override
   CompanyState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
-    _initialize();
-    return const CompanyState();
-  }
+    
+    final authState = ref.watch(authProvider);
+    final companyId = authState.profile?.companyId;
 
-  void _initialize() {
-    // Listen to authentication status changes to load the tenant details
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      final companyId = next.profile?.companyId;
-      if (companyId != null) {
-        loadCompany(companyId);
-      } else {
-        state = const CompanyState();
+    if (companyId != null) {
+      if (_loadedCompanyId != companyId) {
+        _loadedCompanyId = companyId;
+        Future.microtask(() => loadCompany(companyId));
+        return const CompanyState(isLoading: true);
       }
-    }, fireImmediately: true);
+      return state;
+    } else {
+      _loadedCompanyId = null;
+      return const CompanyState();
+    }
   }
 
   Future<void> loadCompany(String companyId) async {

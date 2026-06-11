@@ -1,5 +1,7 @@
 # Environment variables (contains Supabase keys)
 .env
+env
+env.txt
 
 # Miscellaneous
 *.class

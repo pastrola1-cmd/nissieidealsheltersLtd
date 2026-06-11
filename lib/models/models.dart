@@ -5,3 +5,7 @@ export 'lead.dart';
 export 'commission.dart';
 export 'inspection.dart';
 export 'transaction.dart';
+export 'notification.dart';
+export 'campaign.dart';
+export 'daily_report.dart';
+export 'goal.dart';

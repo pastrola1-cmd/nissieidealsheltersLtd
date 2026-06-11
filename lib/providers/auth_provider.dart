@@ -74,8 +74,13 @@ class AuthNotifier extends Notifier<AuthState> {
       try {
         final profile = await _supabaseService.getProfile(userId);
         if (profile != null) {
+          Company? company;
+          if (profile.companyId != null) {
+            company = await _supabaseService.getCompany(profile.companyId!);
+          }
           state = AuthState(
             profile: profile,
+            company: company,
             isAuthenticated: true,
             isLoading: false,
           );
@@ -116,13 +121,15 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Signs up a new user and lets the Postgres trigger auto-create the Profile.
   Future<bool> signUp({
     required String email,
     required String password,
     required String fullName,
     required String phone,
     required UserRole role,
+    String? companyId,
+    String? createCompanyName,
+    String? createSubscriptionTier,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -132,6 +139,9 @@ class AuthNotifier extends Notifier<AuthState> {
         data: {
           'full_name': fullName,
           'role': role.value,
+          if (companyId != null) 'company_id': companyId,
+          if (createCompanyName != null) 'create_company_name': createCompanyName,
+          if (createSubscriptionTier != null) 'create_subscription_tier': createSubscriptionTier,
         },
       );
       if (response.user != null) {
@@ -199,6 +209,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
       state = AuthState(
         profile: Profile.fromJson(updatedData),
+        company: state.company,
         isAuthenticated: true,
         isLoading: false,
       );
@@ -209,6 +220,15 @@ class AuthNotifier extends Notifier<AuthState> {
         errorMessage: e.toString(),
       );
       return false;
+    }
+  }
+
+  /// Refreshes only the company details in the authentication state.
+  Future<void> refreshCompany() async {
+    final profile = state.profile;
+    if (profile != null && profile.companyId != null) {
+      final company = await _supabaseService.getCompany(profile.companyId!);
+      state = state.copyWith(company: company);
     }
   }
 }

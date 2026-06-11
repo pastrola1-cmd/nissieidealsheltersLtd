@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/lead_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/partner_provider.dart';
+import 'package:ppn/widgets/shimmer_loading.dart';
+import 'package:ppn/widgets/empty_state.dart';
 
 class LeadListScreen extends ConsumerStatefulWidget {
   const LeadListScreen({super.key});
@@ -18,12 +21,18 @@ class LeadListScreen extends ConsumerStatefulWidget {
 
 class _LeadListScreenState extends ConsumerState<LeadListScreen> {
   final _searchController = TextEditingController();
-  String _selectedStageFilter = 'All'; // 'All', 'New', 'Contacted', 'Inspection Booked', 'Negotiation', 'Closed', 'Lost'
+  String _selectedStageFilter = 'All'; 
   String _searchQuery = '';
+  Timer? _debounceTimer;
+
+  // Selection state
+  final Set<String> _selectedLeadIds = {};
+  bool get _isSelectionMode => _selectedLeadIds.isNotEmpty;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -68,83 +77,356 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Leads Pipeline'),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _selectedLeadIds.clear()),
+              )
+            : null,
+        title: Text(_isSelectionMode ? '${_selectedLeadIds.length} Selected' : 'Leads Pipeline'),
         backgroundColor: AppColors.surface,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
         centerTitle: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: ElevatedButton.icon(
-              onPressed: () => context.push('/admin/leads/add'),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('New Lead'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.textOnAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          if (_isSelectionMode)
+            IconButton(
+              icon: Icon(
+                _selectedLeadIds.length == filteredLeads.length
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
               ),
-            ),
-          ),
-        ],
-      ),
-      body: state.isLoading && state.leads.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
-          : RefreshIndicator(
-              onRefresh: () async {
-                await ref.read(leadProvider.notifier).loadLeads();
+              tooltip: 'Select All',
+              onPressed: () {
+                setState(() {
+                  if (_selectedLeadIds.length == filteredLeads.length) {
+                    _selectedLeadIds.clear();
+                  } else {
+                    _selectedLeadIds.addAll(filteredLeads.map((l) => l.id));
+                  }
+                });
               },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Stats Row ──
-                    _buildStatsRow(
-                      total: totalCount,
-                      newLeads: newCount,
-                      closed: closedCount,
-                      screenWidth: screenWidth,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ── Filters & Search ──
-                    _buildSearchAndFilters(theme),
-                    const SizedBox(height: 24),
-
-                    // ── Leads pipeline List ──
-                    if (state.errorMessage != null)
-                      Center(
-                        child: Text(
-                          'Error: ${state.errorMessage}',
-                          style: const TextStyle(color: AppColors.error),
-                        ),
-                      )
-                    else if (filteredLeads.isEmpty)
-                      _buildEmptyState(theme)
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredLeads.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final lead = filteredLeads[index];
-                          final property = properties.cast<Property?>().firstWhere((p) => p?.id == lead.propertyId, orElse: () => null);
-                          final partner = partners.cast<Profile?>().firstWhere((p) => p?.id == lead.partnerId, orElse: () => null);
-                          return _buildLeadCard(context, lead, property, partner, theme);
-                        },
-                      ),
-                  ],
+            )
+          else ...[
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/admin/leads/add'),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('New Lead'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.textOnAccent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ),
+          ]
+        ],
+      ),
+      body: Stack(
+        children: [
+          state.isLoading && state.leads.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: ShimmerList(),
+                )
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    await ref.read(leadProvider.notifier).loadLeads();
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(24, 24, 24, _isSelectionMode ? 100 : 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Stats Row ──
+                        if (!_isSelectionMode) ...[
+                          _buildStatsRow(
+                            total: totalCount,
+                            newLeads: newCount,
+                            closed: closedCount,
+                            screenWidth: screenWidth,
+                          ),
+                          const SizedBox(height: 20),
+                          // Import & Export Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/admin/leads/import'),
+                                  icon: const Icon(Icons.file_upload_outlined, size: 16, color: AppColors.primary),
+                                  label: const Text('Import CSV', style: TextStyle(color: AppColors.primary)),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: AppColors.border),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => context.push('/admin/leads/export'),
+                                  icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.primary),
+                                  label: const Text('Export CSV', style: TextStyle(color: AppColors.primary)),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: AppColors.border),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // ── Filters & Search ──
+                        _buildSearchAndFilters(theme),
+                        const SizedBox(height: 24),
+
+                        // ── Leads pipeline List ──
+                        if (state.errorMessage != null)
+                          Center(
+                            child: Text(
+                              'Error: ${state.errorMessage}',
+                              style: const TextStyle(color: AppColors.error),
+                            ),
+                          )
+                        else if (filteredLeads.isEmpty)
+                          _buildEmptyState(theme)
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredLeads.length,
+                            separatorBuilder: (context, index) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final lead = filteredLeads[index];
+                              final property = properties.cast<Property?>().firstWhere((p) => p?.id == lead.propertyId, orElse: () => null);
+                              final partner = partners.cast<Profile?>().firstWhere((p) => p?.id == lead.partnerId, orElse: () => null);
+                              return _buildLeadCard(context, lead, property, partner, theme);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+          
+          // Bulk Action Toolbar
+          if (_isSelectionMode)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 24,
+              child: _buildBulkActionToolbar(context),
+            ),
+        ],
+      ),
     );
   }
+
+  Widget _buildBulkActionToolbar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.textPrimary,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildToolbarButton(
+            icon: Icons.person_add_alt_1_outlined,
+            label: 'Assign',
+            onTap: () => _showBulkAssignDialog(context),
+          ),
+          _buildToolbarButton(
+            icon: Icons.playlist_add_check_rounded,
+            label: 'Stage',
+            onTap: () => _showBulkStageDialog(context),
+          ),
+          _buildToolbarButton(
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete',
+            color: AppColors.error,
+            onTap: () => _showBulkDeleteDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolbarButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color color = Colors.white,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Bulk Dialogs ──
+
+  Future<void> _showBulkAssignDialog(BuildContext context) async {
+    final marketers = ref.read(agencyMarketersProvider).value ?? [];
+    String? selectedAgentId;
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Bulk Assign Agent'),
+          content: DropdownButtonFormField<String?>(
+            value: selectedAgentId,
+            decoration: const InputDecoration(labelText: 'Select Agent'),
+            items: [
+              const DropdownMenuItem<String?>(value: 'unassign', child: Text('Unassigned Leads')),
+              ...marketers.map((m) => DropdownMenuItem<String?>(
+                    value: m.id,
+                    child: Text(m.fullName ?? m.email ?? ''),
+                  )),
+            ],
+            onChanged: (val) => setDialogState(() => selectedAgentId = val),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedAgentId == null
+                  ? null
+                  : () async {
+                      Navigator.pop(dialogCtx);
+                      final success = await ref.read(leadProvider.notifier).bulkUpdateLeads(
+                            leadIds: _selectedLeadIds.toList(),
+                            assignedAgentId: selectedAgentId,
+                          );
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Leads assigned successfully!')),
+                        );
+                        setState(() => _selectedLeadIds.clear());
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white),
+              child: const Text('Assign'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showBulkStageDialog(BuildContext context) async {
+    LeadStage? selectedStage;
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Bulk Change Stage'),
+          content: DropdownButtonFormField<LeadStage?>(
+            value: selectedStage,
+            decoration: const InputDecoration(labelText: 'Select Lead Stage'),
+            items: LeadStage.values
+                .map((stage) => DropdownMenuItem<LeadStage?>(
+                      value: stage,
+                      child: Text(stage.label),
+                    ))
+                .toList(),
+            onChanged: (val) => setDialogState(() => selectedStage = val),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedStage == null
+                  ? null
+                  : () async {
+                      Navigator.pop(dialogCtx);
+                      final success = await ref.read(leadProvider.notifier).bulkUpdateLeads(
+                            leadIds: _selectedLeadIds.toList(),
+                            stage: selectedStage,
+                          );
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Leads stage updated successfully!')),
+                        );
+                        setState(() => _selectedLeadIds.clear());
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white),
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showBulkDeleteDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Confirm Bulk Deletion', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete the ${_selectedLeadIds.length} selected leads? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ref.read(leadProvider.notifier).bulkDeleteLeads(_selectedLeadIds.toList());
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Leads deleted successfully!')),
+                );
+                setState(() => _selectedLeadIds.clear());
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Existing Elements ──
 
   Widget _buildStatsRow({
     required int total,
@@ -272,8 +554,13 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
         TextField(
           controller: _searchController,
           onChanged: (val) {
-            setState(() {
-              _searchQuery = val.trim().toLowerCase();
+            if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              }
             });
           },
           decoration: InputDecoration(
@@ -283,11 +570,11 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
             fillColor: AppColors.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.border),
+              borderSide: const BorderSide(color: AppColors.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: AppColors.border),
+              borderSide: const BorderSide(color: AppColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -374,128 +661,173 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     }
 
     final dateStr = DateFormat('MMM d, yyyy').format(lead.updatedAt);
+    final isSelected = _selectedLeadIds.contains(lead.id);
 
     return InkWell(
       onTap: () {
-        context.push('/admin/leads/${lead.id}');
+        if (_isSelectionMode) {
+          setState(() {
+            if (isSelected) {
+              _selectedLeadIds.remove(lead.id);
+            } else {
+              _selectedLeadIds.add(lead.id);
+            }
+          });
+        } else {
+          context.push('/admin/leads/${lead.id}');
+        }
+      },
+      onLongPress: () {
+        setState(() {
+          if (isSelected) {
+            _selectedLeadIds.remove(lead.id);
+          } else {
+            _selectedLeadIds.add(lead.id);
+          }
+        });
       },
       borderRadius: BorderRadius.circular(16),
       child: Ink(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 1.5 : 1.0,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Header Row (Buyer name & Stage badge)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    lead.buyerName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: stageColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: stageColor.withValues(alpha: 0.15)),
-                  ),
-                  child: Text(
-                    lead.stage.label.toUpperCase(),
-                    style: TextStyle(
-                      color: stageColor,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-
-            // Property details
-            Row(
-              children: [
-                const Icon(Icons.home_work_outlined, size: 16, color: AppColors.textTertiary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    property?.title ?? 'Unknown Property Listing',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Partner details
-            Row(
-              children: [
-                const Icon(Icons.handshake_outlined, size: 16, color: AppColors.textTertiary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      text: 'Referred by: ',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: theme.textTheme.bodyMedium?.fontFamily),
-                      children: [
-                        TextSpan(
-                          text: partner?.fullName ?? 'Direct Client',
-                          style: const TextStyle(
+            if (_isSelectionMode) ...[
+              Checkbox(
+                value: isSelected,
+                activeColor: AppColors.primary,
+                onChanged: (val) {
+                  setState(() {
+                    if (isSelected) {
+                      _selectedLeadIds.remove(lead.id);
+                    } else {
+                      _selectedLeadIds.add(lead.id);
+                    }
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Row (Buyer name & Stage badge)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lead.buyerName,
+                          style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: stageColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: stageColor.withValues(alpha: 0.15)),
+                        ),
+                        child: Text(
+                          lead.stage.label.toUpperCase(),
+                          style: TextStyle(
+                            color: stageColor,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
 
-            // Footer Row (Phone & Date)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
-                    const SizedBox(width: 6),
-                    Text(
-                      lead.buyerPhone,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Updated: $dateStr',
-                  style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
-                ),
-              ],
+                  // Property details
+                  Row(
+                    children: [
+                      const Icon(Icons.home_work_outlined, size: 16, color: AppColors.textTertiary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          property?.title ?? 'Unknown Property Listing',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Partner details
+                  Row(
+                    children: [
+                      const Icon(Icons.handshake_outlined, size: 16, color: AppColors.textTertiary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            text: 'Referred by: ',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontFamily: theme.textTheme.bodyMedium?.fontFamily),
+                            children: [
+                              TextSpan(
+                                text: partner?.fullName ?? 'Direct Client',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+
+                  // Footer Row (Phone & Date)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
+                          const SizedBox(width: 6),
+                          Text(
+                            lead.buyerPhone,
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Updated: $dateStr',
+                        style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -504,41 +836,18 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.assignment_turned_in_outlined,
-                size: 64,
-                color: AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No leads match your filter',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Create a manual lead or check shared partner links.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.assignment_turned_in_outlined,
+      title: 'No leads match your filter',
+      description: 'Create a manual lead or check shared partner links.',
+      actionLabel: 'Reset Filters',
+      onActionPressed: () {
+        _searchController.clear();
+        setState(() {
+          _searchQuery = '';
+          _selectedStageFilter = 'All';
+        });
+      },
     );
   }
 }

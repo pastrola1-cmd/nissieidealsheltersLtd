@@ -19,9 +19,40 @@ void main() {
       expect(company.id, 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6');
       expect(company.name, 'Scalewealth Estate');
       expect(company.logoUrl, 'https://example.com/logo.png');
+      expect(company.isHidden, false);
 
       final backToJson = company.toJson();
       expect(backToJson['id'], 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6');
+      expect(backToJson['is_hidden'], false);
+      expect(company.subscriptionTier, 'basic');
+      expect(company.subscriptionStatus, 'trialing');
+      expect(company.plan.maxLeadsPerMonth, 150);
+      expect(company.effectiveLeadLimit, 150);
+
+      final companyWithCustomPlan = Company.fromJson({
+        ...json,
+        'subscription_tier': 'growth',
+        'subscription_status': 'active',
+        'subscription_expires_at': '2026-06-24T10:00:00.000Z',
+        'is_hidden': true,
+        'custom_lead_limit': 300,
+      });
+      expect(companyWithCustomPlan.subscriptionTier, 'growth');
+      expect(companyWithCustomPlan.subscriptionStatus, 'active');
+      expect(companyWithCustomPlan.subscriptionExpiresAt, DateTime.parse('2026-06-24T10:00:00.000Z'));
+      expect(companyWithCustomPlan.plan.maxListings, 50);
+      expect(companyWithCustomPlan.plan.maxPartners, 25);
+      expect(companyWithCustomPlan.plan.maxLeadsPerMonth, 500);
+      expect(companyWithCustomPlan.customLeadLimit, 300);
+      expect(companyWithCustomPlan.effectiveLeadLimit, 300);
+      expect(companyWithCustomPlan.isSubscriptionActive, true);
+      expect(companyWithCustomPlan.isHidden, true);
+
+      final copiedCompany = companyWithCustomPlan.copyWith(isHidden: false, customLeadLimit: null);
+      expect(copiedCompany.isHidden, false);
+      expect(copiedCompany.subscriptionTier, 'growth');
+      expect(copiedCompany.customLeadLimit, null);
+      expect(copiedCompany.effectiveLeadLimit, 500);
     });
 
     test('Profile model tests', () {
@@ -99,6 +130,7 @@ void main() {
         'source_channel': 'whatsapp',
         'stage': 'new',
         'notes': 'Looking for a flat in Maitama',
+        'lead_fingerprint': '+2348098765432:jane@buyer.com',
         'created_at': '2026-06-10T10:00:00.000Z',
         'updated_at': '2026-06-10T10:00:00.000Z',
       };
@@ -107,10 +139,15 @@ void main() {
       expect(lead.id, 'lead-id-123');
       expect(lead.stage, LeadStage.newLead);
       expect(lead.notes, 'Looking for a flat in Maitama');
+      expect(lead.leadFingerprint, '+2348098765432:jane@buyer.com');
 
       final backToJson = lead.toJson();
       expect(backToJson['stage'], 'new');
       expect(backToJson['buyer_name'], 'Jane Buyer');
+      expect(backToJson['lead_fingerprint'], '+2348098765432:jane@buyer.com');
+
+      final copied = lead.copyWith(leadFingerprint: 'custom-fingerprint');
+      expect(copied.leadFingerprint, 'custom-fingerprint');
     });
 
     test('Inspection model tests', () {

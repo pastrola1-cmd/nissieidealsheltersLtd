@@ -32,24 +32,26 @@ class PropertyState {
 
 class PropertyNotifier extends Notifier<PropertyState> {
   late final SupabaseService _supabaseService;
+  String? _loadedCompanyId;
 
   @override
   PropertyState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
-    _initialize();
-    return const PropertyState();
-  }
+    
+    final authState = ref.watch(authProvider);
+    final companyId = authState.profile?.companyId;
 
-  void _initialize() {
-    // Listen to authentication status changes to load/clear properties
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      final companyId = next.profile?.companyId;
-      if (companyId != null) {
-        loadProperties(companyId);
-      } else {
-        state = const PropertyState();
+    if (companyId != null) {
+      if (_loadedCompanyId != companyId) {
+        _loadedCompanyId = companyId;
+        Future.microtask(() => loadProperties(companyId));
+        return const PropertyState(isLoading: true);
       }
-    }, fireImmediately: true);
+      return state;
+    } else {
+      _loadedCompanyId = null;
+      return const PropertyState();
+    }
   }
 
   Future<void> loadProperties(String companyId) async {
@@ -76,6 +78,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
     String? assignedPartnerId,
     required CommissionType commissionType,
     required double commissionValue,
+    String? targetAudience,
   }) async {
     final profile = ref.read(authProvider).profile;
     final companyId = profile?.companyId;
@@ -100,6 +103,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
         'created_by': profile!.id,
         'commission_type': commissionType.value,
         'commission_value': commissionValue,
+        'target_audience': targetAudience,
       };
 
       final insertedRaw = await _supabaseService.insert('properties', insertData);
@@ -157,6 +161,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
     String? assignedPartnerId,
     required CommissionType commissionType,
     required double commissionValue,
+    String? targetAudience,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -189,6 +194,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
         'assigned_partner_id': assignedPartnerId,
         'commission_type': commissionType.value,
         'commission_value': commissionValue,
+        'target_audience': targetAudience,
         'updated_at': DateTime.now().toIso8601String(),
       };
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/constants/app_spacing.dart';
+import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/providers/auth_provider.dart';
 
 class AwaitingApprovalScreen extends ConsumerStatefulWidget {
@@ -117,7 +118,9 @@ class _AwaitingApprovalScreenState extends ConsumerState<AwaitingApprovalScreen>
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Your partner account has been registered successfully. An administrator will review and activate your account shortly.',
+                  authState.profile?.role == UserRole.admin
+                      ? 'Your agency administration account has been registered successfully. The platform administrator will review and approve your agency portal shortly.'
+                      : 'Your partner account has been registered successfully. An administrator will review and activate your account shortly.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,

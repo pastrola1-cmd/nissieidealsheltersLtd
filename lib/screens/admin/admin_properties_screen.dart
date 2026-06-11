@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/property_provider.dart';
+import 'package:ppn/widgets/shimmer_loading.dart';
+import 'package:ppn/widgets/empty_state.dart';
 
 class AdminPropertiesScreen extends ConsumerStatefulWidget {
   const AdminPropertiesScreen({super.key});
@@ -18,10 +21,12 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
   final _searchController = TextEditingController();
   String _selectedStatusFilter = 'All'; // 'All', 'Available', 'Reserved', 'Sold'
   String _searchQuery = '';
+  Timer? _debounceTimer;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -77,7 +82,10 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
         ],
       ),
       body: state.isLoading && state.properties.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          ? const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: ShimmerGrid(),
+            )
           : RefreshIndicator(
               onRefresh: () async {
                 final companyId = ref.read(propertyProvider).properties.firstOrNull?.companyId;
@@ -265,8 +273,13 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
         TextField(
           controller: _searchController,
           onChanged: (val) {
-            setState(() {
-              _searchQuery = val.trim().toLowerCase();
+            if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                setState(() {
+                  _searchQuery = val.trim().toLowerCase();
+                });
+              }
             });
           },
           decoration: InputDecoration(
@@ -539,41 +552,18 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.home_work_outlined,
-                size: 64,
-                color: AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No properties match your filter',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try clearing search queries or adding a new property portfolio.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.home_work_outlined,
+      title: 'No properties match your filter',
+      description: 'Try clearing search queries or adding a new property portfolio.',
+      actionLabel: 'Reset Filters',
+      onActionPressed: () {
+        _searchController.clear();
+        setState(() {
+          _searchQuery = '';
+          _selectedStatusFilter = 'All';
+        });
+      },
     );
   }
 

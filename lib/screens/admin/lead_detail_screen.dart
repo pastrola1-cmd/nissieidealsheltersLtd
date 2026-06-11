@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/models/models.dart';
+import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/providers/lead_provider.dart';
+import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/partner_provider.dart';
 import 'package:ppn/providers/earnings_provider.dart';
@@ -36,6 +38,41 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
   }
 
   Future<void> _changeStage(LeadStage stage) async {
+    if (stage == LeadStage.closed) {
+      final lead = ref.read(leadProvider).leads.cast<Lead?>().firstWhere((l) => l?.id == widget.leadId, orElse: () => null);
+      final property = ref.read(propertyProvider).properties.cast<Property?>().firstWhere((p) => p?.id == lead?.propertyId, orElse: () => null);
+      if (lead != null) {
+        _showCloseLeadDialog(lead, property);
+      }
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Update Lead Stage?'),
+        content: Text('Are you sure you want to update this lead stage to "${stage.label}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: stage == LeadStage.lost ? AppColors.error : AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     setState(() => _isSaving = true);
     final success = await ref.read(leadProvider.notifier).updateStage(
           widget.leadId,
@@ -240,6 +277,8 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final leadState = ref.watch(leadProvider);
+    final authState = ref.watch(authProvider);
+    final currentRole = authState.profile?.role;
 
     final Lead? lead = leadState.leads.cast<Lead?>().firstWhere(
           (l) => l?.id == widget.leadId,
@@ -394,6 +433,8 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
                     value: regDate,
                     icon: Icons.calendar_month_outlined,
                   ),
+                  const SizedBox(height: 16),
+                  _buildAssignedAgentRow(context, ref, lead, currentRole),
                 ],
               ),
             ),
@@ -712,6 +753,105 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAssignedAgentRow(BuildContext context, WidgetRef ref, Lead lead, UserRole? role) {
+    final canAssign = role == UserRole.admin || role == UserRole.manager || role == UserRole.platformAdmin;
+    
+    if (!canAssign) {
+      if (lead.assignedAgentId == null) {
+        return _buildDetailRow(
+          label: 'ASSIGNED AGENT',
+          value: 'Unassigned',
+          icon: Icons.person_outline,
+        );
+      }
+      
+      return FutureBuilder<Profile?>(
+        future: ref.read(supabaseServiceProvider).getProfile(lead.assignedAgentId!),
+        builder: (context, snapshot) {
+          final name = snapshot.data?.fullName ?? 'Loading agent name...';
+          return _buildDetailRow(
+            label: 'ASSIGNED AGENT',
+            value: name,
+            icon: Icons.person_outline,
+          );
+        },
+      );
+    }
+    
+    final marketersAsync = ref.watch(agencyMarketersProvider);
+    
+    return marketersAsync.when(
+      data: (agents) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.person_outline, size: 20, color: AppColors.textTertiary),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ASSIGNED AGENT',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      value: lead.assignedAgentId,
+                      isExpanded: true,
+                      hint: const Text('Unassigned (Select Agent)', style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Unassigned', style: TextStyle(fontSize: 14)),
+                        ),
+                        ...agents.map((agent) {
+                          return DropdownMenuItem<String?>(
+                            value: agent.id,
+                            child: Text(agent.fullName ?? agent.email ?? '', style: const TextStyle(fontSize: 14)),
+                          );
+                        }),
+                      ],
+                      onChanged: (newAgentId) async {
+                        final success = await ref.read(leadProvider.notifier).assignAgent(lead.id, newAgentId);
+                        if (context.mounted) {
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Agent assigned successfully!'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to assign agent.'),
+                                backgroundColor: AppColors.error,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+      error: (err, stack) => Text('Error loading agents: $err'),
     );
   }
 }

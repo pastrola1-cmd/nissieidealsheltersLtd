@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/utils/validators.dart';
 import 'package:ppn/providers/company_provider.dart';
+import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/services/supabase_service.dart';
 
 class CompanyProfileScreen extends ConsumerStatefulWidget {
@@ -150,7 +152,35 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
         centerTitle: true,
       ),
       body: state.company == null
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          ? Center(
+              child: state.errorMessage != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 48),
+                          const SizedBox(height: 16),
+                          Text(
+                            state.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () {
+                              final companyId = ref.read(authProvider).profile?.companyId;
+                              if (companyId != null) {
+                                ref.read(companyProvider.notifier).loadCompany(companyId);
+                              }
+                            },
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const CircularProgressIndicator(color: AppColors.accent),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               child: Form(
@@ -218,6 +248,72 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
+
+                    // ── Company Code display for partners invitation ──
+                    Card(
+                      color: AppColors.surface,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: AppColors.border),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.vpn_key_rounded, color: AppColors.accent, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Company Code (Tenant ID)',
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.copy_rounded, color: AppColors.accent),
+                                  tooltip: 'Copy Company Code',
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: state.company!.id));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Company Code copied to clipboard!'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SelectableText(
+                              state.company!.id,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Share this code with partners so they can join your agency directly when they sign up.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
                     // ── Fields ──
                     Text(

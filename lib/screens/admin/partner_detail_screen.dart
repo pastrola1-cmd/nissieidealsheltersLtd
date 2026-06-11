@@ -24,6 +24,32 @@ class _PartnerDetailScreenState extends ConsumerState<PartnerDetailScreen> {
     String action,
     Future<bool> Function() apiCall,
   ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('$action Partner?'),
+        content: Text('Are you sure you want to ${action.toLowerCase()} this partner account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: action == 'Reject' || action == 'Suspend' ? AppColors.error : AppColors.success,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     setState(() => _isActionLoading = true);
     final success = await apiCall();
     if (mounted) {

@@ -34,24 +34,26 @@ class InspectionState {
 class InspectionNotifier extends Notifier<InspectionState> {
   late final SupabaseService _supabaseService;
   final _secureStorage = const FlutterSecureStorage();
+  String? _loadedProfileId;
 
   @override
   InspectionState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
-    _initialize();
-    return const InspectionState();
-  }
+    
+    final authState = ref.watch(authProvider);
+    final profile = authState.profile;
 
-  void _initialize() {
-    // Listen to auth state to load inspections automatically
-    ref.listen<AuthState>(authProvider, (previous, next) {
-      final profile = next.profile;
-      if (profile != null) {
-        loadInspections();
-      } else {
-        state = const InspectionState();
+    if (profile != null) {
+      if (_loadedProfileId != profile.id) {
+        _loadedProfileId = profile.id;
+        Future.microtask(() => loadInspections());
+        return const InspectionState(isLoading: true);
       }
-    }, fireImmediately: true);
+      return state;
+    } else {
+      _loadedProfileId = null;
+      return const InspectionState();
+    }
   }
 
   /// Loads inspections based on the user's role and scopes.

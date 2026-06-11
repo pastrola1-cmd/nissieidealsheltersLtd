@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
@@ -9,6 +10,7 @@ import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:ppn/core/intelligence/intelligence.dart';
 
 class PropertyFormScreen extends ConsumerStatefulWidget {
   final String? propertyId;
@@ -32,6 +34,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
   PropertyStatus _status = PropertyStatus.available;
   CommissionType _commissionType = CommissionType.percentage;
   String? _assignedPartnerId;
+  String? _targetAudience;
 
   List<String> _existingImages = [];
   final List<XFile> _newImages = [];
@@ -110,6 +113,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
     _commissionType = p.commissionType;
     _commissionValueController.text = p.commissionValue.toString();
     _assignedPartnerId = p.assignedPartnerId;
+    _targetAudience = p.targetAudience;
     _existingImages = List<String>.from(p.images);
   }
 
@@ -169,6 +173,19 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
   Future<void> _handleSave() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    if (!_isEditMode) {
+      final authState = ref.read(authProvider);
+      final company = authState.company;
+      if (company != null) {
+        final plan = company.plan;
+        final currentPropertiesCount = ref.read(propertyProvider).properties.length;
+        if (currentPropertiesCount >= plan.maxListings) {
+          _showLimitReachedSheet(context, company, 'listings');
+          return;
+        }
+      }
+    }
+
     final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
     final commissionValue = double.tryParse(_commissionValueController.text.trim()) ?? 0.0;
 
@@ -190,6 +207,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
             assignedPartnerId: _assignedPartnerId,
             commissionType: _commissionType,
             commissionValue: commissionValue,
+            targetAudience: _targetAudience,
           );
     } else {
       success = await ref.read(propertyProvider.notifier).createProperty(
@@ -204,6 +222,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
             assignedPartnerId: _assignedPartnerId,
             commissionType: _commissionType,
             commissionValue: commissionValue,
+            targetAudience: _targetAudience,
           );
     }
 
@@ -518,6 +537,28 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                                 setState(() => _assignedPartnerId = val);
                               },
                             ),
+                      const SizedBox(height: 16),
+
+                      // Target Audience Dropdown
+                      DropdownButtonFormField<String?>(
+                        initialValue: _targetAudience,
+                        decoration: _inputDecoration(label: 'Target Audience (Marketing)', icon: Icons.track_changes_outlined),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('General / All Audiences'),
+                          ),
+                          ...AudienceRegistry.getAll().map((profile) {
+                            return DropdownMenuItem<String?>(
+                              value: profile.id,
+                              child: Text(profile.label),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setState(() => _targetAudience = val);
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -682,6 +723,92 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+      ),
+    );
+  }
+
+  void _showLimitReachedSheet(BuildContext context, Company company, String type) {
+    final isListings = type == 'listings';
+    final plan = company.plan;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppColors.errorLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: AppColors.error,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              isListings ? 'Listing Limit Reached' : 'Partner Limit Reached',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isListings
+                  ? 'Your agency is currently on the ${plan.name} which is limited to ${plan.maxListings} property listings. You currently have ${ref.read(propertyProvider).properties.length} listings.'
+                  : 'Your agency has reached the maximum of ${plan.maxPartners} partners allowed on the ${plan.name}.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                      ref.read(authProvider.notifier).refreshCompany();
+                      GoRouter.of(context).push('/admin/billing');
+                    },
+                    child: const Text('Upgrade Plan', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -81,6 +81,34 @@ class SupabaseService {
     await _client.from(table).delete().eq('id', id);
   }
 
+  /// Bulk inserts multiple records into [table] and returns the newly inserted rows.
+  Future<List<Map<String, dynamic>>> bulkInsert(
+    String table,
+    List<Map<String, dynamic>> records,
+  ) async {
+    if (records.isEmpty) return [];
+    final response = await _client.from(table).insert(records).select();
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Bulk updates rows matching the list of [ids] in [table] with the provided [data].
+  /// Returns the updated rows.
+  Future<List<Map<String, dynamic>>> bulkUpdate(
+    String table,
+    List<String> ids,
+    Map<String, dynamic> data,
+  ) async {
+    if (ids.isEmpty) return [];
+    final response = await _client.from(table).update(data).inFilter('id', ids).select();
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Bulk deletes rows matching the list of [ids] from [table].
+  Future<void> bulkDelete(String table, List<String> ids) async {
+    if (ids.isEmpty) return;
+    await _client.from(table).delete().inFilter('id', ids);
+  }
+
   // ─── Type-Safe Helpers ───
 
   /// Fetches properties with optional company filtering.
@@ -99,6 +127,51 @@ class SupabaseService {
   Future<Profile?> getProfile(String id) async {
     final data = await getById('profiles', id);
     return data != null ? Profile.fromJson(data) : null;
+  }
+
+  /// Fetches a single company by ID.
+  Future<Company?> getCompany(String id) async {
+    final data = await getById('companies', id);
+    return data != null ? Company.fromJson(data) : null;
+  }
+
+  /// Fetches all registered companies sorted by name.
+  /// If [excludeHidden] is true, only returns companies where is_hidden is false.
+  Future<List<Company>> getCompanies({bool excludeHidden = false}) async {
+    var query = _client.from('companies').select();
+    if (excludeHidden) {
+      query = query.eq('is_hidden', false);
+    }
+    final response = await query.order('name', ascending: true);
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Company.fromJson(json))
+        .toList();
+  }
+
+  /// Updates a company's subscription tier, status, and expiration.
+  Future<Company> updateCompanySubscription(
+    String companyId, {
+    required String tier,
+    required String status,
+    required DateTime expiresAt,
+    int? customLeadLimit,
+  }) async {
+    final response = await update('companies', companyId, {
+      'subscription_tier': tier,
+      'subscription_status': status,
+      'subscription_expires_at': expiresAt.toIso8601String(),
+      'custom_lead_limit': customLeadLimit,
+    });
+    return Company.fromJson(response);
+  }
+
+  /// Fetches the monthly lead count for a company using the database RPC.
+  Future<int> getMonthlyLeadCount(String companyId) async {
+    final response = await _client.rpc(
+      'get_monthly_lead_count',
+      params: {'p_company_id': companyId},
+    );
+    return response as int;
   }
 
   /// Fetches leads with optional company and partner filters.
@@ -297,6 +370,49 @@ class SupabaseService {
         .toList();
   }
 
+  /// Fetches campaign logs with company filtering.
+  Future<List<Campaign>> getCampaigns(String companyId) async {
+    final response = await _client
+        .from('campaigns')
+        .select()
+        .eq('company_id', companyId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => Campaign.fromJson(json))
+        .toList();
+  }
+
+  /// Logs a campaign share event to database
+  Future<void> logCampaignShare(String campaignId, String platform) async {
+    await _client.from('campaign_shares').insert({
+      'campaign_id': campaignId,
+      'platform': platform,
+    });
+  }
+
+  /// Retrieves a daily report for a specific company and date.
+  Future<DailyReport?> getDailyReport(String companyId, DateTime date) async {
+    final dateStr = date.toIso8601String().split('T').first;
+    final response = await _client
+        .from('daily_reports')
+        .select()
+        .eq('company_id', companyId)
+        .eq('report_date', dateStr)
+        .maybeSingle();
+    if (response == null) return null;
+    return DailyReport.fromJson(response);
+  }
+
+  /// Triggers the database generator function to aggregate data for a specific date.
+  Future<void> triggerReportCompilation(String companyId, DateTime date) async {
+    final dateStr = date.toIso8601String().split('T').first;
+    await _client.rpc('generate_daily_report_for_company', params: {
+      'p_company_id': companyId,
+      'p_date': dateStr,
+    });
+  }
+
+
   /// Updates a partner's bank details.
   Future<Profile> updateProfileBankDetails(
     String profileId, {
@@ -333,4 +449,80 @@ class SupabaseService {
     );
     return (response as num).toDouble();
   }
+
+  /// Exposed client for real-time subscription
+  SupabaseClient get client => _client;
+
+  /// Fetches recent notifications for a user, sorted by created_at desc.
+  Future<List<NotificationModel>> getNotifications(String userId) async {
+    final response = await _client
+        .from('notifications')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => NotificationModel.fromJson(json))
+        .toList();
+  }
+
+  /// Marks a specific notification as read.
+  Future<NotificationModel> markNotificationRead(String id) async {
+    final response = await update('notifications', id, {'read': true});
+    return NotificationModel.fromJson(response);
+  }
+
+  /// Marks all notifications for a user as read.
+  Future<void> markAllNotificationsRead(String userId) async {
+    await _client
+        .from('notifications')
+        .update({'read': true})
+        .eq('user_id', userId);
+  }
+
+  /// Updates the FCM token for a user profile.
+  Future<Profile> updateFcmToken(String userId, String token) async {
+    final response = await update('profiles', userId, {'fcm_token': token});
+    return Profile.fromJson(response);
+  }
+
+  /// Fetches goals with optional company filter.
+  Future<List<Goal>> getGoals({String? companyId}) async {
+    final list = await getAll('goals', companyId: companyId);
+    return list.map((json) => Goal.fromJson(json)).toList();
+  }
+
+  /// Inserts a new goal and returns it.
+  Future<Goal> createGoal(Map<String, dynamic> data) async {
+    final response = await insert('goals', data);
+    return Goal.fromJson(response);
+  }
+
+  /// Invokes the database RPC function to create a new staff member and triggers the password reset invitation email.
+
+  Future<String> inviteStaff({
+    required String email,
+    required String phone,
+    required String fullName,
+    required UserRole role,
+    required String companyId,
+  }) async {
+    // 1. Invoke the postgres RPC function
+    final response = await _client.rpc(
+      'invite_staff_member',
+      params: {
+        'p_email': email,
+        'p_phone': phone,
+        'p_name': fullName,
+        'p_role': role.value,
+        'p_company_id': companyId,
+      },
+    );
+    final userId = response as String;
+    
+    // 2. Trigger the password reset invitation email
+    await _client.auth.resetPasswordForEmail(email);
+    
+    return userId;
+  }
 }
+
