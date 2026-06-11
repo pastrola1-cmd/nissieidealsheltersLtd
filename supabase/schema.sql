@@ -392,7 +392,6 @@ BEGIN
   -- Auto-confirm the email of the user on the database level (failsafe)
   UPDATE auth.users 
   SET email_confirmed_at = COALESCE(email_confirmed_at, now()),
-      confirmed_at = COALESCE(confirmed_at, now()),
       last_sign_in_at = COALESCE(last_sign_in_at, now())
   WHERE id = new.id;
 
