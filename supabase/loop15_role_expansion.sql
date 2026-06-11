@@ -151,7 +151,7 @@ BEGIN
     updated_at
   )
   VALUES (
-    v_user_id::text,
+    v_user_id,
     v_user_id,
     jsonb_build_object('sub', v_user_id, 'email', p_email),
     'email',
