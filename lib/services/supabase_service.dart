@@ -497,16 +497,21 @@ class SupabaseService {
     return Goal.fromJson(response);
   }
 
-  /// Invokes the database RPC function to create a new staff member and triggers the password reset invitation email.
+  /// Invokes the database RPC function to create a new staff member with a
+  /// temporary password. Returns a record containing the user ID and the
+  /// plaintext temporary password so the admin can share it with the staff.
 
-  Future<String> inviteStaff({
+  Future<({String userId, String tempPassword})> inviteStaff({
     required String email,
     required String phone,
     required String fullName,
     required UserRole role,
     required String companyId,
   }) async {
-    // 1. Invoke the postgres RPC function
+    // Generate a readable temporary password (8 chars)
+    final tempPassword = _generateTempPassword();
+
+    // Invoke the postgres RPC function with the temp password
     final response = await _client.rpc(
       'invite_staff_member',
       params: {
@@ -515,18 +520,18 @@ class SupabaseService {
         'p_name': fullName,
         'p_role': role.value,
         'p_company_id': companyId,
+        'p_password': tempPassword,
       },
     );
     final userId = response as String;
-    
-    // 2. Trigger the password reset invitation email
-    try {
-      await _client.auth.resetPasswordForEmail(email);
-    } catch (e) {
-      print('Warning: Could not send password reset email to $email: $e');
-    }
-    
-    return userId;
+
+    return (userId: userId, tempPassword: tempPassword);
+  }
+
+  /// Generates a human-readable temporary password like "Staff7294"
+  String _generateTempPassword() {
+    const prefix = 'Staff';
+    final random = DateTime.now().millisecondsSinceEpoch % 10000;
+    return '$prefix$random';
   }
 }
-

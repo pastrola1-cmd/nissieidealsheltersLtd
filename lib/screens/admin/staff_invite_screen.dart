@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ppn/core/constants/app_colors.dart';
@@ -22,6 +23,7 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
   UserRole _selectedRole = UserRole.marketer;
   bool _isSaving = false;
   bool _success = false;
+  String _tempPassword = '';
 
   @override
   void dispose() {
@@ -52,7 +54,7 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
 
     try {
       final supabaseService = ref.read(supabaseServiceProvider);
-      await supabaseService.inviteStaff(
+      final result = await supabaseService.inviteStaff(
         email: _emailController.text.trim().toLowerCase(),
         phone: _phoneController.text.trim(),
         fullName: _nameController.text.trim(),
@@ -63,6 +65,7 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
       setState(() {
         _isSaving = false;
         _success = true;
+        _tempPassword = result.tempPassword;
       });
     } catch (e) {
       setState(() => _isSaving = false);
@@ -78,72 +81,195 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
     }
   }
 
+  void _copyCredentials() {
+    final email = _emailController.text.trim().toLowerCase();
+    final text = 'Login Credentials for ${_nameController.text.trim()}:\n'
+        'Email: $email\n'
+        'Password: $_tempPassword\n\n'
+        'Please change your password after first login.';
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Login credentials copied to clipboard!'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     if (_success) {
+      final email = _emailController.text.trim().toLowerCase();
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    color: AppColors.success,
-                    size: 80,
-                  ),
+        appBar: AppBar(
+          title: const Text('Staff Created'),
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+          foregroundColor: AppColors.textPrimary,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 32),
-                Text(
-                  'Invitation Sent!',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.success,
+                  size: 64,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  '${_nameController.text.trim()} has been registered as a ${_selectedRole.label}.\nAn email invite was sent to ${_emailController.text.trim()} to set their password.',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Staff Member Created!',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
                 ),
-                const SizedBox(height: 48),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => context.pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${_nameController.text.trim()} has been registered as a ${_selectedRole.label}.',
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // --- Credentials Card ---
+              Card(
+                color: AppColors.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.accent, width: 1.5),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.key_rounded, color: AppColors.accent, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Login Credentials',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Back to Dashboard',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                      const SizedBox(height: 20),
+
+                      // Email row
+                      _credentialRow(
+                        context,
+                        label: 'Email',
+                        value: email,
+                        icon: Icons.email_outlined,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password row
+                      _credentialRow(
+                        context,
+                        label: 'Temporary Password',
+                        value: _tempPassword,
+                        icon: Icons.lock_outline_rounded,
+                      ),
+                      const SizedBox(height: 20),
+
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: AppColors.warning, size: 20),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Share these credentials with your staff member. They can use them to log in immediately.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+
+              // Copy button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _copyCredentials,
+                  icon: const Icon(Icons.copy_rounded),
+                  label: const Text(
+                    'Copy Credentials',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Back button
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () => context.pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Back to Dashboard',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
           ),
         ),
       );
@@ -269,7 +395,7 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
                           elevation: 0,
                         ),
                         child: Text(
-                          'Send Invitation',
+                          'Create Staff Account',
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -280,6 +406,68 @@ class _StaffInviteScreenState extends ConsumerState<StaffInviteScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _credentialRow(BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textTertiary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textTertiary,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('$label copied!'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            color: AppColors.accent,
+            tooltip: 'Copy $label',
+          ),
+        ],
       ),
     );
   }

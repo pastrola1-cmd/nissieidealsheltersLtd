@@ -88,12 +88,13 @@ CREATE OR REPLACE FUNCTION public.invite_staff_member(
   p_phone TEXT,
   p_name TEXT,
   p_role TEXT,
-  p_company_id UUID
+  p_company_id UUID,
+  p_password TEXT DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
   v_user_id UUID;
-  v_temp_password TEXT;
+  v_hashed_password TEXT;
 BEGIN
   -- Check if user already exists
   SELECT id INTO v_user_id FROM auth.users WHERE email = p_email;
@@ -104,8 +105,12 @@ BEGIN
 
   -- Generate a random user ID
   v_user_id := gen_random_uuid();
-  -- Generate a temporary password hash (random uuid string hashed)
-  v_temp_password := crypt(gen_random_uuid()::text, gen_salt('bf'));
+  -- Hash the provided password, or generate a random one if none given
+  IF p_password IS NOT NULL AND p_password != '' THEN
+    v_hashed_password := crypt(p_password, gen_salt('bf'));
+  ELSE
+    v_hashed_password := crypt(gen_random_uuid()::text, gen_salt('bf'));
+  END IF;
 
   INSERT INTO auth.users (
     id,
@@ -127,8 +132,8 @@ BEGIN
     v_user_id,
     '00000000-0000-0000-0000-000000000000',
     p_email,
-    v_temp_password,
-    now(), -- Auto-confirm so they are immediately active and can trigger recovery flow
+    v_hashed_password,
+    now(),
     jsonb_build_object('provider', 'email', 'providers', array['email']),
     jsonb_build_object('full_name', p_name, 'role', p_role, 'company_id', p_company_id),
     now(),
@@ -140,7 +145,7 @@ BEGIN
     ''
   );
 
-  -- Insert into auth.identities to enable GoTrue password recovery/invite flow
+  -- Insert into auth.identities to enable GoTrue login
   INSERT INTO auth.identities (
     id,
     user_id,
