@@ -126,7 +126,14 @@ BEGIN
     phone,
     phone_confirmed_at,
     aud,
-    confirmation_token
+    confirmation_token,
+    email_change,
+    email_change_token_new,
+    recovery_token,
+    email_change_token_current,
+    phone_change,
+    phone_change_token,
+    reauthentication_token
   )
   VALUES (
     v_user_id,
@@ -142,6 +149,13 @@ BEGIN
     p_phone,
     now(),
     'authenticated',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     ''
   );
 
