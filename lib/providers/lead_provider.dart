@@ -171,6 +171,7 @@ class LeadNotifier extends Notifier<LeadState> {
         'source_channel': sourceChannel,
         'stage': LeadStage.newLead.value,
         'notes': notes,
+        if (profile.role == UserRole.marketer) 'assigned_agent_id': profile.id,
       };
 
       final newLead = await _supabaseService.createLead(insertData);

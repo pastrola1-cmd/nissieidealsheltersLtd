@@ -75,6 +75,10 @@ class NotificationsScreen extends ConsumerWidget {
       case 'lead_stage_changed':
         if (role == UserRole.admin || role == UserRole.platformAdmin) {
           context.push('/admin/leads');
+        } else if (role == UserRole.manager) {
+          context.push('/manager/leads');
+        } else if (role == UserRole.marketer) {
+          context.push('/marketer/leads');
         } else if (role == UserRole.partner) {
           context.push('/partner/leads');
         }

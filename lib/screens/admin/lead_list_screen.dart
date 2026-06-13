@@ -9,6 +9,7 @@ import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/lead_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/partner_provider.dart';
+import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/widgets/shimmer_loading.dart';
 import 'package:ppn/widgets/empty_state.dart';
 
@@ -41,6 +42,14 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     final state = ref.watch(leadProvider);
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
+
+    final authState = ref.watch(authProvider);
+    final role = authState.profile?.role;
+    final routePrefix = role == UserRole.manager
+        ? '/manager/leads'
+        : role == UserRole.marketer
+            ? '/marketer/leads'
+            : '/admin/leads';
 
     // Cache providers for name resolutions
     final properties = ref.watch(propertyProvider).properties;
@@ -111,7 +120,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: ElevatedButton.icon(
-                onPressed: () => context.push('/admin/leads/add'),
+                onPressed: () => context.push('$routePrefix/add'),
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('New Lead'),
                 style: ElevatedButton.styleFrom(
@@ -157,7 +166,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
                             children: [
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () => context.push('/admin/leads/import'),
+                                  onPressed: () => context.push('$routePrefix/import'),
                                   icon: const Icon(Icons.file_upload_outlined, size: 16, color: AppColors.primary),
                                   label: const Text('Import CSV', style: TextStyle(color: AppColors.primary)),
                                   style: OutlinedButton.styleFrom(
@@ -170,7 +179,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  onPressed: () => context.push('/admin/leads/export'),
+                                  onPressed: () => context.push('$routePrefix/export'),
                                   icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.primary),
                                   label: const Text('Export CSV', style: TextStyle(color: AppColors.primary)),
                                   style: OutlinedButton.styleFrom(
@@ -638,6 +647,14 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     Profile? partner,
     ThemeData theme,
   ) {
+    final authState = ref.read(authProvider);
+    final role = authState.profile?.role;
+    final routePrefix = role == UserRole.manager
+        ? '/manager/leads'
+        : role == UserRole.marketer
+            ? '/marketer/leads'
+            : '/admin/leads';
+
     Color stageColor;
     switch (lead.stage) {
       case LeadStage.newLead:
@@ -674,7 +691,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
             }
           });
         } else {
-          context.push('/admin/leads/${lead.id}');
+          context.push('$routePrefix/${lead.id}');
         }
       },
       onLongPress: () {

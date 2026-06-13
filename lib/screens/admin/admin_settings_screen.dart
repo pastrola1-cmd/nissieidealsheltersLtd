@@ -203,11 +203,13 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
     final company = authState.company;
+    final role = authState.profile?.role;
+    final title = (role == UserRole.admin || role == UserRole.platformAdmin) ? 'Admin Settings' : 'Settings';
     
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Admin Settings'),
+        title: Text(title),
         backgroundColor: AppColors.surface,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
@@ -341,7 +343,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
             ),
             const SizedBox(height: 24),
 
-            if (company != null) ...[
+            if (company != null && (role == UserRole.admin || role == UserRole.platformAdmin)) ...[
               Card(
                 color: AppColors.surface,
                 elevation: 0,

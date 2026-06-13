@@ -167,6 +167,21 @@ class ManagerDashboardScreen extends ConsumerWidget {
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/manager/team'),
                     ),
+                    const Divider(),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blueGrey.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.settings_outlined, color: Colors.blueGrey),
+                      ),
+                      title: const Text('Account Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Edit profile and update password'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/settings'),
+                    ),
                   ],
                 ),
               ),

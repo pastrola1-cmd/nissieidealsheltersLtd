@@ -239,6 +239,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CompanyProfileScreen(),
       ),
       GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const AdminSettingsScreen(),
+      ),
+      GoRoute(
         path: '/admin/settings',
         name: 'adminSettings',
         builder: (context, state) => const AdminSettingsScreen(),
@@ -508,8 +513,23 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/manager/leads',
                 name: 'managerLeads',
-                builder: (context, state) => const ManagerLeadsScreen(),
+                builder: (context, state) => const LeadListScreen(),
                 routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: 'managerLeadAdd',
+                    builder: (context, state) => const ManualLeadScreen(),
+                  ),
+                  GoRoute(
+                    path: 'import',
+                    name: 'managerLeadImport',
+                    builder: (context, state) => const LeadImportScreen(),
+                  ),
+                  GoRoute(
+                    path: 'export',
+                    name: 'managerLeadExport',
+                    builder: (context, state) => const LeadExportScreen(),
+                  ),
                   GoRoute(
                     path: ':id',
                     name: 'managerLeadDetail',
@@ -554,8 +574,23 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/marketer/leads',
                 name: 'marketerLeads',
-                builder: (context, state) => const MarketerLeadsScreen(),
+                builder: (context, state) => const LeadListScreen(),
                 routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: 'marketerLeadAdd',
+                    builder: (context, state) => const ManualLeadScreen(),
+                  ),
+                  GoRoute(
+                    path: 'import',
+                    name: 'marketerLeadImport',
+                    builder: (context, state) => const LeadImportScreen(),
+                  ),
+                  GoRoute(
+                    path: 'export',
+                    name: 'marketerLeadExport',
+                    builder: (context, state) => const LeadExportScreen(),
+                  ),
                   GoRoute(
                     path: ':id',
                     name: 'marketerLeadDetail',
