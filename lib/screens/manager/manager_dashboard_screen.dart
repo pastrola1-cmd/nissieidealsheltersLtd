@@ -150,7 +150,7 @@ class ManagerDashboardScreen extends ConsumerWidget {
                       title: const Text('Performance Reports', style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: const Text('View daily agency lead, inspection, and revenue reports'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/manager/reports'),
+                      onTap: () => context.go('/manager/reports'),
                     ),
                     const Divider(),
                     ListTile(
@@ -165,7 +165,7 @@ class ManagerDashboardScreen extends ConsumerWidget {
                       title: const Text('Manage Team', style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: const Text('Track agent activities and performance'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/manager/team'),
+                      onTap: () => context.go('/manager/team'),
                     ),
                     const Divider(),
                     ListTile(

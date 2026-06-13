@@ -63,24 +63,24 @@ class NotificationsScreen extends ConsumerWidget {
     switch (notification.type) {
       case 'signup':
         if (role == UserRole.admin || role == UserRole.platformAdmin) {
-          context.push('/admin/partners');
+          context.go('/admin/partners');
         }
         break;
       case 'partner_approved':
         if (role == UserRole.partner) {
-          context.push('/partner/dashboard');
+          context.go('/partner/dashboard');
         }
         break;
       case 'lead_created':
       case 'lead_stage_changed':
         if (role == UserRole.admin || role == UserRole.platformAdmin) {
-          context.push('/admin/leads');
+          context.go('/admin/leads');
         } else if (role == UserRole.manager) {
-          context.push('/manager/leads');
+          context.go('/manager/leads');
         } else if (role == UserRole.marketer) {
-          context.push('/marketer/leads');
+          context.go('/marketer/leads');
         } else if (role == UserRole.partner) {
-          context.push('/partner/leads');
+          context.go('/partner/leads');
         }
         break;
       case 'inspection_booked':
@@ -89,13 +89,13 @@ class NotificationsScreen extends ConsumerWidget {
         } else if (role == UserRole.partner) {
           context.push('/partner/inspections');
         } else if (role == UserRole.buyer) {
-          context.push('/buyer/inspections');
+          context.go('/buyer/inspections');
         }
         break;
       case 'commission_approved':
       case 'withdrawal_resolved':
         if (role == UserRole.partner) {
-          context.push('/partner/earnings');
+          context.go('/partner/earnings');
         }
         break;
       default:

@@ -96,7 +96,7 @@ class MarketerDashboardScreen extends ConsumerWidget {
                       title: const Text('My Leads', style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: const Text('Track and update your assigned leads'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/marketer/leads'),
+                      onTap: () => context.go('/marketer/leads'),
                     ),
                     const Divider(),
                     ListTile(

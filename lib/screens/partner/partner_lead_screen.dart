@@ -9,7 +9,8 @@ import 'package:ppn/providers/lead_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 
 class PartnerLeadScreen extends ConsumerStatefulWidget {
-  const PartnerLeadScreen({super.key});
+  final String? initialStageFilter;
+  const PartnerLeadScreen({super.key, this.initialStageFilter});
 
   @override
   ConsumerState<PartnerLeadScreen> createState() => _PartnerLeadScreenState();
@@ -19,6 +20,15 @@ class _PartnerLeadScreenState extends ConsumerState<PartnerLeadScreen> {
   final _searchController = TextEditingController();
   String _selectedStageFilter = 'All'; // 'All', 'New', 'Contacted', 'Inspection Booked', 'Negotiation', 'Closed', 'Lost'
   String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final validStages = ['All', 'New', 'Contacted', 'Inspection Booked', 'Negotiation', 'Closed', 'Lost'];
+    if (widget.initialStageFilter != null && validStages.contains(widget.initialStageFilter)) {
+      _selectedStageFilter = widget.initialStageFilter!;
+    }
+  }
 
   @override
   void dispose() {

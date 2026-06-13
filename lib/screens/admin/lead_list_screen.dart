@@ -14,7 +14,8 @@ import 'package:ppn/widgets/shimmer_loading.dart';
 import 'package:ppn/widgets/empty_state.dart';
 
 class LeadListScreen extends ConsumerStatefulWidget {
-  const LeadListScreen({super.key});
+  final String? initialStageFilter;
+  const LeadListScreen({super.key, this.initialStageFilter});
 
   @override
   ConsumerState<LeadListScreen> createState() => _LeadListScreenState();
@@ -25,6 +26,15 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
   String _selectedStageFilter = 'All'; 
   String _searchQuery = '';
   Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    final validStages = ['All', 'New', 'Contacted', 'Inspection Booked', 'Negotiation', 'Closed', 'Lost'];
+    if (widget.initialStageFilter != null && validStages.contains(widget.initialStageFilter)) {
+      _selectedStageFilter = widget.initialStageFilter!;
+    }
+  }
 
   // Selection state
   final Set<String> _selectedLeadIds = {};

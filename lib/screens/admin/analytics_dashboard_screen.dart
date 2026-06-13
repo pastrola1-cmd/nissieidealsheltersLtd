@@ -333,7 +333,7 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
                   padding: const EdgeInsets.only(bottom: 16),
                   child: InkWell(
                     onTap: () {
-                      context.push('/$rolePath/leads');
+                      context.go('/$rolePath/leads?stage=${stage.label}');
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Column(

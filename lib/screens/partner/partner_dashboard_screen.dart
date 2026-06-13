@@ -197,7 +197,7 @@ class PartnerDashboardScreen extends ConsumerWidget {
                       child: _buildActionButton(
                         icon: Icons.home_work_outlined,
                         label: 'Browse Listings',
-                        onTap: () => context.push('/partner/properties'),
+                        onTap: () => context.go('/partner/properties'),
                         color: AppColors.accent,
                       ),
                     ),
@@ -206,7 +206,7 @@ class PartnerDashboardScreen extends ConsumerWidget {
                       child: _buildActionButton(
                         icon: Icons.wallet_giftcard_rounded,
                         label: 'Payout Wallet',
-                        onTap: () => context.push('/partner/earnings'),
+                        onTap: () => context.go('/partner/earnings'),
                         color: Colors.purple,
                       ),
                     ),

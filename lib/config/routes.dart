@@ -452,7 +452,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/admin/leads',
                 name: 'adminLeads',
-                builder: (context, state) => const LeadListScreen(),
+                builder: (context, state) {
+                  final stage = state.uri.queryParameters['stage'];
+                  return LeadListScreen(initialStageFilter: stage);
+                },
                 routes: [
                   GoRoute(
                     path: 'add',
@@ -513,7 +516,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/manager/leads',
                 name: 'managerLeads',
-                builder: (context, state) => const LeadListScreen(),
+                builder: (context, state) {
+                  final stage = state.uri.queryParameters['stage'];
+                  return LeadListScreen(initialStageFilter: stage);
+                },
                 routes: [
                   GoRoute(
                     path: 'add',
@@ -574,7 +580,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/marketer/leads',
                 name: 'marketerLeads',
-                builder: (context, state) => const LeadListScreen(),
+                builder: (context, state) {
+                  final stage = state.uri.queryParameters['stage'];
+                  return LeadListScreen(initialStageFilter: stage);
+                },
                 routes: [
                   GoRoute(
                     path: 'add',
@@ -645,7 +654,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/partner/leads',
                 name: 'partnerLeads',
-                builder: (context, state) => const PartnerLeadScreen(),
+                builder: (context, state) {
+                  final stage = state.uri.queryParameters['stage'];
+                  return PartnerLeadScreen(initialStageFilter: stage);
+                },
                 routes: [
                   GoRoute(
                     path: 'add',
