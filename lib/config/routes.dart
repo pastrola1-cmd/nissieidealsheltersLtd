@@ -646,6 +646,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/partner/leads',
                 name: 'partnerLeads',
                 builder: (context, state) => const PartnerLeadScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: 'partnerLeadAdd',
+                    builder: (context, state) => const ManualLeadScreen(),
+                  ),
+                ],
               ),
             ],
           ),

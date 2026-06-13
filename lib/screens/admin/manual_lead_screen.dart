@@ -32,6 +32,20 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
   bool _isSaving = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final profile = ref.read(authProvider).profile;
+      if (profile != null && profile.role == UserRole.partner) {
+        setState(() {
+          _selectedPartnerId = profile.id;
+          _sourceChannel = 'referral';
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _buyerNameController.dispose();
     _buyerPhoneController.dispose();
@@ -79,6 +93,15 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
           onViewExisting: () {
             final authState = ref.read(authProvider);
             final role = authState.profile?.role;
+            if (role == UserRole.partner) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Lead already exists. Partners cannot view existing leads directly.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
             String detailRoute = '/admin/leads/${duplicate.id}';
             if (role == UserRole.manager) {
               detailRoute = '/manager/leads/${duplicate.id}';
@@ -97,9 +120,10 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
             if (mounted) {
               setState(() => _isSaving = false);
               if (success) {
+                final isPartner = ref.read(authProvider).profile?.role == UserRole.partner;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Lead details merged successfully!'),
+                  SnackBar(
+                    content: Text(isPartner ? 'Referral details merged successfully!' : 'Lead details merged successfully!'),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -133,9 +157,10 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
     if (mounted) {
       setState(() => _isSaving = false);
       if (success) {
+        final isPartner = ref.read(authProvider).profile?.role == UserRole.partner;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lead registered successfully!'),
+          SnackBar(
+            content: Text(isPartner ? 'Referral submitted successfully!' : 'Lead registered successfully!'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -156,6 +181,9 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final profile = ref.watch(authProvider).profile;
+    final isPartner = profile?.role == UserRole.partner;
+    
     final properties = ref.watch(propertyProvider).properties.where((p) => p.status == PropertyStatus.available).toList();
     final partners = ref.watch(partnerProvider).partners.where((p) => p.status == PartnerStatus.approved).toList();
     
@@ -164,7 +192,7 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Add Lead Manually'),
+        title: Text(isPartner ? 'Refer a Buyer' : 'Add Lead Manually'),
         backgroundColor: AppColors.surface,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
@@ -250,7 +278,7 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Property & Partner Attribution',
+                        isPartner ? 'Property Listing' : 'Property & Partner Attribution',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
@@ -276,46 +304,49 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
                         },
                         validator: (value) => value == null ? 'Please select a property listing' : null,
                       ),
-                      const SizedBox(height: 16),
+                      
+                      if (!isPartner) ...[
+                        const SizedBox(height: 16),
 
-                      // Partner Dropdown
-                      DropdownButtonFormField<String?>(
-                        initialValue: _selectedPartnerId,
-                        decoration: _inputDecoration(label: 'Attributed Partner (Optional)', icon: Icons.handshake_outlined),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Direct Client (No Partner Referral)'),
-                          ),
-                          ...partners.map((partner) {
-                            return DropdownMenuItem<String?>(
-                              value: partner.id,
-                              child: Text('${partner.fullName ?? partner.email} (${partner.referralCode})'),
-                            );
-                          }),
-                        ],
-                        onChanged: (val) {
-                          setState(() => _selectedPartnerId = val);
-                        },
-                      ),
-                      const SizedBox(height: 16),
+                        // Partner Dropdown
+                        DropdownButtonFormField<String?>(
+                          initialValue: _selectedPartnerId,
+                          decoration: _inputDecoration(label: 'Attributed Partner (Optional)', icon: Icons.handshake_outlined),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Direct Client (No Partner Referral)'),
+                            ),
+                            ...partners.map((partner) {
+                              return DropdownMenuItem<String?>(
+                                value: partner.id,
+                                child: Text('${partner.fullName ?? partner.email} (${partner.referralCode})'),
+                              );
+                            }),
+                          ],
+                          onChanged: (val) {
+                            setState(() => _selectedPartnerId = val);
+                          },
+                        ),
+                        const SizedBox(height: 16),
 
-                      // Source Channel
-                      DropdownButtonFormField<String>(
-                        initialValue: _sourceChannel,
-                        decoration: _inputDecoration(label: 'Lead Source Channel', icon: Icons.campaign_outlined),
-                        items: const [
-                          DropdownMenuItem(value: 'walk_in', child: Text('Walk In / Offline')),
-                          DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp Referral')),
-                          DropdownMenuItem(value: 'website', child: Text('Direct Website')),
-                          DropdownMenuItem(value: 'referral', child: Text('Other Referrals')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _sourceChannel = val);
-                          }
-                        },
-                      ),
+                        // Source Channel
+                        DropdownButtonFormField<String>(
+                          initialValue: _sourceChannel,
+                          decoration: _inputDecoration(label: 'Lead Source Channel', icon: Icons.campaign_outlined),
+                          items: const [
+                            DropdownMenuItem(value: 'walk_in', child: Text('Walk In / Offline')),
+                            DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp Referral')),
+                            DropdownMenuItem(value: 'website', child: Text('Direct Website')),
+                            DropdownMenuItem(value: 'referral', child: Text('Other Referrals')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _sourceChannel = val);
+                            }
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -383,7 +414,7 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
                           elevation: 0,
                         ),
                         child: Text(
-                          'Register Buyer Lead',
+                          isPartner ? 'Submit Referral' : 'Register Buyer Lead',
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

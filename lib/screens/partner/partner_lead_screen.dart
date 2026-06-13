@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
@@ -71,6 +72,18 @@ class _PartnerLeadScreenState extends ConsumerState<PartnerLeadScreen> {
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
         centerTitle: false,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/partner/leads/add'),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: const Text(
+          'Refer Buyer',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: state.isLoading && state.leads.isEmpty
           ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
@@ -473,6 +486,21 @@ class _PartnerLeadScreenState extends ConsumerState<PartnerLeadScreen> {
               'Share your property links to start generating leads.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => context.push('/partner/leads/add'),
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text('Register Buyer Manually'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
               ),
             ),
           ],
