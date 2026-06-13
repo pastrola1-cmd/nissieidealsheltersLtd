@@ -44,7 +44,7 @@ jobs:
 
   deploy_web:
     name: Build & Deploy Web
-    needs: [analyze_and_test, build_apk]
+    needs: analyze_and_test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
@@ -61,15 +61,6 @@ jobs:
 
       - name: Build Web release
         run: flutter build web --release
-
-      - name: Download APK Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-release-apk
-          path: build/web
-
-      - name: Rename APK in Web folder
-        run: mv build/web/app-release.apk build/web/scalewealthestate-release.apk
 
       - name: Deploy to Firebase Hosting
         uses: w9jds/firebase-action@master
