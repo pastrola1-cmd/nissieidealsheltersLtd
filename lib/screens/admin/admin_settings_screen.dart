@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/utils/validators.dart';
 import 'package:ppn/models/models.dart';
+import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
