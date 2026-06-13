@@ -479,3 +479,33 @@ We set up a secure, automated CI/CD pipeline in the repository using **GitHub Ac
   2. **Environment File:** Safely uploaded the contents of `env.txt` as the repository secret `ENV_TXT`, and configured the workflow to recreate the file before build/tests execute. This resolved the `Failed to build asset bundle` error on the remote runner.
 
 ---
+
+## 🔁 LOOP 27: Staff Lead Access, RLS Policy Updates & Temporary Password Changes
+
+We have successfully resolved the issue where staff members (Managers and Marketers) were unable to change their temporary passwords and manage company leads.
+
+### 1. Temporary Password Change Fix
+* **Adaptive Settings Route:** Registered the path `/settings` globally in [routes.dart](file:///C:/Users/Admin/Desktop/ppn/lib/config/routes.dart) pointing to the general [AdminSettingsScreen](file:///C:/Users/Admin/Desktop/ppn/lib/screens/admin/admin_settings_screen.dart).
+* **Role-Adaptive Styling:** Refactored the Settings Screen to dynamically adapt its title to "Settings" (for non-admins) and hide administrative actions (like company billing) from staff users. The Change Password section is now fully visible and functional for all logged-in roles.
+* **Dashboard Settings Tile:** Integrated "Account Settings" shortcuts on the Manager and Marketer dashboards to route staff directly to `/settings`.
+
+### 2. Leads Management for Staff (Managers & Marketers)
+* **Access Delegation:** Configured the `/manager/leads` and `/marketer/leads` branch in the app's router to map directly to the fully-functional [LeadListScreen](file:///C:/Users/Admin/Desktop/ppn/lib/screens/admin/lead_list_screen.dart).
+* **Role-Aware Prefixing:** Updated navigation paths across the leads system to dynamically compute role prefixes (e.g. `/manager/leads/add`), bypassing `/admin/` guards and letting managers/marketers add, import, export, and view leads.
+* **Automatic Marketer Lead Attribution:** Programmed `createLead` inside the `LeadNotifier` state provider to automatically assign the lead's `assigned_agent_id` to the marketer's profile ID if they are the creator of the lead.
+* **Notifications Routing:** Updated the shared notifications router so that when a manager or marketer taps a lead notification, they are directed to the correct path.
+
+### 3. Database RLS Updates
+* **SQL Patch:** Created [update_rls_policies.sql](file:///C:/Users/Admin/Desktop/update_rls_policies.sql) (and also in the repository as `supabase/loop27_staff_lead_policies.sql`). 
+* **Permissions Granted:**
+  * **SELECT:** Admins, Platform Admins, and Managers can read all company leads; Marketers can read leads assigned to them.
+  * **INSERT:** Admins, Platform Admins, Managers, and Marketers can create leads for their company.
+  * **UPDATE:** Admins, Platform Admins, and Managers can update any company lead; Marketers can update leads assigned to them.
+  * **DELETE:** Admins, Platform Admins, and Managers can delete any company lead.
+
+### 4. Release Compilation
+* **Aesthetic and Label Verification:** Verified application label is set to `ScaleWealth Estate` under AndroidManifest.xml.
+* **APK Build:** Compiled release version targetting `android-arm64`:
+  `flutter build apk --release --target-platform android-arm64`
+* **Desktop Output:** Copied output release file to the Desktop at:
+  [scalewealthestate-release.apk](file:///C:/Users/Admin/Desktop/scalewealthestate-release.apk)
