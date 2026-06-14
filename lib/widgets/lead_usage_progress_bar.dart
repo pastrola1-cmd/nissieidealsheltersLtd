@@ -50,7 +50,7 @@ class LeadUsageProgressBar extends ConsumerWidget {
       data: (usedCount) {
         final limit = company.effectiveLeadLimit;
         final isUnlimited = limit >= 999999;
-        final usageRatio = isUnlimited ? 0.0 : (usedCount / limit).clamp(0.0, 1.0);
+        final usageRatio = (isUnlimited || limit <= 0) ? 0.0 : (usedCount / limit).clamp(0.0, 1.0);
         final percent = (usageRatio * 100).toInt();
 
         Color progressColor = AppColors.success;
@@ -60,7 +60,7 @@ class LeadUsageProgressBar extends ConsumerWidget {
           progressColor = Colors.orange;
         }
 
-        final isLimitReached = !isUnlimited && usedCount >= limit;
+        final isLimitReached = !isUnlimited && limit > 0 && usedCount >= limit;
 
         return Card(
           elevation: 0,
