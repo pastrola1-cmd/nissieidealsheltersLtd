@@ -49,7 +49,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final service = ref.read(supabaseServiceProvider);
       final list = await service.getCompanies(excludeHidden: true);
       setState(() {
-        _companies = list;
+        _companies = [
+          Company(
+            id: 'manual',
+            name: 'Join via Company Code (Manual ID)',
+            createdAt: DateTime.now(),
+          ),
+          ...list,
+        ];
         if (list.isNotEmpty) {
           _selectedCompanyId = list.first.id;
         } else {
@@ -58,6 +65,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       });
     } catch (e) {
       setState(() {
+        _companies = [
+          Company(
+            id: 'manual',
+            name: 'Join via Company Code (Manual ID)',
+            createdAt: DateTime.now(),
+          ),
+        ];
         _selectedCompanyId = 'manual';
       });
     } finally {
@@ -420,47 +434,115 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             child: CircularProgressIndicator(color: AppColors.accent),
                           ),
                         )
-                      : DropdownButtonFormField<String>(
-                          value: _selectedCompanyId,
-                          dropdownColor: AppColors.surface,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textPrimary,
-                          ),
-                          decoration: _inputDecoration(
-                            label: _selectedRole == _UserRole.admin
-                                ? 'Select Agency to Join *'
-                                : 'Select Agency *',
-                            hint: 'Select your agency',
-                            prefixIcon: Icons.business_rounded,
-                          ),
-                          items: [
-                            DropdownMenuItem<String>(
-                              value: 'manual',
-                              child: Text(
-                                _selectedRole == _UserRole.admin
-                                    ? 'Join via Company Code (Manual)'
-                                    : 'Enter Company Code Manually / Fallback',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            ..._companies.map((c) => DropdownMenuItem<String>(
-                                  value: c.id,
-                                  child: Text(
-                                    c.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                )),
-                          ],
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedCompanyId = val;
+                      : RawAutocomplete<Company>(
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            return _companies.where((Company company) {
+                              return company.name
+                                  .toLowerCase()
+                                  .contains(textEditingValue.text.toLowerCase());
                             });
                           },
-                          validator: (val) {
-                            if (val == null) {
-                              return 'Please select an agency';
+                          displayStringForOption: (Company company) => company.name,
+                          onSelected: (Company company) {
+                            setState(() {
+                              _selectedCompanyId = company.id;
+                            });
+                          },
+                          optionsViewBuilder: (BuildContext context,
+                              AutocompleteOnSelected<Company> onSelected,
+                              Iterable<Company> options) {
+                            return Align(
+                              alignment: Alignment.topLeft,
+                              child: Material(
+                                elevation: 8.0,
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppColors.surface,
+                                child: Container(
+                                  width: MediaQuery.of(context).size.width - 64,
+                                  constraints: const BoxConstraints(maxHeight: 220.0),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: ListView.builder(
+                                      padding: EdgeInsets.zero,
+                                      shrinkWrap: true,
+                                      itemCount: options.length,
+                                      itemBuilder: (BuildContext context, int index) {
+                                        final Company option = options.elementAt(index);
+                                        return InkWell(
+                                          onTap: () {
+                                            onSelected(option);
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16.0, vertical: 14.0),
+                                            decoration: BoxDecoration(
+                                              border: index < options.length - 1
+                                                  ? Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5)))
+                                                  : null,
+                                            ),
+                                            child: Text(
+                                              option.name,
+                                              style: const TextStyle(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          fieldViewBuilder: (BuildContext context,
+                              TextEditingController textEditingController,
+                              FocusNode focusNode,
+                              VoidCallback onFieldSubmitted) {
+                            // Sync selected company to text controller on first load
+                            if (textEditingController.text.isEmpty && _selectedCompanyId != null) {
+                              final current = _companies.firstWhere(
+                                (c) => c.id == _selectedCompanyId,
+                                orElse: () => _companies.first,
+                              );
+                              textEditingController.text = current.name;
                             }
-                            return null;
+
+                            return TextFormField(
+                              controller: textEditingController,
+                              focusNode: focusNode,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
+                              decoration: _inputDecoration(
+                                label: _selectedRole == _UserRole.admin
+                                    ? 'Select Agency to Join *'
+                                    : 'Select Agency (Type to Search) *',
+                                hint: 'Search agency by name...',
+                                prefixIcon: Icons.search_rounded,
+                              ),
+                              validator: (value) {
+                                if (_selectedCompanyId == null) {
+                                  return 'Please select an agency';
+                                }
+                                final selectedCompany = _companies.firstWhere(
+                                  (c) => c.id == _selectedCompanyId,
+                                  orElse: () => Company(
+                                      id: '',
+                                      name: '',
+                                      createdAt: DateTime.now()),
+                                );
+                                if (textEditingController.text != selectedCompany.name) {
+                                  return 'Please select an agency from suggestions';
+                                }
+                                return null;
+                              },
+                            );
                           },
                         ),
                   if (_selectedCompanyId == 'manual') ...[

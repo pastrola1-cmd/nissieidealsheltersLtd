@@ -152,6 +152,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         return _getDefaultRouteForRole(profile.role);
       }
 
+      // ── Redirect pending approvals ──
+      if (profile.status == PartnerStatus.pending) {
+        if (state.matchedLocation != '/partner/awaiting-approval') {
+          return '/partner/awaiting-approval';
+        }
+        return null;
+      }
+
+      if (state.matchedLocation == '/partner/awaiting-approval') {
+        return _getDefaultRouteForRole(profile.role);
+      }
+
       // ── Redirect to profile completion if details are missing ──
       final needName = profile.fullName == null || profile.fullName!.isEmpty;
       final needPhone = profile.phone == null || profile.phone!.isEmpty;
