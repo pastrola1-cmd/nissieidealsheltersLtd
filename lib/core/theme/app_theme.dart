@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/constants/app_spacing.dart';
 
@@ -164,29 +165,25 @@ class AppTheme {
       ),
 
       // ── Text Theme ──
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontFamily: 'Inter',
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.outfit(
           fontSize: 32,
           fontWeight: FontWeight.w800,
           color: AppColors.textPrimary,
           height: 1.2,
         ),
-        displayMedium: TextStyle(
-          fontFamily: 'Inter',
+        displayMedium: GoogleFonts.outfit(
           fontSize: 28,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
           height: 1.2,
         ),
-        headlineLarge: TextStyle(
-          fontFamily: 'Inter',
+        headlineLarge: GoogleFonts.outfit(
           fontSize: 24,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
-        headlineMedium: TextStyle(
-          fontFamily: 'Inter',
+        headlineMedium: GoogleFonts.outfit(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,

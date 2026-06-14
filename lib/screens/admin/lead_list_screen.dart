@@ -454,49 +454,54 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     required double screenWidth,
   }) {
     final isMobile = screenWidth < 600;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Flex(
-          direction: isMobile ? Axis.vertical : Axis.horizontal,
-          children: [
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Total Leads',
-                value: total.toString(),
-                icon: Icons.assignment_rounded,
-                color: AppColors.primary,
-                textColor: AppColors.textOnPrimary,
-                isGradient: true,
-              ),
-            ),
-            if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'New',
-                value: newLeads.toString(),
-                icon: Icons.new_releases_outlined,
-                color: AppColors.info,
-                textColor: AppColors.info,
-                isGradient: false,
-              ),
-            ),
-            if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Closed Deals',
-                value: closed.toString(),
-                icon: Icons.check_circle_outline_rounded,
-                color: AppColors.success,
-                textColor: AppColors.successDark,
-                isGradient: false,
-              ),
-            ),
-          ],
-        );
-      },
+    
+    final cards = [
+      _buildStatCard(
+        title: 'Total Leads',
+        value: total.toString(),
+        icon: Icons.assignment_rounded,
+        color: AppColors.primary,
+        textColor: AppColors.textOnPrimary,
+        isGradient: true,
+      ),
+      _buildStatCard(
+        title: 'New',
+        value: newLeads.toString(),
+        icon: Icons.new_releases_outlined,
+        color: AppColors.info,
+        textColor: AppColors.info,
+        isGradient: false,
+      ),
+      _buildStatCard(
+        title: 'Closed Deals',
+        value: closed.toString(),
+        icon: Icons.check_circle_outline_rounded,
+        color: AppColors.success,
+        textColor: AppColors.successDark,
+        isGradient: false,
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        children: [
+          cards[0],
+          const SizedBox(height: 12),
+          cards[1],
+          const SizedBox(height: 12),
+          cards[2],
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: cards[0]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[1]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[2]),
+      ],
     );
   }
 

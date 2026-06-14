@@ -154,49 +154,54 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
     required double screenWidth,
   }) {
     final isMobile = screenWidth < 600;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Flex(
-          direction: isMobile ? Axis.vertical : Axis.horizontal,
-          children: [
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Total Listings',
-                value: total.toString(),
-                icon: Icons.business_rounded,
-                color: AppColors.primary,
-                textColor: AppColors.textOnPrimary,
-                isGradient: true,
-              ),
-            ),
-            if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Available',
-                value: available.toString(),
-                icon: Icons.check_circle_outline_rounded,
-                color: AppColors.success,
-                textColor: AppColors.successDark,
-                isGradient: false,
-              ),
-            ),
-            if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Sold Out',
-                value: sold.toString(),
-                icon: Icons.shopping_bag_outlined,
-                color: AppColors.secondary,
-                textColor: AppColors.secondary,
-                isGradient: false,
-              ),
-            ),
-          ],
-        );
-      },
+    
+    final cards = [
+      _buildStatCard(
+        title: 'Total Listings',
+        value: total.toString(),
+        icon: Icons.business_rounded,
+        color: AppColors.primary,
+        textColor: AppColors.textOnPrimary,
+        isGradient: true,
+      ),
+      _buildStatCard(
+        title: 'Available',
+        value: available.toString(),
+        icon: Icons.check_circle_outline_rounded,
+        color: AppColors.success,
+        textColor: AppColors.successDark,
+        isGradient: false,
+      ),
+      _buildStatCard(
+        title: 'Sold Out',
+        value: sold.toString(),
+        icon: Icons.shopping_bag_outlined,
+        color: AppColors.secondary,
+        textColor: AppColors.secondary,
+        isGradient: false,
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        children: [
+          cards[0],
+          const SizedBox(height: 12),
+          cards[1],
+          const SizedBox(height: 12),
+          cards[2],
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: cards[0]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[1]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[2]),
+      ],
     );
   }
 

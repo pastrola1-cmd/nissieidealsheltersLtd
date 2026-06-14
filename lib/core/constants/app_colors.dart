@@ -11,13 +11,14 @@ class AppColors {
   static const Color primaryDark = Color(0xFF0F0F1A);
 
   // ── Accent ──
-  static const Color accent = Color(0xFFE94560);
-  static const Color accentLight = Color(0xFFFF6B81);
-  static const Color accentDark = Color(0xFFC23152);
+  static const Color accent = Color(0xFF10B981);
+  static const Color accentLight = Color(0xFF34D399);
+  static const Color accentDark = Color(0xFF059669);
 
   // ── Secondary ──
-  static const Color secondary = Color(0xFF0F3460);
-  static const Color secondaryLight = Color(0xFF1A4A7A);
+  static const Color secondary = Color(0xFFF59E0B);
+  static const Color secondaryLight = Color(0xFFFEF3C7);
+  static const Color secondaryDark = Color(0xFFD97706);
 
   // ── Success / Green ──
   static const Color success = Color(0xFF10B981);
@@ -68,6 +69,10 @@ class AppColors {
   static const Color commissionPaid = Color(0xFF3B82F6);
   static const Color commissionDisputed = Color(0xFFEF4444);
 
+  // ── Dark Surfaces (for premium sections) ──
+  static const Color darkSurface = Color(0xFF1A1A2E);
+  static const Color darkSurfaceLight = Color(0xFF232946);
+
   // ── Gradients ──
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [primary, secondary],
@@ -85,5 +90,37 @@ class AppColors {
     colors: [success, Color(0xFF34D399)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
+  );
+
+  /// Premium gradient for dashboard welcome banners and hero sections
+  static const LinearGradient dashboardHeaderGradient = LinearGradient(
+    colors: [Color(0xFF0D9488), Color(0xFF10B981), Color(0xFF059669)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// CTA / Primary action button gradient (matches landing page)
+  static const LinearGradient ctaGradient = LinearGradient(
+    colors: [Color(0xFF10B981), Color(0xFF0D9488)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Warm accent for commissions, earnings, and gold highlights
+  static const LinearGradient warmAccentGradient = LinearGradient(
+    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Shimmer / loading effect gradient
+  static const LinearGradient shimmerGradient = LinearGradient(
+    colors: [
+      Color(0xFFF1F5F9),
+      Color(0xFFE2E8F0),
+      Color(0xFFF1F5F9),
+    ],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
   );
 }

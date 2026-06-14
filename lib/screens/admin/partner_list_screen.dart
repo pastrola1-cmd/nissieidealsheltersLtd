@@ -130,49 +130,54 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
     required double screenWidth,
   }) {
     final isMobile = screenWidth < 600;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Flex(
-          direction: isMobile ? Axis.vertical : Axis.horizontal,
-          children: [
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Total Partners',
-                value: total.toString(),
-                icon: Icons.people_outline_rounded,
-                color: AppColors.primary,
-                textColor: AppColors.textOnPrimary,
-                isGradient: true,
-              ),
-            ),
-            if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Pending Review',
-                value: pending.toString(),
-                icon: Icons.hourglass_top_rounded,
-                color: AppColors.warning,
-                textColor: AppColors.warningDark,
-                isGradient: false,
-              ),
-            ),
-            if (isMobile) const SizedBox(height: 12) else const SizedBox(width: 16),
-            Expanded(
-              flex: isMobile ? 0 : 1,
-              child: _buildStatCard(
-                title: 'Approved Partners',
-                value: approved.toString(),
-                icon: Icons.verified_user_outlined,
-                color: AppColors.success,
-                textColor: AppColors.successDark,
-                isGradient: false,
-              ),
-            ),
-          ],
-        );
-      },
+    
+    final cards = [
+      _buildStatCard(
+        title: 'Total Partners',
+        value: total.toString(),
+        icon: Icons.people_outline_rounded,
+        color: AppColors.primary,
+        textColor: AppColors.textOnPrimary,
+        isGradient: true,
+      ),
+      _buildStatCard(
+        title: 'Pending Review',
+        value: pending.toString(),
+        icon: Icons.hourglass_top_rounded,
+        color: AppColors.warning,
+        textColor: AppColors.warningDark,
+        isGradient: false,
+      ),
+      _buildStatCard(
+        title: 'Approved Partners',
+        value: approved.toString(),
+        icon: Icons.verified_user_outlined,
+        color: AppColors.success,
+        textColor: AppColors.successDark,
+        isGradient: false,
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        children: [
+          cards[0],
+          const SizedBox(height: 12),
+          cards[1],
+          const SizedBox(height: 12),
+          cards[2],
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: cards[0]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[1]),
+        const SizedBox(width: 16),
+        Expanded(child: cards[2]),
+      ],
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ppn/core/constants/app_colors.dart';
 
@@ -66,9 +67,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: _currentPage < _slides.length - 1
                     ? TextButton(
                         onPressed: _completeOnboarding,
-                        child: const Text(
+                        child: Text(
                           'Skip',
-                          style: TextStyle(
+                          style: GoogleFonts.outfit(
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.bold,
                           ),
@@ -114,7 +115,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           slide.title,
                           textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineSmall?.copyWith(
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                           ),
@@ -159,31 +161,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   // Next / Get Started button
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_currentPage < _slides.length - 1) {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      } else {
-                        _completeOnboarding();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppColors.ctaGradient,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      _currentPage == _slides.length - 1 ? 'Get Started' : 'Next',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          if (_currentPage < _slides.length - 1) {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          } else {
+                            _completeOnboarding();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                          child: Center(
+                            widthFactor: 1,
+                            child: Text(
+                              _currentPage == _slides.length - 1 ? 'Get Started' : 'Next',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -210,3 +227,4 @@ class OnboardingSlideData {
     required this.color,
   });
 }
+

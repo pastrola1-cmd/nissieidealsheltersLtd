@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ppn/core/constants/app_colors.dart';
@@ -149,20 +150,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     height: 52,
                     child: authState.isLoading
                         ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
-                        : ElevatedButton(
-                            onPressed: _handleLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              foregroundColor: AppColors.textOnAccent,
-                              shape: RoundedRectangleBorder(
+                        : DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: AppColors.ctaGradient,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.accent.withValues(alpha: 0.35),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _handleLogin,
                                 borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                              textStyle: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
+                                child: Center(
+                                  child: Text(
+                                    AppStrings.login,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textOnAccent,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                            child: const Text(AppStrings.login),
                           ),
                   ),
                   const SizedBox(height: 32),
@@ -202,27 +218,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildBrandHeader(ThemeData theme) {
     return Column(
       children: [
-        // App logo text
+        // App logo with premium gradient
         Container(
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            gradient: AppColors.accentGradient,
+            gradient: AppColors.dashboardHeaderGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: AppColors.accent.withValues(alpha: 0.3),
-                blurRadius: 20,
+                blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
             ],
           ),
           child: Center(
             child: Text(
-              AppStrings.appName,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: AppColors.textOnAccent,
+              'SW',
+              style: GoogleFonts.outfit(
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
+                color: AppColors.textOnAccent,
                 letterSpacing: 2,
               ),
             ),
@@ -231,9 +248,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 20),
         Text(
           AppStrings.appFullName,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: AppColors.textPrimary,
+          style: GoogleFonts.outfit(
+            fontSize: 22,
             fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 6),
