@@ -11,7 +11,8 @@ import 'package:ppn/services/supabase_service.dart';
 
 /// Sign-up screen for PPN.
 class SignupScreen extends ConsumerStatefulWidget {
-  const SignupScreen({super.key});
+  final String? initialEmail;
+  const SignupScreen({super.key, this.initialEmail});
 
   @override
   ConsumerState<SignupScreen> createState() => _SignupScreenState();
@@ -40,6 +41,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialEmail != null) {
+      _emailController.text = widget.initialEmail!;
+    }
     _loadCompanies();
   }
 

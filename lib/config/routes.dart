@@ -226,7 +226,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/signup',
         name: 'signup',
-        builder: (context, state) => const SignupScreen(),
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'];
+          return SignupScreen(initialEmail: email);
+        },
       ),
       GoRoute(
         path: '/partner/awaiting-approval',
