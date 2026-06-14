@@ -59,6 +59,9 @@ import 'package:ppn/screens/admin/goal_setting_screen.dart';
 import 'package:ppn/screens/admin/goal_detail_screen.dart';
 import 'package:ppn/screens/admin/analytics_dashboard_screen.dart';
 import 'package:ppn/screens/admin/block_performance_screen.dart';
+import 'package:ppn/screens/admin/document_generator_screen.dart';
+import 'package:ppn/screens/admin/document_preview_screen.dart';
+import 'package:ppn/screens/admin/document_list_screen.dart';
 
 
 
@@ -301,6 +304,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/reports',
         name: 'adminReports',
         builder: (context, state) => const DailyReportsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/documents',
+        name: 'adminDocuments',
+        builder: (context, state) => const DocumentListScreen(),
+      ),
+      GoRoute(
+        path: '/admin/documents/generate',
+        name: 'adminDocumentGenerate',
+        builder: (context, state) {
+          final leadId = state.uri.queryParameters['leadId']!;
+          return DocumentGeneratorScreen(leadId: leadId);
+        },
+      ),
+      GoRoute(
+        path: '/admin/documents/preview',
+        name: 'adminDocumentPreview',
+        builder: (context, state) {
+          final url = state.uri.queryParameters['url']!;
+          final title = state.uri.queryParameters['title']!;
+          return DocumentPreviewScreen(fileUrl: url, title: title);
+        },
       ),
       GoRoute(
         path: '/admin/campaigns',

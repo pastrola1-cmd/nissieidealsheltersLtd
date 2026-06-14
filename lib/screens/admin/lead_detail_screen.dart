@@ -11,6 +11,7 @@ import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/partner_provider.dart';
 import 'package:ppn/providers/earnings_provider.dart';
+import 'package:ppn/providers/document_provider.dart';
 
 class LeadDetailScreen extends ConsumerStatefulWidget {
   final String leadId;
@@ -614,6 +615,111 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
                             ),
                     ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Deal Documents Section ──
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Deal Documents',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.push('/admin/documents/generate?leadId=${lead.id}'),
+                  icon: const Icon(Icons.add_rounded, size: 16, color: AppColors.accent),
+                  label: const Text('New Offer', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Card(
+              color: AppColors.surface,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final docState = ref.watch(documentProvider);
+                    final leadDocs = docState.documents.where((d) => d.leadId == lead.id).toList();
+
+                    if (leadDocs.isEmpty) {
+                      return Column(
+                        children: [
+                          const Icon(Icons.folder_open_rounded, size: 40, color: AppColors.textTertiary),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No documents generated for this deal yet.',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: ElevatedButton.icon(
+                              onPressed: () => context.push('/admin/documents/generate?leadId=${lead.id}'),
+                              icon: const Icon(Icons.description_outlined, size: 18),
+                              label: const Text('Generate Offer Letter', style: TextStyle(fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: leadDocs.length,
+                      separatorBuilder: (context, idx) => const Divider(),
+                      itemBuilder: (context, idx) {
+                        final doc = leadDocs[idx];
+                        final formattedDate = DateFormat('MMM dd, yyyy').format(doc.createdAt);
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.description_rounded, color: AppColors.accent, size: 20),
+                          ),
+                          title: Text(
+                            doc.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            '${doc.type.label} • $formattedDate',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.open_in_new_rounded, size: 18, color: AppColors.textSecondary),
+                            onPressed: () {
+                              context.push('/admin/documents/preview?url=${Uri.encodeComponent(doc.fileUrl)}&title=${Uri.encodeComponent(doc.title)}');
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ),

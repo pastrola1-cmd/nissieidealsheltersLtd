@@ -534,4 +534,33 @@ class SupabaseService {
     final random = DateTime.now().millisecondsSinceEpoch % 10000;
     return '$prefix$random';
   }
+
+  // ─── Document Engine Helpers ───
+
+  /// Fetches documents with optional company and lead filters.
+  Future<List<DocumentRecord>> getDocuments({String? companyId, String? leadId}) async {
+    var query = _client.from('documents').select();
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    if (leadId != null) {
+      query = query.eq('lead_id', leadId);
+    }
+    final response = await query.order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => DocumentRecord.fromJson(json))
+        .toList();
+  }
+
+  /// Inserts a new document record.
+  Future<DocumentRecord> createDocument(Map<String, dynamic> data) async {
+    final response = await insert('documents', data);
+    return DocumentRecord.fromJson(response);
+  }
+
+  /// Deletes a document record.
+  Future<void> deleteDocument(String id) async {
+    await delete('documents', id);
+  }
 }
+

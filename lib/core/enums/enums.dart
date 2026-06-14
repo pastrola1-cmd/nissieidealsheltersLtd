@@ -171,3 +171,24 @@ enum TransactionStatus {
     );
   }
 }
+
+/// Types of documents generated in the system
+enum DocumentType {
+  offerLetter('offer_letter', 'Offer Letter'),
+  receipt('receipt', 'Receipt'),
+  tenancyAgreement('tenancy_agreement', 'Tenancy Agreement'),
+  purchaseAgreement('purchase_agreement', 'Purchase Agreement'),
+  commissionStatement('commission_statement', 'Commission Statement');
+
+  const DocumentType(this.value, this.label);
+  final String value;
+  final String label;
+
+  static DocumentType fromString(String value) {
+    return DocumentType.values.firstWhere(
+      (d) => d.value == value,
+      orElse: () => DocumentType.offerLetter,
+    );
+  }
+}
+

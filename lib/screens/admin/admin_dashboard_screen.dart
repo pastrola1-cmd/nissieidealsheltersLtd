@@ -300,6 +300,21 @@ class AdminDashboardScreen extends ConsumerWidget {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.description_rounded, color: Colors.blue),
+                          ),
+                          title: const Text('Document Registry', style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text('Generate and manage offer letters, tenancy agreements & receipts'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push('/admin/documents'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
                               color: Colors.amber.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
