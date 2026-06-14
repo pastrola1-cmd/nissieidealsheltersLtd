@@ -227,8 +227,10 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                                         context.push('/admin/documents/preview?url=${Uri.encodeComponent(doc.fileUrl)}&title=${Uri.encodeComponent(doc.title)}');
                                       } else if (action == 'share') {
                                         SharePlus.instance.share(
-                                          'Here is the ${doc.type.label} for the transaction: ${doc.fileUrl}',
-                                          subject: doc.title,
+                                          ShareParams(
+                                            text: 'Here is the ${doc.type.label} for the transaction: ${doc.fileUrl}',
+                                            subject: doc.title,
+                                          ),
                                         );
                                       } else if (action == 'delete') {
                                         _showDeleteConfirmation(context, doc.id);
