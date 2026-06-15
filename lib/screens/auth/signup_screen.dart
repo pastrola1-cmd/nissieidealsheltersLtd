@@ -61,11 +61,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
           ...list,
         ];
-        if (list.isNotEmpty) {
-          _selectedCompanyId = list.first.id;
-        } else {
-          _selectedCompanyId = 'manual';
-        }
+        _selectedCompanyId = null;
       });
     } catch (e) {
       setState(() {
@@ -523,6 +519,20 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: AppColors.textPrimary,
                               ),
+                              onChanged: (value) {
+                                final selectedCompany = _companies.firstWhere(
+                                  (c) => c.id == _selectedCompanyId,
+                                  orElse: () => Company(
+                                      id: '',
+                                      name: '',
+                                      createdAt: DateTime.now()),
+                                );
+                                if (value != selectedCompany.name) {
+                                  setState(() {
+                                    _selectedCompanyId = null;
+                                  });
+                                }
+                              },
                               decoration: _inputDecoration(
                                 label: _selectedRole == _UserRole.admin
                                     ? 'Select Agency to Join *'
