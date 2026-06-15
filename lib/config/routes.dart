@@ -153,7 +153,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // ── Redirect pending approvals ──
-      if (profile.status == PartnerStatus.pending) {
+      if (profile.role == UserRole.partner && profile.status == PartnerStatus.pending) {
         if (state.matchedLocation != '/partner/awaiting-approval') {
           return '/partner/awaiting-approval';
         }

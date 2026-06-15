@@ -35,7 +35,7 @@ BEGIN
     new.phone,
     COALESCE(new.raw_user_meta_data->>'role', 'buyer'),
     CASE 
-      WHEN COALESCE(new.raw_user_meta_data->>'role', 'buyer') = 'admin' THEN 'pending'
+      WHEN COALESCE(new.raw_user_meta_data->>'role', 'buyer') = 'admin' THEN 'approved'
       WHEN COALESCE(new.raw_user_meta_data->>'role', 'buyer') = 'partner' THEN 'pending'
       WHEN COALESCE(new.raw_user_meta_data->>'role', 'buyer') = 'platform_admin' THEN 'approved'
       ELSE 'approved'
