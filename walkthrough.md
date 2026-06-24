@@ -542,3 +542,43 @@ We have successfully designed, developed, and registered the public **Landing Pa
 * **Auth Redirection Bypass:** Updated the GoRouter redirect configuration in [routes.dart](file:///C:/Users/Admin/Desktop/ppn/lib/config/routes.dart) so that path `/lp/*` is treated as a public guest route, allowing anonymous leads to open the page directly without logging in.
 * **Route Path:** Registered the route `/lp/:id` (accessible via `/#/lp/{property-id}`) pointing to the newly implemented `LandingPageScreen`.
 
+---
+
+## 🔁 LOOP 38: Subscription Tier Limits, Free Trial Customization, and Login Screen Blanks
+
+We have successfully implemented and deployed the subscription tier enforcement layer, customized the Free Trial to exactly 7 days, and resolved the critical production issue where the app went blank upon user login.
+
+### 1. Fixed "Blank Screen on Login" Bug
+* **Where**: [auth_provider.dart](file:///C:/Users/Admin/Desktop/ppn/lib/providers/auth_provider.dart)
+* **What**: Added a deduplication guard (`_activeFetch` Completer) to prevent concurrent profile fetches when `onAuthStateChange` and manual logins trigger simultaneously. This eliminates the race condition that caused the screen to go blank.
+
+### 2. Configured the Restricted "Free Trial" Tier (7-Day Trial)
+* **Where**: [company.dart](file:///C:/Users/Admin/Desktop/ppn/lib/models/company.dart) & [signup_screen.dart](file:///C:/Users/Admin/Desktop/ppn/lib/screens/auth/signup_screen.dart)
+* **What**: Defined the `SubscriptionPlan.free` tier. Modified features list and signup selection card:
+  * **Badge**: Set to "7-Day Trial" (instead of "Limited Trial").
+  * **Features**: Displays "7-Day Free Trial", "Up to 2 listings", "Up to 1 registered partner", "10 leads/month", and "Shared ScaleWealth App branding".
+* **Database Triggers**: Modified the database trigger `handle_new_user()` in [consolidated_db_catchup.sql](file:///c:/Users/Admin/Desktop/ppn/supabase/consolidated_db_catchup.sql) and [add_subscriptions_migration.sql](file:///c:/Users/Admin/Desktop/ppn/supabase/add_subscriptions_migration.sql) to set `subscription_expires_at` to **exactly 7 days** if the user registers on the `free` tier, while paid plans retain their 14-day default trial period.
+
+### 3. Enforced Resource Limits
+* **Where**: [property_provider.dart](file:///C:/Users/Admin/Desktop/ppn/lib/providers/property_provider.dart) & [partner_provider.dart](file:///C:/Users/Admin/Desktop/ppn/lib/providers/partner_provider.dart)
+* **What**: Intercepts submissions to prevent exceeding constraints:
+  * **Property Listings Cap**: Blocks property creation with a plan limit warning SnackBar/dialog once the listings count reaches the plan's maximum (max of **2 listings** on the Free tier).
+  * **Partner Registration Cap**: Blocks approving affiliate partners once the limit is reached (max of **1 partner** on the Free tier).
+
+### 4. Restricted Premium Settings for Free Tier
+* **Where**: [company_profile_screen.dart](file:///C:/Users/Admin/Desktop/ppn/lib/screens/admin/company_profile_screen.dart)
+* **What**: Disabled configurations like **Custom Logo uploads**, **Custom Domains**, **Landing Page toggles**, and **WhatsApp Business API keys** for Free tier companies, and displayed a warning banner directing them to upgrade.
+
+### 5. Upgrades & Custom Dedicated App CTAs
+* **Where**: [billing_screen.dart](file:///C:/Users/Admin/Desktop/ppn/lib/screens/admin/billing_screen.dart)
+* **What**:
+  * Integrated the new Free Trial card into the billing overview.
+  * Added a prominent **White-Label Custom Dedicated App** card explaining the benefits (own developer accounts, custom brand, priority infrastructure).
+  * Added pre-filled bottom-sheet contact buttons to instantly email or WhatsApp support with the agency's name and **Tenant ID** pre-loaded.
+
+### 6. Production Deploy (CI/CD Pipeline)
+* Pushed to the `main` branch, triggering the automated GitHub Actions CI/CD deployment workflow. 
+* All tests and analysis checks passed cleanly, successfully compiling the production release bundle and deploying it live to Firebase Hosting at:
+  👉 **[https://scalewealthestate.web.app](https://scalewealthestate.web.app)**
+
+
