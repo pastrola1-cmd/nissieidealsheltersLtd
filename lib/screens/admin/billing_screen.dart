@@ -191,6 +191,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildPricingGrid(context, company, isMobile),
+                    _buildDedicatedAppCard(context, company, isMobile),
                   ],
                 ),
               ),
@@ -469,6 +470,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
 
   Widget _buildPricingGrid(BuildContext context, Company company, bool isMobile) {
     final plans = [
+      SubscriptionPlan.free,
       SubscriptionPlan.basic,
       SubscriptionPlan.growth,
       SubscriptionPlan.enterprise,
@@ -544,7 +546,9 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              _currencyFormat.format(plan.price) + ' / mo',
+              plan.price == 0
+                  ? 'Free'
+                  : _currencyFormat.format(plan.price) + ' / mo',
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 24,
@@ -602,15 +606,23 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                                 ),
                               );
                             }
-                          : () => _showUpgradeInstructions(context, company, plan),
+                          : plan.tier == 'free'
+                              ? null // Cannot manually select/downgrade to Free trial tier
+                              : () => _showUpgradeInstructions(context, company, plan),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: ref.read(authProvider).profile?.role == UserRole.manager ? Colors.grey[400] : AppColors.primary,
+                        backgroundColor: ref.read(authProvider).profile?.role == UserRole.manager || plan.tier == 'free' ? Colors.grey[400] : AppColors.primary,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: Text(ref.read(authProvider).profile?.role == UserRole.manager ? 'Contact Admin to Upgrade' : 'Select Plan'),
+                      child: Text(
+                        ref.read(authProvider).profile?.role == UserRole.manager
+                            ? 'Contact Admin to Upgrade'
+                            : plan.tier == 'free'
+                                ? 'Unavailable'
+                                : 'Select Plan',
+                      ),
                     ),
             ),
           ],
@@ -816,6 +828,219 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
       ],
+    );
+  }
+
+  Widget _buildDedicatedAppCard(BuildContext context, Company company, bool isMobile) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 32),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber.withOpacity(0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -10,
+            top: -10,
+            child: Icon(
+              Icons.phone_iphone_rounded,
+              size: 130,
+              color: Colors.white.withOpacity(0.03),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(28.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        'WHITE-LABEL EXCLUSIVE',
+                        style: TextStyle(
+                          color: Colors.amber,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Launch Your Own Dedicated App',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Get a fully custom-branded mobile app (iOS & Android) published directly under your own developer accounts. Includes your custom logo, name, custom web domain, unlimited push notifications, and dedicated database infrastructure.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: isMobile ? double.infinity : 220,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showDedicatedAppRequestOptions(context, company),
+                    icon: const Icon(Icons.rocket_launch_rounded),
+                    label: const Text('Request Dedicated App'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: const Color(0xFF0F172A),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDedicatedAppRequestOptions(BuildContext context, Company company) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(28.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Request Dedicated App',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Talk to our product team to launch your dedicated custom-branded real estate app. We will pre-fill your Tenant ID and company name so we can assist you instantly.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.email_outlined),
+                    label: const Text('Email Request'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final emailUri = Uri(
+                        scheme: 'mailto',
+                        path: 'support@scalewealth.com',
+                        queryParameters: {
+                          'subject': 'Dedicated App Request: ${company.name}',
+                          'body': 'Hello ScaleWealth Support,\n\nWe would like to request a dedicated custom-branded app for our agency.\n\nTenant ID: ${company.id}\nCompany Name: ${company.name}\n\nPlease let us know the next steps and pricing details.\n\nThank you!',
+                        },
+                      );
+                      if (await canLaunchUrl(emailUri)) {
+                        await launchUrl(emailUri);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not open email client.')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('WhatsApp Request'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final message = Uri.encodeComponent(
+                        'Hello Support, I am interested in requesting a dedicated custom-branded mobile app for my agency: ${company.name}.\n\nTenant ID: ${company.id}',
+                      );
+                      final whatsappUrl = Uri.parse('https://wa.me/2348000000000?text=$message');
+                      if (await canLaunchUrl(whatsappUrl)) {
+                        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not launch WhatsApp.')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

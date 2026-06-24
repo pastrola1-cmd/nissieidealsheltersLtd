@@ -61,6 +61,10 @@ class PlatformDashboardScreen extends ConsumerWidget {
                     _buildStatsRow(state),
                     const SizedBox(height: 32),
 
+                    // ── 2. Module Usage & Adoption Analytics ──
+                    _buildModuleUsageSection(context, state),
+                    const SizedBox(height: 32),
+
                     // ── 2. Header and Add Company ──
                     isMobile
                         ? Column(
@@ -885,4 +889,224 @@ class PlatformDashboardScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildModuleUsageSection(BuildContext context, PlatformState state) {
+    final theme = Theme.of(context);
+    final totalCompanies = state.companies.length;
+    final activeAdopters = state.lpAdoptionSummary.where((row) => (row['total_landing_pages'] as num? ?? 0) > 0).length;
+    final double adoptionRate = totalCompanies > 0 ? (activeAdopters / totalCompanies * 100) : 0.0;
+    
+    final int totalLps = state.lpAdoptionSummary.fold<int>(0, (sum, row) => sum + (row['total_landing_pages'] as num? ?? 0).toInt());
+    final int totalViews = state.lpAdoptionSummary.fold<int>(0, (sum, row) => sum + (row['total_views'] as num? ?? 0).toInt());
+    final int totalLeads = state.lpAdoptionSummary.fold<int>(0, (sum, row) => sum + (row['total_leads'] as num? ?? 0).toInt());
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Landing Pages & Ads Module Adoption',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Stats grid for LP adoption
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final double width = (constraints.maxWidth - 24) / 4;
+            final items = [
+              _buildStatCard('Adoption Rate', '${adoptionRate.toStringAsFixed(1)}%', Icons.pie_chart_outline_rounded, Colors.purple),
+              _buildStatCard('Active Pages', totalLps.toString(), Icons.web_rounded, Colors.orange),
+              _buildStatCard('Total LP Views', totalViews.toString(), Icons.remove_red_eye_outlined, Colors.teal),
+              _buildStatCard('Total LP Leads', totalLeads.toString(), Icons.contact_page_outlined, Colors.indigo),
+            ];
+
+            if (isMobile) {
+              return Column(
+                children: items.map((card) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: SizedBox(width: double.infinity, child: card),
+                )).toList(),
+              );
+            }
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: items.map((card) => SizedBox(width: width, child: card)).toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+
+        // Layout row/column for Tables (Top Performing & Tenant breakdown)
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isLargeScreen = constraints.maxWidth > 900;
+            
+            final topPerformingWidget = Card(
+              color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.trending_up_rounded, color: AppColors.success),
+                        SizedBox(width: 8),
+                        Text(
+                          'Top Performing Landing Pages (Limit 5)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (state.topLandingPages.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text('No landing page performance data available yet.', style: TextStyle(color: AppColors.textTertiary)),
+                        ),
+                      )
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          horizontalMargin: 0,
+                          columnSpacing: 24,
+                          columns: const [
+                            DataColumn(label: Text('Property / Agency')),
+                            DataColumn(label: Text('Views', textAlign: TextAlign.right)),
+                            DataColumn(label: Text('Leads', textAlign: TextAlign.right)),
+                            DataColumn(label: Text('Conv. Rate', textAlign: TextAlign.right)),
+                          ],
+                          rows: state.topLandingPages.map((row) {
+                            final double rate = (row['conversion_rate'] as num? ?? 0.0).toDouble();
+                            return DataRow(cells: [
+                              DataCell(Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(row['property_title']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(row['company_name']?.toString() ?? '', style: const TextStyle(color: AppColors.textTertiary, fontSize: 11)),
+                                ],
+                              )),
+                              DataCell(Text(row['views_count']?.toString() ?? '0', textAlign: TextAlign.right)),
+                              DataCell(Text(row['leads_count']?.toString() ?? '0', textAlign: TextAlign.right)),
+                              DataCell(Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: rate > 0 ? AppColors.successLight : AppColors.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${rate.toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    color: rate > 0 ? AppColors.successDark : AppColors.textSecondary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              )),
+                            ]);
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+
+            final tenantBreakdownWidget = Card(
+              color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.assessment_outlined, color: AppColors.primary),
+                        SizedBox(width: 8),
+                        Text(
+                          'Adoption Breakdown by Agency',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (state.lpAdoptionSummary.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text('No tenant data available.', style: TextStyle(color: AppColors.textTertiary)),
+                        ),
+                      )
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          horizontalMargin: 0,
+                          columnSpacing: 24,
+                          columns: const [
+                            DataColumn(label: Text('Agency')),
+                            DataColumn(label: Text('Plan')),
+                            DataColumn(label: Text('LPs', textAlign: TextAlign.right)),
+                            DataColumn(label: Text('Views', textAlign: TextAlign.right)),
+                            DataColumn(label: Text('Leads', textAlign: TextAlign.right)),
+                          ],
+                          rows: state.lpAdoptionSummary.map((row) {
+                            return DataRow(cells: [
+                              DataCell(Text(row['company_name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                              DataCell(Text(row['subscription_tier']?.toString().toUpperCase() ?? '', style: const TextStyle(fontSize: 12))),
+                              DataCell(Text(row['total_landing_pages']?.toString() ?? '0', textAlign: TextAlign.right)),
+                              DataCell(Text(row['total_views']?.toString() ?? '0', textAlign: TextAlign.right)),
+                              DataCell(Text(row['total_leads']?.toString() ?? '0', textAlign: TextAlign.right)),
+                            ]);
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+
+            if (isLargeScreen) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: topPerformingWidget),
+                  const SizedBox(width: 24),
+                  Expanded(child: tenantBreakdownWidget),
+                ],
+              );
+            }
+
+            return Column(
+              children: [
+                topPerformingWidget,
+                const SizedBox(height: 24),
+                tenantBreakdownWidget,
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
 }
+

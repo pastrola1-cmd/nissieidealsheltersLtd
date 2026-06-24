@@ -1,10 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/providers/auth_provider.dart';
+import 'package:ppn/providers/auth_state.dart';
 import 'package:ppn/screens/shells/admin_shell.dart';
 import 'package:ppn/screens/shells/manager_shell.dart';
 import 'package:ppn/screens/shells/marketer_shell.dart';
@@ -12,10 +13,8 @@ import 'package:ppn/screens/shells/partner_shell.dart';
 import 'package:ppn/screens/shells/buyer_shell.dart';
 import 'package:ppn/screens/manager/manager_dashboard_screen.dart';
 import 'package:ppn/screens/manager/manager_team_screen.dart';
-import 'package:ppn/screens/manager/manager_leads_screen.dart';
 import 'package:ppn/screens/shared/daily_reports_screen.dart';
 import 'package:ppn/screens/marketer/marketer_dashboard_screen.dart';
-import 'package:ppn/screens/marketer/marketer_leads_screen.dart';
 import 'package:ppn/screens/marketer/marketer_followups_screen.dart';
 import 'package:ppn/screens/auth/login_screen.dart';
 import 'package:ppn/screens/auth/signup_screen.dart';
@@ -32,16 +31,17 @@ import 'package:ppn/screens/admin/admin_properties_screen.dart';
 import 'package:ppn/screens/admin/property_form_screen.dart';
 import 'package:ppn/screens/shared/property_detail_screen.dart';
 import 'package:ppn/screens/shared/notifications_screen.dart';
-import 'package:ppn/screens/placeholders/placeholder_screen.dart';
 import 'package:ppn/screens/admin/partner_list_screen.dart';
 import 'package:ppn/screens/admin/partner_detail_screen.dart';
 import 'package:ppn/screens/partner/partner_profile_screen.dart';
+import 'package:ppn/screens/partner/partner_properties_screen.dart';
 import 'package:ppn/screens/admin/lead_list_screen.dart';
 import 'package:ppn/screens/admin/lead_detail_screen.dart';
 import 'package:ppn/screens/admin/manual_lead_screen.dart';
 import 'package:ppn/screens/admin/lead_import_screen.dart';
 import 'package:ppn/screens/admin/lead_export_screen.dart';
 import 'package:ppn/screens/partner/partner_lead_screen.dart';
+import 'package:ppn/screens/buyer/buyer_profile_screen.dart';
 import 'package:ppn/screens/buyer/buyer_inspections_screen.dart';
 import 'package:ppn/screens/buyer/book_inspection_screen.dart';
 import 'package:ppn/screens/buyer/inspection_confirmation_screen.dart';
@@ -62,6 +62,7 @@ import 'package:ppn/screens/admin/block_performance_screen.dart';
 import 'package:ppn/screens/admin/document_generator_screen.dart';
 import 'package:ppn/screens/admin/document_preview_screen.dart';
 import 'package:ppn/screens/admin/document_list_screen.dart';
+import 'package:ppn/screens/shared/landing_page_screen.dart';
 
 
 
@@ -76,19 +77,12 @@ final _partnerShellNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'partner');
 final _buyerShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'buyer');
 
-/// Helper class to bridge Stream changes to GoRouter's refreshListenable.
-class GoRouterRefreshStream extends ChangeNotifier {
-  late final StreamSubscription<dynamic> _subscription;
-
-  GoRouterRefreshStream(Stream<dynamic> stream) {
-    notifyListeners();
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
-  }
-
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
+/// Listenable that notifies GoRouter when the AuthNotifier state changes.
+class RouterRefreshListenable extends ChangeNotifier {
+  RouterRefreshListenable(Ref ref) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      notifyListeners();
+    });
   }
 }
 
@@ -120,19 +114,33 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: onboardingCompleted ? '/login' : '/onboarding',
-    refreshListenable: GoRouterRefreshStream(
-      ref.watch(authProvider.notifier).stream,
-    ),
+    refreshListenable: RouterRefreshListenable(ref),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final loggingIn = state.matchedLocation == '/login' ||
           state.matchedLocation == '/signup' ||
           state.matchedLocation == '/onboarding';
+      final isAuthLoading = state.matchedLocation == '/auth-loading';
+
+      // ── While auth is loading, show a branded loading screen ──
+      if (authState.isLoading) {
+        // Don't redirect if already on the loading screen or on auth pages
+        return isAuthLoading ? null : '/auth-loading';
+      }
+
+      // ── If loading just finished, redirect away from auth-loading ──
+      if (isAuthLoading) {
+        if (authState.isAuthenticated && authState.profile != null) {
+          return _getDefaultRouteForRole(authState.profile!.role);
+        }
+        return '/login';
+      }
 
       // ── Redirect to login if not authenticated ──
       if (!authState.isAuthenticated) {
         final isPropertyDetail = state.matchedLocation.startsWith('/properties/');
-        return (loggingIn || isPropertyDetail) ? null : '/login';
+        final isLandingPage = state.matchedLocation.startsWith('/lp/');
+        return (loggingIn || isPropertyDetail || isLandingPage) ? null : '/login';
       }
 
       final profile = authState.profile;
@@ -224,6 +232,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
+        path: '/auth-loading',
+        name: 'authLoading',
+        builder: (context, state) => const _AuthLoadingScreen(),
+      ),
+      GoRoute(
         path: '/signup',
         name: 'signup',
         builder: (context, state) {
@@ -284,6 +297,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           final refCode = state.uri.queryParameters['ref'];
           final campId = state.uri.queryParameters['camp'];
           return PropertyDetailScreen(
+            propertyId: id,
+            referralCode: refCode,
+            campaignId: campId,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/lp/:id',
+        name: 'landingPage',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final refCode = state.uri.queryParameters['ref'];
+          final campId = state.uri.queryParameters['camp'];
+          return LandingPageScreen(
             propertyId: id,
             referralCode: refCode,
             campaignId: campId,
@@ -684,8 +711,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/partner/properties',
                 name: 'partnerProperties',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'Partner Properties'),
+                builder: (context, state) => const PartnerPropertiesScreen(),
               ),
             ],
           ),
@@ -773,8 +799,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/buyer/profile',
                 name: 'buyerProfile',
-                builder: (context, state) =>
-                    const PlaceholderScreen(title: 'My Profile'),
+                builder: (context, state) => const BuyerProfileScreen(),
               ),
             ],
           ),
@@ -783,3 +808,87 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Premium branded loading screen shown during auth state transitions.
+/// Prevents the blank screen that users see when logging in.
+class _AuthLoadingScreen extends StatelessWidget {
+  const _AuthLoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Animated Logo ──
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Opacity(opacity: value, child: child),
+                );
+              },
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF34D399)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    'SW',
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // ── Loading indicator ──
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Status text ──
+            Text(
+              'Signing you in…',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

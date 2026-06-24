@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/auth_state.dart';
+import 'package:ppn/providers/company_provider.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/core/enums/enums.dart';
 
@@ -38,8 +38,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
   PropertyState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
     
-    final authState = ref.watch(authProvider);
-    final companyId = authState.profile?.companyId;
+    final companyId = ref.watch(selectedCompanyIdProvider);
 
     if (companyId != null) {
       if (_loadedCompanyId != companyId) {
@@ -85,6 +84,18 @@ class PropertyNotifier extends Notifier<PropertyState> {
     if (companyId == null) {
       state = state.copyWith(errorMessage: 'Authentication error: Company ID not found.');
       return false;
+    }
+
+    final company = ref.read(authProvider).company;
+    if (company != null) {
+      final plan = company.plan;
+      if (state.properties.length >= plan.maxListings) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Listing limit reached. Your plan (${plan.name}) allows up to ${plan.maxListings} listings. Please upgrade your plan or request a dedicated app.',
+        );
+        return false;
+      }
     }
 
     state = state.copyWith(isLoading: true);

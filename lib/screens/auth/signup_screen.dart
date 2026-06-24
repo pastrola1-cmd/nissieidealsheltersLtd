@@ -32,7 +32,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _obscurePassword = true;
   _UserRole? _selectedRole;
   bool _createAgencyMode = true;
-  String _selectedSubscriptionTier = 'basic';
+  String _selectedSubscriptionTier = 'free';
 
   List<Company> _companies = [];
   bool _isLoadingCompanies = false;
@@ -393,6 +393,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  _SubscriptionPlanCard(
+                    title: 'Free Trial',
+                    priceText: '₦0',
+                    limitsText: '2 Listings • 1 Partner',
+                    featuresText: 'Shared ScaleWealth App branding, 10 leads/month',
+                    badgeText: '7-Day Trial',
+                    isSelected: _selectedSubscriptionTier == 'free',
+                    activeColor: Colors.blueGrey,
+                    onTap: () => setState(() => _selectedSubscriptionTier = 'free'),
+                  ),
+                  const SizedBox(height: 12),
                   _SubscriptionPlanCard(
                     title: 'Starter Plan',
                     priceText: '₦25,000',

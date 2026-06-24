@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/auth_state.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/core/enums/enums.dart';
 
@@ -111,6 +110,19 @@ class PartnerNotifier extends Notifier<PartnerState> {
 
   /// Approves a partner, generating a referral code and enabling login/access.
   Future<bool> approvePartner(String partnerId, String fullName, String companyName) async {
+    final company = ref.read(authProvider).company;
+    if (company != null) {
+      final plan = company.plan;
+      final approvedCount = state.partners.where((p) => p.status == PartnerStatus.approved).length;
+      if (approvedCount >= plan.maxPartners) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Partner limit reached. Your plan (${plan.name}) allows up to ${plan.maxPartners} approved partners. Please upgrade your plan or request a dedicated app.',
+        );
+        return false;
+      }
+    }
+
     state = state.copyWith(isLoading: true);
     try {
       final referralCode = _generateReferralCode(fullName, companyName);

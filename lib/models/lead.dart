@@ -17,6 +17,9 @@ class Lead {
   final String? assignedAgentId;
   final String? leadFingerprint;
   final String? campaignId;
+  final String intentScore;
+  final Map<String, dynamic> engagementSignals;
+  final DateTime? firstResponseAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -35,6 +38,9 @@ class Lead {
     this.assignedAgentId,
     this.leadFingerprint,
     this.campaignId,
+    this.intentScore = 'Cold',
+    this.engagementSignals = const {},
+    this.firstResponseAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -55,6 +61,9 @@ class Lead {
       assignedAgentId: json['assigned_agent_id'] as String?,
       leadFingerprint: json['lead_fingerprint'] as String?,
       campaignId: json['campaign_id'] as String?,
+      intentScore: json['intent_score'] as String? ?? 'Cold',
+      engagementSignals: json['engagement_signals'] as Map<String, dynamic>? ?? {},
+      firstResponseAt: json['first_response_at'] != null ? DateTime.parse(json['first_response_at'] as String) : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -76,6 +85,9 @@ class Lead {
       'assigned_agent_id': assignedAgentId,
       'lead_fingerprint': leadFingerprint,
       'campaign_id': campaignId,
+      'intent_score': intentScore,
+      'engagement_signals': engagementSignals,
+      'first_response_at': firstResponseAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -96,6 +108,9 @@ class Lead {
     String? assignedAgentId,
     String? leadFingerprint,
     String? campaignId,
+    String? intentScore,
+    Map<String, dynamic>? engagementSignals,
+    DateTime? firstResponseAt,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -114,8 +129,13 @@ class Lead {
       assignedAgentId: assignedAgentId ?? this.assignedAgentId,
       leadFingerprint: leadFingerprint ?? this.leadFingerprint,
       campaignId: campaignId ?? this.campaignId,
+      intentScore: intentScore ?? this.intentScore,
+      engagementSignals: engagementSignals ?? this.engagementSignals,
+      firstResponseAt: firstResponseAt ?? this.firstResponseAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
+
+

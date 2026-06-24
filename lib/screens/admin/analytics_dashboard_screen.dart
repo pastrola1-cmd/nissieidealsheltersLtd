@@ -11,6 +11,8 @@ import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/analytics_provider.dart';
 import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/widgets/goals_dashboard_list.dart';
+import 'package:ppn/providers/sla_provider.dart';
+import 'package:intl/intl.dart';
 
 class AnalyticsDashboardScreen extends ConsumerStatefulWidget {
   const AnalyticsDashboardScreen({super.key});
@@ -97,6 +99,10 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
 
                     // Staff Performance Table Card
                     _buildStaffLeaderboardCard(analytics),
+                    const SizedBox(height: 28),
+
+                    // SLA Performance Section
+                    _buildSlaPerformanceSection(context),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -718,6 +724,294 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
+  }
+
+  Widget _buildSlaPerformanceSection(BuildContext context) {
+    final slaStatsAsync = ref.watch(slaStatsProvider);
+
+    return slaStatsAsync.when(
+      data: (stats) {
+        final complianceRate = (stats['compliance_rate'] as num?)?.toDouble() ?? 100.0;
+        final avgResponseSeconds = (stats['avg_response_time_seconds'] as num?)?.toDouble() ?? 0.0;
+        final avgResponseMinutes = avgResponseSeconds / 60.0;
+        final overdueLeads = List<Map<String, dynamic>>.from(stats['overdue_leads'] ?? []);
+        final agentBreakdown = List<Map<String, dynamic>>.from(stats['agent_breakdown'] ?? []);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'SLA Response Compliance',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'SLA COMPLIANCE RATE',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textTertiary, letterSpacing: 0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                '${complianceRate.toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  color: complianceRate >= 80.0
+                                      ? AppColors.success
+                                      : (complianceRate >= 50.0 ? const Color(0xFFFB8C00) : const Color(0xFFE53935)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                complianceRate >= 80.0
+                                    ? Icons.check_circle_outline_rounded
+                                    : Icons.warning_amber_rounded,
+                                color: complianceRate >= 80.0
+                                    ? AppColors.success
+                                    : (complianceRate >= 50.0 ? const Color(0xFFFB8C00) : const Color(0xFFE53935)),
+                                size: 24,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Card(
+                    color: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'AVG RESPONSE TIME',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textTertiary, letterSpacing: 0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            avgResponseMinutes < 60
+                                ? '${avgResponseMinutes.toStringAsFixed(1)} min(s)'
+                                : '${(avgResponseMinutes / 60.0).toStringAsFixed(1)} hr(s)',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (overdueLeads.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Card(
+                color: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: const Color(0xFFE53935)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.gpp_maybe_rounded, color: const Color(0xFFE53935)),
+                          SizedBox(width: 8),
+                          Text(
+                            'SLA Overdue Lead Alerts',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFE53935),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'The following leads have breached their response SLA window. Contact them immediately.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: overdueLeads.length,
+                        separatorBuilder: (context, index) => const Divider(height: 16),
+                        itemBuilder: (context, index) {
+                          final item = overdueLeads[index];
+                          final leadName = item['buyer_name'] ?? 'Jane Buyer';
+                          final intent = item['intent_score'] ?? 'Cold';
+                          final overdueSeconds = (item['overdue_by_seconds'] as num?)?.toDouble() ?? 0.0;
+                          final overdueMinutes = overdueSeconds / 60.0;
+                          final dateStr = DateFormat('MMM d, h:mm a').format(DateTime.parse(item['created_at'] as String));
+
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    leadName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Created: $dateStr • Intent: $intent',
+                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE53935).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  overdueMinutes < 60
+                                      ? 'Overdue by ${overdueMinutes.toStringAsFixed(0)}m'
+                                      : 'Overdue by ${(overdueMinutes / 60.0).toStringAsFixed(1)}h',
+                                  style: const TextStyle(
+                                    color: const Color(0xFFE53935),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (agentBreakdown.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Card(
+                color: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Agent SLA Performance',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Tracks lead response compliance rates and average speed per agent.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 16),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: agentBreakdown.length,
+                        separatorBuilder: (context, index) => const Divider(height: 24),
+                        itemBuilder: (context, index) {
+                          final agent = agentBreakdown[index];
+                          final name = agent['agent_name'] ?? 'Unassigned';
+                          final count = agent['total_leads'] ?? 0;
+                          final rate = (agent['compliance_rate'] as num?)?.toDouble() ?? 100.0;
+                          final speedSec = (agent['avg_response_time_seconds'] as num?)?.toDouble() ?? 0.0;
+                          final speedMin = speedSec / 60.0;
+
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '$count Leads Handled • Avg Speed: ${speedMin.toStringAsFixed(1)}m',
+                                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                '${rate.toStringAsFixed(1)}% Compliance',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: rate >= 80.0
+                                      ? AppColors.success
+                                      : (rate >= 50.0 ? const Color(0xFFFB8C00) : const Color(0xFFE53935)),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24.0),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (err, stack) => const Text('Error loading SLA metrics'),
+    );
   }
 }
 

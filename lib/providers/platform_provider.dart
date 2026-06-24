@@ -30,6 +30,8 @@ class PlatformState {
   final int totalProperties;
   final int totalPartners;
   final double totalSalesProcessed;
+  final List<Map<String, dynamic>> lpAdoptionSummary;
+  final List<Map<String, dynamic>> topLandingPages;
   final bool isLoading;
   final String? errorMessage;
 
@@ -38,6 +40,8 @@ class PlatformState {
     this.totalProperties = 0,
     this.totalPartners = 0,
     this.totalSalesProcessed = 0.0,
+    this.lpAdoptionSummary = const [],
+    this.topLandingPages = const [],
     this.isLoading = false,
     this.errorMessage,
   });
@@ -47,6 +51,8 @@ class PlatformState {
     int? totalProperties,
     int? totalPartners,
     double? totalSalesProcessed,
+    List<Map<String, dynamic>>? lpAdoptionSummary,
+    List<Map<String, dynamic>>? topLandingPages,
     bool? isLoading,
     String? errorMessage,
   }) {
@@ -55,6 +61,8 @@ class PlatformState {
       totalProperties: totalProperties ?? this.totalProperties,
       totalPartners: totalPartners ?? this.totalPartners,
       totalSalesProcessed: totalSalesProcessed ?? this.totalSalesProcessed,
+      lpAdoptionSummary: lpAdoptionSummary ?? this.lpAdoptionSummary,
+      topLandingPages: topLandingPages ?? this.topLandingPages,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
     );
@@ -141,11 +149,26 @@ class PlatformNotifier extends Notifier<PlatformState> {
         ));
       }
 
+      // 5. Fetch Landing Page adoption summaries
+      final adoptionResponse = await _client.from('platform_lp_adoption_summary').select();
+      final List<Map<String, dynamic>> adoptionList = List<Map<String, dynamic>>.from(adoptionResponse);
+
+      // 6. Fetch Top Landing Pages ranking
+      final performanceResponse = await _client
+          .from('platform_lp_performance_ranking')
+          .select()
+          .order('conversion_rate', ascending: false)
+          .order('leads_count', ascending: false)
+          .limit(5);
+      final List<Map<String, dynamic>> performanceList = List<Map<String, dynamic>>.from(performanceResponse);
+
       state = PlatformState(
         companies: platformCompanies,
         totalProperties: totalProperties,
         totalPartners: totalPartners,
         totalSalesProcessed: totalSales,
+        lpAdoptionSummary: adoptionList,
+        topLandingPages: performanceList,
         isLoading: false,
       );
     } catch (e) {

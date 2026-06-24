@@ -10,7 +10,6 @@ import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/providers/lead_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/models/models.dart';
 
 class LeadImportScreen extends ConsumerStatefulWidget {
   const LeadImportScreen({super.key});
@@ -44,7 +43,6 @@ class _LeadImportScreenState extends ConsumerState<LeadImportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     
     return Scaffold(
       backgroundColor: AppColors.background,

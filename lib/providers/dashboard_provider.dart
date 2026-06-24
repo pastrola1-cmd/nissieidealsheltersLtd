@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/auth_provider.dart';
+import 'package:ppn/providers/company_provider.dart';
 import 'package:ppn/providers/property_provider.dart';
 import 'package:ppn/providers/partner_provider.dart';
 import 'package:ppn/providers/lead_provider.dart';
@@ -348,8 +349,10 @@ class DashboardNotifier extends Notifier<DashboardState> {
     final profile = ref.read(authProvider).profile;
     if (profile == null) return;
 
+    final selectedCompanyId = ref.read(selectedCompanyIdProvider);
+
     await Future.wait([
-      ref.read(propertyProvider.notifier).loadProperties(profile.companyId ?? ''),
+      ref.read(propertyProvider.notifier).loadProperties(selectedCompanyId ?? ''),
       if (profile.role == UserRole.admin || profile.role == UserRole.platformAdmin)
         ref.read(partnerProvider.notifier).loadPartners(profile.companyId),
       ref.read(leadProvider.notifier).loadLeads(),

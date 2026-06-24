@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/auth_state.dart';
 import 'package:ppn/services/supabase_service.dart';
 
 class CompanyState {
@@ -28,6 +27,23 @@ class CompanyState {
   }
 }
 
+class SelectedCompanyIdNotifier extends Notifier<String?> {
+  @override
+  String? build() {
+    final authState = ref.watch(authProvider);
+    return authState.profile?.companyId;
+  }
+
+  @override
+  set state(String? value) {
+    super.state = value;
+  }
+}
+
+final selectedCompanyIdProvider = NotifierProvider<SelectedCompanyIdNotifier, String?>(() {
+  return SelectedCompanyIdNotifier();
+});
+
 class CompanyNotifier extends Notifier<CompanyState> {
   late final SupabaseService _supabaseService;
   String? _loadedCompanyId;
@@ -36,8 +52,7 @@ class CompanyNotifier extends Notifier<CompanyState> {
   CompanyState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
     
-    final authState = ref.watch(authProvider);
-    final companyId = authState.profile?.companyId;
+    final companyId = ref.watch(selectedCompanyIdProvider);
 
     if (companyId != null) {
       if (_loadedCompanyId != companyId) {
@@ -72,6 +87,15 @@ class CompanyNotifier extends Notifier<CompanyState> {
     String? phone,
     String? address,
     String? logoUrl,
+    String? fbPixelId,
+    String? fbCapiToken,
+    bool? lpModuleEnabled,
+    String? whatsappPhoneNumberId,
+    String? whatsappWabaId,
+    String? whatsappAccessToken,
+    bool? whatsappEnabled,
+    String? whatsappTemplateName,
+    String? customDomain,
   }) async {
     final companyId = state.company?.id;
     if (companyId == null) return false;
@@ -84,6 +108,15 @@ class CompanyNotifier extends Notifier<CompanyState> {
         'phone': phone,
         'address': address,
         'logo_url': logoUrl,
+        'fb_pixel_id': fbPixelId,
+        'fb_capi_token': fbCapiToken,
+        if (lpModuleEnabled != null) 'lp_module_enabled': lpModuleEnabled,
+        'whatsapp_phone_number_id': whatsappPhoneNumberId,
+        'whatsapp_waba_id': whatsappWabaId,
+        'whatsapp_access_token': whatsappAccessToken,
+        if (whatsappEnabled != null) 'whatsapp_enabled': whatsappEnabled,
+        'whatsapp_template_name': whatsappTemplateName,
+        'custom_domain': customDomain,
       });
       state = CompanyState(company: Company.fromJson(updatedData), isLoading: false);
       return true;
@@ -96,4 +129,9 @@ class CompanyNotifier extends Notifier<CompanyState> {
 
 final companyProvider = NotifierProvider<CompanyNotifier, CompanyState>(() {
   return CompanyNotifier();
+});
+
+final allCompaniesProvider = FutureProvider.autoDispose<List<Company>>((ref) async {
+  final service = ref.watch(supabaseServiceProvider);
+  return service.getCompanies(excludeHidden: true);
 });

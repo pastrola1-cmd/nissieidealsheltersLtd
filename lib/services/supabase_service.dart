@@ -562,5 +562,175 @@ class SupabaseService {
   Future<void> deleteDocument(String id) async {
     await delete('documents', id);
   }
+
+  // ─── Landing Page Helpers ───
+
+  /// Fetches a landing page config by property ID.
+  Future<Map<String, dynamic>?> getLandingPageByPropertyId(String propertyId) async {
+    final response = await _client
+        .from('landing_pages')
+        .select()
+        .eq('property_id', propertyId)
+        .maybeSingle();
+    return response;
+  }
+
+  /// Fetches a landing page config by slug.
+  Future<Map<String, dynamic>?> getLandingPageBySlug(String companyId, String slug) async {
+    final response = await _client
+        .from('landing_pages')
+        .select()
+        .eq('company_id', companyId)
+        .eq('slug', slug)
+        .maybeSingle();
+    return response;
+  }
+
+  /// Fetches a company by its custom domain.
+  Future<Company?> getCompanyByDomain(String domain) async {
+    final response = await _client
+        .from('companies')
+        .select()
+        .eq('custom_domain', domain)
+        .maybeSingle();
+    return response != null ? Company.fromJson(response) : null;
+  }
+
+  /// Fetches a landing page config by slug globally across any company.
+  Future<Map<String, dynamic>?> getLandingPageBySlugGlobally(String slug) async {
+    final response = await _client
+        .from('landing_pages')
+        .select()
+        .eq('slug', slug)
+        .limit(1)
+        .maybeSingle();
+    return response;
+  }
+
+  /// Fetches a property by company ID and landing page slug.
+  Future<Property?> getPropertyByLpSlug(String companyId, String slug) async {
+    final lp = await getLandingPageBySlug(companyId, slug);
+    if (lp == null) return null;
+    final propertyId = lp['property_id'] as String;
+    return getProperty(propertyId);
+  }
+
+  /// Submits a lead captured from a landing page using the secure postgres RPC.
+  Future<String> submitPublicLead({
+    required String companyId,
+    required String propertyId,
+    required String buyerName,
+    required String buyerPhone,
+    String? buyerEmail,
+    String? notes,
+    required String consentText,
+    String? ipAddress,
+    String? userAgent,
+    String? sourceLandingPageId,
+  }) async {
+    final response = await _client.rpc(
+      'create_public_lead',
+      params: {
+        'p_company_id': companyId,
+        'p_property_id': propertyId,
+        'p_buyer_name': buyerName,
+        'p_buyer_phone': buyerPhone,
+        'p_buyer_email': buyerEmail,
+        'p_notes': notes,
+        'p_consent_text': consentText,
+        'p_ip_address': ipAddress,
+        'p_user_agent': userAgent,
+        'p_source_landing_page_id': sourceLandingPageId,
+      },
+    );
+    return response as String;
+  }
+
+  /// Increments the view count of a landing page.
+  Future<void> incrementLandingPageView(String landingPageId) async {
+    await _client.rpc(
+      'increment_landing_page_view',
+      params: {'p_landing_page_id': landingPageId},
+    );
+  }
+
+  /// Fetches active variants for a landing page.
+  Future<List<LandingPageVariant>> getLandingPageVariants(String landingPageId) async {
+    final response = await _client
+        .from('landing_page_variants')
+        .select()
+        .eq('landing_page_id', landingPageId)
+        .eq('is_active', true);
+    return List<Map<String, dynamic>>.from(response)
+        .map((json) => LandingPageVariant.fromJson(json))
+        .toList();
+  }
+
+  /// Records variant engagement securely via the database RPC.
+  Future<void> recordVariantEngagement({
+    required String variantId,
+    required bool isLead,
+  }) async {
+    await _client.rpc(
+      'record_variant_engagement',
+      params: {
+        'p_variant_id': variantId,
+        'p_is_lead': isLead,
+      },
+    );
+  }
+
+  /// Logs an engagement signal for a lead and recalculates its intent score.
+  Future<void> logLeadEngagement({
+    required String leadId,
+    required String signalType,
+    required String signalValue,
+  }) async {
+    try {
+      await _client.rpc(
+        'log_lead_engagement',
+        params: {
+          'p_lead_id': leadId,
+          'p_signal_type': signalType,
+          'p_signal_value': signalValue,
+        },
+      );
+    } catch (e) {
+      // Ignore or log error to prevent breaking user flow
+      print('Error logging lead engagement: $e');
+    }
+  }
+
+  /// Fetches SLA metrics for a company using the database RPC.
+  Future<Map<String, dynamic>> getCompanySlaStats(String companyId) async {
+    try {
+      final response = await _client.rpc(
+        'get_company_sla_stats',
+        params: {'p_company_id': companyId},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      print('Error getting company SLA stats: $e');
+      return {
+        'total_leads': 0,
+        'compliant_leads': 0,
+        'compliance_rate': 100.0,
+        'avg_response_time_seconds': 0.0,
+        'overdue_leads': [],
+        'agent_breakdown': [],
+      };
+    }
+  }
+
+  /// Bulk generates landing pages for a company. Returns the count of generated pages.
+  Future<int> bulkGenerateLandingPages(String companyId) async {
+    final response = await _client.rpc(
+      'generate_landing_pages_for_company',
+      params: {'p_company_id': companyId},
+    );
+    return response as int;
+  }
 }
+
+
 

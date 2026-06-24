@@ -509,3 +509,36 @@ We have successfully resolved the issue where staff members (Managers and Market
   `flutter build apk --release --target-platform android-arm64`
 * **Desktop Output:** Copied output release file to the Desktop at:
   [scalewealthestate-release.apk](file:///C:/Users/Admin/Desktop/scalewealthestate-release.apk)
+
+---
+
+## 🔁 LOOP 30: Landing Pages & Ads Module (Phase 1 MVP)
+
+We have successfully designed, developed, and registered the public **Landing Pages & Ads Module** directly inside the existing `ppn` Flutter web application:
+
+### 1. Database Foundation & Public Security Handlers
+* **SQL Migration Script:** Created [loop30_landing_pages.sql](file:///C:/Users/Admin/Desktop/ppn/supabase/loop30_landing_pages.sql) which:
+  * Adds tracking columns (`fb_pixel_id`, `fb_capi_token`, `lp_module_enabled`) to the `companies` table.
+  * Creates the `landing_pages` configuration table.
+  * Creates the `lp_consent_log` audit table for NDPR/GDPR compliance.
+  * Extends the `leads` table with columns `source_landing_page_id`, `consent_timestamp`, and `consent_text`.
+  * Creates a secure `SECURITY DEFINER` function `public.create_public_lead` to allow guest/public submissions to create leads and log consent while bypassing RLS read/write limits on `leads`.
+  * Creates `public.increment_landing_page_view` function to track LP analytics.
+  * Hardens landing pages and consent logs with appropriate RLS policies.
+
+### 2. Supabase Integration
+* **Dart Services:** Extended the [SupabaseService](file:///C:/Users/Admin/Desktop/ppn/lib/services/supabase_service.dart) class to support landing page fetches by property ID or slug, increment views, and execute the public lead capture RPC safely.
+
+### 3. Public Landing Page UI & Form Validation
+* **Screen View:** Created [LandingPageScreen](file:///C:/Users/Admin/Desktop/ppn/lib/screens/shared/landing_page_screen.dart) featuring:
+  * **Hero Headline & Carousel:** Reads dynamic headlines and slides property images.
+  * **Dynamic Budget Calibration:** Automatically calculates relevant budget drop-down choices based on the listing's target price.
+  * **NDPR Compliance Consent Checkbox:** Requires the user to explicitly acknowledge the consent statement before form submission.
+  * **WhatsApp Post-Submit Deep Links:** Displays a beautiful checkmark success card with a pre-filled wa.me chat link opening WhatsApp with the agency's phone number on form completion.
+  * **Floating WhatsApp Button:** Sticky floating action button for quick WhatsApp communication.
+  * **Responsive Layout:** Dynamic side-by-side design on desktop and above-the-fold stacked view on mobile web.
+
+### 4. Navigation & Route Registration
+* **Auth Redirection Bypass:** Updated the GoRouter redirect configuration in [routes.dart](file:///C:/Users/Admin/Desktop/ppn/lib/config/routes.dart) so that path `/lp/*` is treated as a public guest route, allowing anonymous leads to open the page directly without logging in.
+* **Route Path:** Registered the route `/lp/:id` (accessible via `/#/lp/{property-id}`) pointing to the newly implemented `LandingPageScreen`.
+

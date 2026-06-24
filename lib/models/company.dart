@@ -14,6 +14,15 @@ class Company {
   final DateTime? subscriptionExpiresAt;
   final bool isHidden;
   final int? customLeadLimit;
+  final String? fbPixelId;
+  final String? fbCapiToken;
+  final bool lpModuleEnabled;
+  final String? whatsappPhoneNumberId;
+  final String? whatsappWabaId;
+  final String? whatsappAccessToken;
+  final bool whatsappEnabled;
+  final String whatsappTemplateName;
+  final String? customDomain;
 
   const Company({
     required this.id,
@@ -23,11 +32,20 @@ class Company {
     this.phone,
     this.address,
     required this.createdAt,
-    this.subscriptionTier = 'basic',
+    this.subscriptionTier = 'free',
     this.subscriptionStatus = 'trialing',
     this.subscriptionExpiresAt,
     this.isHidden = false,
     this.customLeadLimit,
+    this.fbPixelId,
+    this.fbCapiToken,
+    this.lpModuleEnabled = true,
+    this.whatsappPhoneNumberId,
+    this.whatsappWabaId,
+    this.whatsappAccessToken,
+    this.whatsappEnabled = false,
+    this.whatsappTemplateName = 'property_inquiry_auto',
+    this.customDomain,
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
@@ -39,13 +57,22 @@ class Company {
       phone: json['phone'] as String?,
       address: json['address'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
-      subscriptionTier: (json['subscription_tier'] as String?) ?? 'basic',
+      subscriptionTier: (json['subscription_tier'] as String?) ?? 'free',
       subscriptionStatus: (json['subscription_status'] as String?) ?? 'trialing',
       subscriptionExpiresAt: json['subscription_expires_at'] != null
           ? DateTime.parse(json['subscription_expires_at'] as String)
           : null,
       isHidden: (json['is_hidden'] as bool?) ?? false,
       customLeadLimit: json['custom_lead_limit'] as int?,
+      fbPixelId: json['fb_pixel_id'] as String?,
+      fbCapiToken: json['fb_capi_token'] as String?,
+      lpModuleEnabled: (json['lp_module_enabled'] as bool?) ?? true,
+      whatsappPhoneNumberId: json['whatsapp_phone_number_id'] as String?,
+      whatsappWabaId: json['whatsapp_waba_id'] as String?,
+      whatsappAccessToken: json['whatsapp_access_token'] as String?,
+      whatsappEnabled: (json['whatsapp_enabled'] as bool?) ?? false,
+      whatsappTemplateName: (json['whatsapp_template_name'] as String?) ?? 'property_inquiry_auto',
+      customDomain: json['custom_domain'] as String?,
     );
   }
 
@@ -63,6 +90,15 @@ class Company {
       'subscription_expires_at': subscriptionExpiresAt?.toIso8601String(),
       'is_hidden': isHidden,
       'custom_lead_limit': customLeadLimit,
+      'fb_pixel_id': fbPixelId,
+      'fb_capi_token': fbCapiToken,
+      'lp_module_enabled': lpModuleEnabled,
+      'whatsapp_phone_number_id': whatsappPhoneNumberId,
+      'whatsapp_waba_id': whatsappWabaId,
+      'whatsapp_access_token': whatsappAccessToken,
+      'whatsapp_enabled': whatsappEnabled,
+      'whatsapp_template_name': whatsappTemplateName,
+      'custom_domain': customDomain,
     };
   }
 
@@ -79,6 +115,15 @@ class Company {
     DateTime? subscriptionExpiresAt,
     bool? isHidden,
     Object? customLeadLimit = const Object(),
+    String? fbPixelId,
+    String? fbCapiToken,
+    bool? lpModuleEnabled,
+    String? whatsappPhoneNumberId,
+    String? whatsappWabaId,
+    String? whatsappAccessToken,
+    bool? whatsappEnabled,
+    String? whatsappTemplateName,
+    Object? customDomain = const Object(),
   }) {
     return Company(
       id: id ?? this.id,
@@ -95,6 +140,17 @@ class Company {
       customLeadLimit: customLeadLimit == const Object()
           ? this.customLeadLimit
           : (customLeadLimit as int?),
+      fbPixelId: fbPixelId ?? this.fbPixelId,
+      fbCapiToken: fbCapiToken ?? this.fbCapiToken,
+      lpModuleEnabled: lpModuleEnabled ?? this.lpModuleEnabled,
+      whatsappPhoneNumberId: whatsappPhoneNumberId ?? this.whatsappPhoneNumberId,
+      whatsappWabaId: whatsappWabaId ?? this.whatsappWabaId,
+      whatsappAccessToken: whatsappAccessToken ?? this.whatsappAccessToken,
+      whatsappEnabled: whatsappEnabled ?? this.whatsappEnabled,
+      whatsappTemplateName: whatsappTemplateName ?? this.whatsappTemplateName,
+      customDomain: customDomain == const Object()
+          ? this.customDomain
+          : (customDomain as String?),
     );
   }
 }
@@ -117,6 +173,23 @@ class SubscriptionPlan {
     required this.maxLeadsPerMonth,
     required this.features,
   });
+
+  static const free = SubscriptionPlan(
+    tier: 'free',
+    name: 'Free Trial',
+    price: 0,
+    maxListings: 2,
+    maxPartners: 1,
+    maxLeadsPerMonth: 10,
+    features: [
+      '7-Day Free Trial',
+      'Up to 2 listings',
+      'Up to 1 registered partner',
+      '10 leads per month',
+      'Shared ScaleWealth App branding',
+      'No Custom Domain or White-labeling',
+    ],
+  );
 
   static const basic = SubscriptionPlan(
     tier: 'basic',
@@ -168,6 +241,8 @@ class SubscriptionPlan {
 
   static SubscriptionPlan fromTier(String tier) {
     switch (tier.toLowerCase()) {
+      case 'free':
+        return free;
       case 'growth':
         return growth;
       case 'enterprise':

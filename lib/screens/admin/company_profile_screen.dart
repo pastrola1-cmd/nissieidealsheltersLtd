@@ -8,6 +8,7 @@ import 'package:ppn/core/utils/validators.dart';
 import 'package:ppn/providers/company_provider.dart';
 import 'package:ppn/providers/auth_provider.dart';
 import 'package:ppn/services/supabase_service.dart';
+import 'package:ppn/services/whatsapp_service.dart';
 
 class CompanyProfileScreen extends ConsumerStatefulWidget {
   const CompanyProfileScreen({super.key});
@@ -22,9 +23,21 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _fbPixelIdController = TextEditingController();
+  final _fbCapiTokenController = TextEditingController();
+  final _waPhoneIdController = TextEditingController();
+  final _waWabaIdController = TextEditingController();
+  final _waTokenController = TextEditingController();
+  final _waTemplateController = TextEditingController();
+  final _customDomainController = TextEditingController();
   
   String? _logoUrl;
   bool _isUploadingLogo = false;
+  bool _obscureCapiToken = true;
+  bool _lpModuleEnabled = true;
+  bool _obscureWaToken = true;
+  bool _waEnabled = false;
+  bool _isTestingWhatsApp = false;
 
   @override
   void initState() {
@@ -36,6 +49,15 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
       _phoneController.text = company.phone ?? '';
       _addressController.text = company.address ?? '';
       _logoUrl = company.logoUrl;
+      _fbPixelIdController.text = company.fbPixelId ?? '';
+      _fbCapiTokenController.text = company.fbCapiToken ?? '';
+      _lpModuleEnabled = company.lpModuleEnabled;
+      _waPhoneIdController.text = company.whatsappPhoneNumberId ?? '';
+      _waWabaIdController.text = company.whatsappWabaId ?? '';
+      _waTokenController.text = company.whatsappAccessToken ?? '';
+      _waTemplateController.text = company.whatsappTemplateName.isNotEmpty ? company.whatsappTemplateName : 'property_inquiry_auto';
+      _waEnabled = company.whatsappEnabled;
+      _customDomainController.text = company.customDomain ?? '';
     }
   }
 
@@ -45,12 +67,30 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _fbPixelIdController.dispose();
+    _fbCapiTokenController.dispose();
+    _waPhoneIdController.dispose();
+    _waWabaIdController.dispose();
+    _waTokenController.dispose();
+    _waTemplateController.dispose();
+    _customDomainController.dispose();
     super.dispose();
   }
 
   Future<void> _pickAndUploadLogo() async {
     final company = ref.read(companyProvider).company;
     if (company == null) return;
+
+    if (company.subscriptionTier == 'free') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Logo upload is disabled on the Free tier. Upgrade your plan or request a dedicated app to customize your branding.'),
+          backgroundColor: AppColors.warningDark,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(
@@ -106,6 +146,64 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
     }
   }
 
+  Future<void> _sendTestWhatsAppMessage() async {
+    final phoneId = _waPhoneIdController.text.trim();
+    final token = _waTokenController.text.trim();
+    final template = _waTemplateController.text.trim();
+    final recipient = _phoneController.text.trim();
+
+    if (phoneId.isEmpty || token.isEmpty || recipient.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill Phone Number ID, Access Token, and Contact Phone to test.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isTestingWhatsApp = true);
+    try {
+      final success = await ref.read(whatsAppServiceProvider).sendTestMessage(
+        phoneId: phoneId,
+        accessToken: token,
+        templateName: template,
+        recipientPhone: recipient,
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Test template message sent successfully!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to send test message. Check configuration and Meta Graph settings.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTestingWhatsApp = false);
+      }
+    }
+  }
+
   Future<void> _handleSave() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -115,6 +213,15 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
           phone: _phoneController.text.trim(),
           address: _addressController.text.trim(),
           logoUrl: _logoUrl,
+          fbPixelId: _fbPixelIdController.text.trim().isNotEmpty ? _fbPixelIdController.text.trim() : null,
+          fbCapiToken: _fbCapiTokenController.text.trim().isNotEmpty ? _fbCapiTokenController.text.trim() : null,
+          lpModuleEnabled: _lpModuleEnabled,
+          whatsappPhoneNumberId: _waPhoneIdController.text.trim().isNotEmpty ? _waPhoneIdController.text.trim() : null,
+          whatsappWabaId: _waWabaIdController.text.trim().isNotEmpty ? _waWabaIdController.text.trim() : null,
+          whatsappAccessToken: _waTokenController.text.trim().isNotEmpty ? _waTokenController.text.trim() : null,
+          whatsappEnabled: _waEnabled,
+          whatsappTemplateName: _waTemplateController.text.trim().isNotEmpty ? _waTemplateController.text.trim() : 'property_inquiry_auto',
+          customDomain: _customDomainController.text.trim().isNotEmpty ? _customDomainController.text.trim() : null,
         );
 
     if (success && mounted) {
@@ -313,6 +420,40 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
                         ),
                       ),
                     ),
+                    if (state.company?.subscriptionTier == 'free') ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.withOpacity(0.4), width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.stars_rounded, color: Colors.amber, size: 24),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Free Trial Plan Active',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Want your own logo branding, custom domains, and unlimited listings? Upgrade your plan or request a dedicated custom-branded app!',
+                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
 
                     // ── Fields ──
@@ -356,7 +497,212 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
                       decoration: _inputDecoration(label: 'Office Address', icon: Icons.map_outlined),
                       validator: (value) => Validators.validateRequired(value, 'Office address'),
                     ),
+                    const SizedBox(height: 32),
+
+                    // ── Marketing & Tracking ──
+                    Text(
+                      'Marketing & Tracking (FB Pixel / CAPI)',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _fbPixelIdController,
+                      keyboardType: TextInputType.number,
+                      decoration: _inputDecoration(
+                        label: 'Facebook Pixel ID',
+                        icon: Icons.analytics_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _fbCapiTokenController,
+                      keyboardType: TextInputType.text,
+                      obscureText: _obscureCapiToken,
+                      decoration: _inputDecoration(
+                        label: 'Meta Conversions API Token',
+                        icon: Icons.vpn_key_outlined,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureCapiToken ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: AppColors.textTertiary,
+                          ),
+                          onPressed: () {
+                            setState(() => _obscureCapiToken = !_obscureCapiToken);
+                          },
+                        ),
+                        helperText: 'Required for server-side event deduplication and offline conversion matching.',
+                      ),
+                    ),
+                    // ── Custom Domain Section ──
+                    if (state.company?.subscriptionTier == 'enterprise') ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'White Label Custom Domain',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _customDomainController,
+                        keyboardType: TextInputType.url,
+                        decoration: _inputDecoration(
+                          label: 'Custom Domain',
+                          icon: Icons.link_rounded,
+                        ).copyWith(
+                          helperText: 'Point your domain (CNAME) to scalewealth.app. Example: agency.com',
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+
+                    // ── Module Toggle ──
+                    Card(
+                      color: AppColors.surface,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                      child: SwitchListTile.adaptive(
+                        title: const Text(
+                          'Landing Pages & Ads Module',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        subtitle: Text(
+                          state.company?.subscriptionTier == 'basic'
+                              ? 'Disabled on Starter Plan. Upgrade to enable.'
+                              : state.company?.subscriptionTier == 'free'
+                                  ? 'Disabled on Free Tier. Upgrade to enable.'
+                                  : 'Enable conversion-optimized public property landing pages.',
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        ),
+                        value: state.company?.subscriptionTier == 'basic' || state.company?.subscriptionTier == 'free' ? false : _lpModuleEnabled,
+                        activeColor: AppColors.accent,
+                        onChanged: state.company?.subscriptionTier == 'basic' || state.company?.subscriptionTier == 'free'
+                            ? null
+                            : (val) {
+                                setState(() => _lpModuleEnabled = val);
+                              },
+                      ),
+                    ),
                     const SizedBox(height: 40),
+
+                    // Only show WhatsApp configs if module is enabled and not Starter/Free
+                    if (_lpModuleEnabled && state.company?.subscriptionTier != 'basic' && state.company?.subscriptionTier != 'free') ...[
+                      Text(
+                        'WhatsApp Business API Automation (Meta)',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Card(
+                        color: AppColors.surface,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: AppColors.border),
+                        ),
+                        child: SwitchListTile.adaptive(
+                          title: const Text(
+                            'Enable WhatsApp Auto-Broker',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          subtitle: const Text(
+                            'Send transactional brochures and location details to new leads instantly.',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                          value: _waEnabled,
+                          activeColor: const Color(0xFF25D366),
+                          onChanged: (val) {
+                            setState(() => _waEnabled = val);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _waPhoneIdController,
+                        keyboardType: TextInputType.number,
+                        decoration: _inputDecoration(
+                          label: 'WhatsApp Phone Number ID',
+                          icon: Icons.phone_android_rounded,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _waWabaIdController,
+                        keyboardType: TextInputType.number,
+                        decoration: _inputDecoration(
+                          label: 'WhatsApp Business Account ID (WABA)',
+                          icon: Icons.business_center_outlined,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _waTokenController,
+                        keyboardType: TextInputType.text,
+                        obscureText: _obscureWaToken,
+                        decoration: _inputDecoration(
+                          label: 'WhatsApp Permanent Access Token',
+                          icon: Icons.vpn_key_outlined,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureWaToken ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: AppColors.textTertiary,
+                            ),
+                            onPressed: () {
+                              setState(() => _obscureWaToken = !_obscureWaToken);
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextFormField(
+                        controller: _waTemplateController,
+                        keyboardType: TextInputType.text,
+                        decoration: _inputDecoration(
+                          label: 'Meta Approved Template Name',
+                          icon: Icons.description_outlined,
+                        ).copyWith(
+                          helperText: 'Defaults to property_inquiry_auto. Ensure template variables match standard layout.',
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      OutlinedButton.icon(
+                        onPressed: _isTestingWhatsApp ? null : _sendTestWhatsAppMessage,
+                        icon: _isTestingWhatsApp 
+                            ? const SizedBox(
+                                width: 16, 
+                                height: 16, 
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF25D366))
+                              )
+                            : const Icon(Icons.send_rounded, size: 16),
+                        label: const Text('Send Test WhatsApp Message'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF25D366),
+                          side: const BorderSide(color: Color(0xFF25D366)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
 
                     // ── Save Button ──
                     SizedBox(

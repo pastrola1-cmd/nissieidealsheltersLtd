@@ -36,6 +36,7 @@ void main() {
         'subscription_expires_at': '2026-06-24T10:00:00.000Z',
         'is_hidden': true,
         'custom_lead_limit': 300,
+        'custom_domain': 'agency.com',
       });
       expect(companyWithCustomPlan.subscriptionTier, 'growth');
       expect(companyWithCustomPlan.subscriptionStatus, 'active');
@@ -47,12 +48,21 @@ void main() {
       expect(companyWithCustomPlan.effectiveLeadLimit, 300);
       expect(companyWithCustomPlan.isSubscriptionActive, true);
       expect(companyWithCustomPlan.isHidden, true);
+      expect(companyWithCustomPlan.customDomain, 'agency.com');
 
-      final copiedCompany = companyWithCustomPlan.copyWith(isHidden: false, customLeadLimit: null);
+      final copiedCompany = companyWithCustomPlan.copyWith(
+        isHidden: false,
+        customLeadLimit: null,
+        customDomain: 'new-agency.com',
+      );
       expect(copiedCompany.isHidden, false);
       expect(copiedCompany.subscriptionTier, 'growth');
       expect(copiedCompany.customLeadLimit, null);
       expect(copiedCompany.effectiveLeadLimit, 500);
+      expect(copiedCompany.customDomain, 'new-agency.com');
+
+      final clearedDomain = copiedCompany.copyWith(customDomain: null);
+      expect(clearedDomain.customDomain, null);
     });
 
     test('Profile model tests', () {
@@ -131,6 +141,12 @@ void main() {
         'stage': 'new',
         'notes': 'Looking for a flat in Maitama',
         'lead_fingerprint': '+2348098765432:jane@buyer.com',
+        'intent_score': 'Warm',
+        'engagement_signals': {
+          'visit_count': 2,
+          'max_video_progress': 50,
+        },
+        'first_response_at': '2026-06-10T10:05:00.000Z',
         'created_at': '2026-06-10T10:00:00.000Z',
         'updated_at': '2026-06-10T10:00:00.000Z',
       };
@@ -140,14 +156,29 @@ void main() {
       expect(lead.stage, LeadStage.newLead);
       expect(lead.notes, 'Looking for a flat in Maitama');
       expect(lead.leadFingerprint, '+2348098765432:jane@buyer.com');
+      expect(lead.intentScore, 'Warm');
+      expect(lead.engagementSignals['visit_count'], 2);
+      expect(lead.engagementSignals['max_video_progress'], 50);
+      expect(lead.firstResponseAt, DateTime.parse('2026-06-10T10:05:00.000Z'));
 
       final backToJson = lead.toJson();
       expect(backToJson['stage'], 'new');
       expect(backToJson['buyer_name'], 'Jane Buyer');
       expect(backToJson['lead_fingerprint'], '+2348098765432:jane@buyer.com');
+      expect(backToJson['intent_score'], 'Warm');
+      expect(backToJson['engagement_signals']['visit_count'], 2);
+      expect(backToJson['first_response_at'], '2026-06-10T10:05:00.000Z');
 
-      final copied = lead.copyWith(leadFingerprint: 'custom-fingerprint');
+      final copied = lead.copyWith(
+        leadFingerprint: 'custom-fingerprint',
+        intentScore: 'Hot',
+        engagementSignals: {'visit_count': 3},
+        firstResponseAt: DateTime.parse('2026-06-10T10:10:00.000Z'),
+      );
       expect(copied.leadFingerprint, 'custom-fingerprint');
+      expect(copied.intentScore, 'Hot');
+      expect(copied.engagementSignals['visit_count'], 3);
+      expect(copied.firstResponseAt, DateTime.parse('2026-06-10T10:10:00.000Z'));
     });
 
     test('Inspection model tests', () {
@@ -227,6 +258,43 @@ void main() {
       expect(backToJson['type'], 'credit');
       expect(backToJson['amount'], 5000000.0);
       expect(backToJson['status'], 'completed');
+    });
+
+    test('LandingPageVariant model tests', () {
+      final json = {
+        'id': 'variant-id-123',
+        'landing_page_id': 'lp-id-123',
+        'company_id': 'company-id-123',
+        'variant_code': 'B',
+        'headline': 'Exclusive 4 Bedroom Terrace in Ikoyi',
+        'cta_primary': 'Claim Your Free Tour Now',
+        'cta_secondary': 'Download Price Sheet',
+        'views_count': 120,
+        'leads_count': 15,
+        'is_active': true,
+        'created_at': '2026-06-15T10:00:00.000Z',
+      };
+
+      final variant = LandingPageVariant.fromJson(json);
+      expect(variant.id, 'variant-id-123');
+      expect(variant.variantCode, 'B');
+      expect(variant.headline, 'Exclusive 4 Bedroom Terrace in Ikoyi');
+      expect(variant.ctaPrimary, 'Claim Your Free Tour Now');
+      expect(variant.ctaSecondary, 'Download Price Sheet');
+      expect(variant.viewsCount, 120);
+      expect(variant.leadsCount, 15);
+      expect(variant.isActive, true);
+
+      final backToJson = variant.toJson();
+      expect(backToJson['variant_code'], 'B');
+      expect(backToJson['views_count'], 120);
+
+      final copied = variant.copyWith(
+        variantCode: 'C',
+        isActive: false,
+      );
+      expect(copied.variantCode, 'C');
+      expect(copied.isActive, false);
     });
   });
 }

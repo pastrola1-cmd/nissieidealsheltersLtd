@@ -22,9 +22,137 @@ class _BuyerHomeScreenState extends ConsumerState<BuyerHomeScreen> {
   String _selectedLocation = 'All';
 
   @override
+  void initState() {
+    super.initState();
+    // Default the selected company if it's null
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final selectedId = ref.read(selectedCompanyIdProvider);
+      if (selectedId == null) {
+        try {
+          final companies = await ref.read(allCompaniesProvider.future);
+          if (companies.isNotEmpty && mounted) {
+            ref.read(selectedCompanyIdProvider.notifier).state = companies.first.id;
+          }
+        } catch (e) {
+          debugPrint('Error defaulting selected company: $e');
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _showAgencySelectorBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.only(top: 8, bottom: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Pull Bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Select Real Estate Agency',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              Consumer(
+                builder: (context, ref, child) {
+                  final companiesVal = ref.watch(allCompaniesProvider);
+                  final selectedId = ref.watch(selectedCompanyIdProvider);
+
+                  return companiesVal.when(
+                    data: (companies) {
+                      if (companies.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text('No active agencies found.', style: TextStyle(color: AppColors.textSecondary)),
+                        );
+                      }
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: companies.length,
+                        itemBuilder: (context, index) {
+                          final item = companies[index];
+                          final isSelected = item.id == selectedId;
+                          return ListTile(
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.border),
+                                image: item.logoUrl != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(item.logoUrl!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: item.logoUrl == null
+                                  ? const Icon(Icons.business_rounded, color: AppColors.textTertiary)
+                                  : null,
+                            ),
+                            title: Text(
+                              item.name,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? const Icon(Icons.check_circle_rounded, color: AppColors.success)
+                                : null,
+                            onTap: () {
+                              ref.read(selectedCompanyIdProvider.notifier).state = item.id;
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      );
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    ),
+                    error: (err, s) => Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text('Error loading agencies: $err', style: const TextStyle(color: AppColors.error)),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -84,47 +212,60 @@ class _BuyerHomeScreenState extends ConsumerState<BuyerHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        // Company Logo
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.border),
-                            image: company?.logoUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(company!.logoUrl!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: company?.logoUrl == null
-                              ? const Icon(Icons.business_rounded, size: 24, color: AppColors.textTertiary)
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    InkWell(
+                      onTap: _showAgencySelectorBottomSheet,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        child: Row(
                           children: [
-                            Text(
-                              company?.name ?? 'Loading Agency...',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textPrimary,
+                            // Company Logo
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border),
+                                image: company?.logoUrl != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(company!.logoUrl!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
                               ),
+                              child: company?.logoUrl == null
+                                  ? const Icon(Icons.business_rounded, size: 24, color: AppColors.textTertiary)
+                                  : null,
                             ),
-                            Text(
-                              'Exclusive Home Seeker',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      company?.name ?? 'Select Agency',
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary, size: 18),
+                                  ],
+                                ),
+                                Text(
+                                  'Exclusive Home Seeker',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
                     Row(
                       children: [

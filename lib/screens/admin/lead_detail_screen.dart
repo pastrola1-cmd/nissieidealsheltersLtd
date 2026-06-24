@@ -375,21 +375,28 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
                           ),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: stageColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: stageColor.withValues(alpha: 0.15)),
-                        ),
-                        child: Text(
-                          lead.stage.label.toUpperCase(),
-                          style: TextStyle(
-                            color: stageColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildIntentBadge(lead.intentScore),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: stageColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: stageColor.withValues(alpha: 0.15)),
+                            ),
+                            child: Text(
+                              lead.stage.label.toUpperCase(),
+                              style: TextStyle(
+                                color: stageColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -439,6 +446,10 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
                 ],
               ),
             ),
+            if (lead.engagementSignals.isNotEmpty || lead.sourceChannel == 'landing_page') ...[
+              const SizedBox(height: 24),
+              _buildEngagementSignalsCard(theme, lead),
+            ],
             const SizedBox(height: 24),
 
             // ── Pipeline stage Stepper Changer ──
@@ -956,8 +967,231 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
           ],
         );
       },
-      loading: () => const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
       error: (err, stack) => Text('Error loading agents: $err'),
+      loading: () => _buildDetailRow(
+        label: 'ASSIGNED AGENT',
+        value: 'Loading agents...',
+        icon: Icons.person_outline,
+      ),
+    );
+  }
+
+  Widget _buildIntentBadge(String score) {
+    Color color;
+    IconData icon;
+    switch (score.toLowerCase()) {
+      case 'hot':
+        color = const Color(0xFFE53935); // Crimson red
+        icon = Icons.local_fire_department_rounded;
+        break;
+      case 'warm':
+        color = const Color(0xFFFB8C00); // Warm orange
+        icon = Icons.whatshot_rounded;
+        break;
+      case 'cold':
+      default:
+        color = const Color(0xFF1E88E5); // Cold blue
+        icon = Icons.ac_unit_rounded;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            score.toUpperCase(),
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEngagementSignalsCard(ThemeData theme, Lead lead) {
+    final signals = lead.engagementSignals;
+    final visitCount = signals['visit_count'] ?? 1;
+    final lastVisitStr = signals['last_visit_at'] != null
+        ? DateFormat('MMM d, yyyy - h:mm a').format(DateTime.parse(signals['last_visit_at'] as String))
+        : null;
+    final videoProgress = signals['max_video_progress'] ?? 0;
+    final scrollDepth = signals['max_scroll_depth'] ?? 0;
+    final timeOnPage = signals['time_on_page_seconds'] ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                'Digital Engagement Signals',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 16),
+          _buildSignalRow(
+            label: 'PAGE VISITS',
+            value: '$visitCount visit(s)',
+            icon: Icons.ads_click_rounded,
+          ),
+          if (lastVisitStr != null) ...[
+            const SizedBox(height: 16),
+            _buildSignalRow(
+              label: 'LAST ACTIVE ON LP',
+              value: lastVisitStr,
+              icon: Icons.restore_rounded,
+            ),
+          ],
+          const SizedBox(height: 16),
+          _buildSignalProgressRow(
+            label: 'VIDEO WALKTHROUGH WATCHED',
+            value: '$videoProgress%',
+            percent: videoProgress / 100.0,
+            icon: Icons.play_circle_outline_rounded,
+            color: const Color(0xFFE53935),
+          ),
+          const SizedBox(height: 16),
+          _buildSignalProgressRow(
+            label: 'PAGE SCROLL DEPTH',
+            value: '$scrollDepth%',
+            percent: scrollDepth / 100.0,
+            icon: Icons.swap_vert_rounded,
+            color: const Color(0xFF4CAF50),
+          ),
+          const SizedBox(height: 16),
+          _buildSignalRow(
+            label: 'TIME ON PAGE',
+            value: '$timeOnPage second(s)',
+            icon: Icons.timer_outlined,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignalRow({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.textTertiary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textTertiary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignalProgressRow({
+    required String label,
+    required String value,
+    required double percent,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.textTertiary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textTertiary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: percent,
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  color: color,
+                  minHeight: 6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

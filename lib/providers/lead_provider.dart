@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/auth_state.dart';
 import 'package:ppn/providers/company_provider.dart';
 import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/core/enums/enums.dart';

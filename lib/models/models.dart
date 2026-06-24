@@ -10,4 +10,5 @@ export 'campaign.dart';
 export 'daily_report.dart';
 export 'goal.dart';
 export 'document_record.dart';
+export 'landing_page_variant.dart';
 

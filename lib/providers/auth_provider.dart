@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
@@ -19,10 +20,10 @@ class AuthNotifier extends Notifier<AuthState> {
   late final SupabaseService _supabaseService;
   final sb.SupabaseClient _client = SupabaseConfig.client;
   StreamSubscription<sb.AuthState>? _authSubscription;
-  
-  // Custom broadcast StreamController to notify GoRouter when state updates
-  final StreamController<AuthState> _streamController = StreamController<AuthState>.broadcast();
-  Stream<AuthState> get stream => _streamController.stream;
+
+  /// Tracks the currently running profile fetch to prevent duplicate concurrent
+  /// fetches (the root cause of the blank-screen-on-login bug).
+  Completer<void>? _activeFetch;
 
   @override
   AuthState build() {
@@ -32,19 +33,9 @@ class AuthNotifier extends Notifier<AuthState> {
     // Register cleanup callback on provider dispose
     ref.onDispose(() {
       _authSubscription?.cancel();
-      _streamController.close();
     });
 
     return const AuthState();
-  }
-
-  // Override state setter to push updates to the stream controller
-  @override
-  set state(AuthState value) {
-    super.state = value;
-    if (!_streamController.isClosed) {
-      _streamController.add(value);
-    }
   }
 
   void _initialize() {
@@ -58,6 +49,12 @@ class AuthNotifier extends Notifier<AuthState> {
     _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
       final session = data.session;
       if (session != null) {
+        // If a fetch is already running for this user, just wait for it.
+        if (_activeFetch != null && !_activeFetch!.isCompleted) {
+          await _activeFetch!.future;
+          return;
+        }
+        // Only fetch if we don't already have this user's profile loaded.
         if (state.profile?.id != session.user.id) {
           await _fetchProfile(session.user.id);
         }
@@ -67,36 +64,51 @@ class AuthNotifier extends Notifier<AuthState> {
     });
   }
 
+  /// Fetches the user profile, guarded by [_activeFetch] to prevent duplicates.
   Future<void> _fetchProfile(String userId) async {
-    state = state.copyWith(isLoading: true);
-    // Retry mechanism to account for slight database trigger delays on signup
-    for (int i = 0; i < 4; i++) {
-      try {
-        final profile = await _supabaseService.getProfile(userId);
-        if (profile != null) {
-          Company? company;
-          if (profile.companyId != null) {
-            company = await _supabaseService.getCompany(profile.companyId!);
-          }
-          state = AuthState(
-            profile: profile,
-            company: company,
-            isAuthenticated: true,
-            isLoading: false,
-          );
-          return;
-        }
-      } catch (e) {
-        // Silently catch and retry
-      }
-      await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
+    // If already fetching this exact user, piggyback on the existing operation.
+    if (_activeFetch != null && !_activeFetch!.isCompleted) {
+      await _activeFetch!.future;
+      return;
     }
 
-    state = const AuthState(
-      errorMessage: 'User profile could not be loaded. Please try again.',
-      isAuthenticated: false,
-      isLoading: false,
-    );
+    final completer = Completer<void>();
+    _activeFetch = completer;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      // Retry mechanism to account for slight database trigger delays on signup
+      for (int i = 0; i < 4; i++) {
+        try {
+          final profile = await _supabaseService.getProfile(userId);
+          if (profile != null) {
+            Company? company;
+            if (profile.companyId != null) {
+              company = await _supabaseService.getCompany(profile.companyId!);
+            }
+            state = AuthState(
+              profile: profile,
+              company: company,
+              isAuthenticated: true,
+              isLoading: false,
+            );
+            return;
+          }
+        } catch (e) {
+          debugPrint('AuthNotifier._fetchProfile retry $i error: $e');
+        }
+        await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
+      }
+
+      state = const AuthState(
+        errorMessage: 'User profile could not be loaded. Please try again.',
+        isAuthenticated: false,
+        isLoading: false,
+      );
+    } finally {
+      completer.complete();
+    }
   }
 
   /// Logs in a user with email and password.

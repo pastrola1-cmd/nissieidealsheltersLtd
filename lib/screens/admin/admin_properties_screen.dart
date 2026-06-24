@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -7,8 +8,11 @@ import 'package:ppn/core/constants/app_colors.dart';
 import 'package:ppn/core/enums/enums.dart';
 import 'package:ppn/models/models.dart';
 import 'package:ppn/providers/property_provider.dart';
+import 'package:ppn/providers/company_provider.dart';
+import 'package:ppn/services/supabase_service.dart';
 import 'package:ppn/widgets/shimmer_loading.dart';
 import 'package:ppn/widgets/empty_state.dart';
+import 'package:ppn/widgets/variants_dialog.dart';
 
 class AdminPropertiesScreen extends ConsumerStatefulWidget {
   const AdminPropertiesScreen({super.key});
@@ -30,9 +34,168 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
     super.dispose();
   }
 
+  Future<void> _bulkGenerateLandingPages() async {
+    final company = ref.read(companyProvider).company;
+    if (company == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bulk Generate Landing Pages'),
+        content: const Text(
+          'This will automatically generate landing pages with standard default configurations for all properties in your portfolio that do not already have one. Do you want to proceed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.accent),
+      ),
+    );
+
+    try {
+      final service = ref.read(supabaseServiceProvider);
+      final count = await service.bulkGenerateLandingPages(company.id);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bulk generation completed! Generated $count landing pages.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to bulk generate landing pages: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _manageVariants(BuildContext context, Property property) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.accent),
+      ),
+    );
+
+    try {
+      final service = ref.read(supabaseServiceProvider);
+      final lp = await service.getLandingPageByPropertyId(property.id);
+
+      if (mounted) {
+        Navigator.of(context).pop(); // Dismiss loader
+      }
+
+      if (lp == null) {
+        if (mounted) {
+          final create = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Landing Page Not Found'),
+              content: const Text(
+                'This property does not have a landing page configuration yet. Would you like to generate a default landing page for this property now?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
+                  child: const Text('Generate'),
+                ),
+              ],
+            ),
+          );
+
+          if (create == true) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const Center(
+                child: CircularProgressIndicator(color: AppColors.accent),
+              ),
+            );
+
+            final baseSlug = property.title.toLowerCase().replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '-');
+            final slug = baseSlug.endsWith('-') ? baseSlug.substring(0, baseSlug.length - 1) : baseSlug;
+            
+            await service.insert('landing_pages', {
+              'company_id': property.companyId,
+              'property_id': property.id,
+              'slug': slug,
+              'status': 'published',
+              'headline': '${property.title} — Premium Property Listing',
+              'cta_primary': 'Book Free Site Inspection',
+              'cta_secondary': 'Get Price List',
+            });
+
+            if (mounted) {
+              Navigator.of(context).pop(); // Dismiss loader
+              _manageVariants(context, property);
+            }
+          }
+        }
+        return;
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => LandingPageVariantsDialog(
+            property: property,
+            landingPage: lp,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Dismiss loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to check landing page configuration: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(propertyProvider);
+    final companyState = ref.watch(companyProvider);
+    final company = companyState.company;
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -64,6 +227,15 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
         foregroundColor: AppColors.textPrimary,
         centerTitle: false,
         actions: [
+          if (company != null && company.subscriptionTier != 'basic' && company.lpModuleEnabled)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: IconButton(
+                icon: const Icon(Icons.auto_awesome, color: AppColors.accent),
+                onPressed: _bulkGenerateLandingPages,
+                tooltip: 'Bulk Generate Landing Pages',
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: ElevatedButton.icon(
@@ -524,6 +696,35 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        if (ref.read(companyProvider).company?.subscriptionTier != 'basic' && ref.read(companyProvider).company?.lpModuleEnabled == true) ...[
+                          IconButton(
+                            icon: const Icon(Icons.call_split_rounded, size: 18, color: AppColors.primary),
+                            onPressed: () => _manageVariants(context, property),
+                            tooltip: 'Manage A/B Variants',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        IconButton(
+                          icon: const Icon(Icons.link_rounded, size: 18, color: AppColors.accent),
+                          onPressed: () async {
+                            final lpUrl = '${Uri.base.origin}/#/lp/${property.id}';
+                            await Clipboard.setData(ClipboardData(text: lpUrl));
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Landing page link copied to clipboard!'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
+                          tooltip: 'Copy Landing Page Link',
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(4),
+                        ),
+                        const SizedBox(width: 12),
                         IconButton(
                           icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
                           onPressed: () {

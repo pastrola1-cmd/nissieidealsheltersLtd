@@ -172,9 +172,14 @@ BEGIN
   v_subscription_tier := COALESCE(new.raw_user_meta_data->>'create_subscription_tier', 'basic');
   
   IF v_company_name IS NOT NULL AND v_company_name <> '' THEN
-    -- Create the new company and get its ID (defaulting to 14 days trialing selected plan)
+    -- Create the new company and get its ID (7 days trial for free tier, 14 days for paid tiers)
     INSERT INTO public.companies (name, subscription_tier, subscription_status, subscription_expires_at)
-    VALUES (v_company_name, v_subscription_tier, 'trialing', now() + interval '14 days')
+    VALUES (
+      v_company_name, 
+      v_subscription_tier, 
+      'trialing', 
+      CASE WHEN v_subscription_tier = 'free' THEN now() + interval '7 days' ELSE now() + interval '14 days' END
+    )
     RETURNING id INTO v_company_id;
   ELSIF (new.raw_user_meta_data->>'company_id') IS NOT NULL AND (new.raw_user_meta_data->>'company_id') <> '' THEN
     -- Use the provided company ID

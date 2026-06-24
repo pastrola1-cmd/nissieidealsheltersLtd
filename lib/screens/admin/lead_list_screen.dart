@@ -767,21 +767,28 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: stageColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: stageColor.withValues(alpha: 0.15)),
-                        ),
-                        child: Text(
-                          lead.stage.label.toUpperCase(),
-                          style: TextStyle(
-                            color: stageColor,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildIntentBadge(lead.intentScore),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: stageColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: stageColor.withValues(alpha: 0.15)),
+                            ),
+                            child: Text(
+                              lead.stage.label.toUpperCase(),
+                              style: TextStyle(
+                                color: stageColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -866,6 +873,51 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
       ),
     );
   }
+
+  Widget _buildIntentBadge(String score) {
+    Color color;
+    IconData icon;
+    switch (score.toLowerCase()) {
+      case 'hot':
+        color = const Color(0xFFE53935); // Crimson red
+        icon = Icons.local_fire_department_rounded;
+        break;
+      case 'warm':
+        color = const Color(0xFFFB8C00); // Warm orange
+        icon = Icons.whatshot_rounded;
+        break;
+      case 'cold':
+      default:
+        color = const Color(0xFF1E88E5); // Cold blue
+        icon = Icons.ac_unit_rounded;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            score.toUpperCase(),
+            style: TextStyle(
+              color: color,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildEmptyState(ThemeData theme) {
     return EmptyState(
