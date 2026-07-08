@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
+import 'package:nissie_ideal_shelters/config/supabase_config.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/config/app_logger.dart';
 
 /// Premium login screen for PPN.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -28,12 +30,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    logDebug('LoginScreen._handleLogin starting...');
     if (_formKey.currentState?.validate() ?? false) {
       final success = await ref.read(authProvider.notifier).login(
             _emailController.text.trim(),
             _passwordController.text,
           );
 
+      logDebug('LoginScreen._handleLogin completed with success: $success');
       if (!success && mounted) {
         final errorMessage = ref.read(authProvider).errorMessage ?? 'Login failed';
         ScaffoldMessenger.of(context).showSnackBar(
@@ -49,6 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    logDebug('LoginScreen.build called. Uri.base: ${Uri.base}');
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
 
@@ -113,8 +118,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (value.length < 8) {
+                        return 'Password must be at least 8 characters';
                       }
                       return null;
                     },
@@ -125,14 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Password reset coming soon…'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
+                      onPressed: () => _showForgotPasswordDialog(context, theme),
                       child: Text(
                         AppStrings.forgotPassword,
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -211,6 +209,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton.small(
+        backgroundColor: Colors.redAccent,
+        child: const Icon(Icons.bug_report, color: Colors.white),
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Diagnostic Logs'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: ListView.builder(
+                  itemCount: globalLogBuffer.length,
+                  itemBuilder: (context, index) => Text(
+                    globalLogBuffer[index],
+                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -218,30 +245,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildBrandHeader(ThemeData theme) {
     return Column(
       children: [
-        // App logo with premium gradient
         Container(
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            gradient: AppColors.dashboardHeaderGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.3),
+                color: AppColors.primary.withValues(alpha: 0.15),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: Center(
-            child: Text(
-              'SW',
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textOnAccent,
-                letterSpacing: 2,
-              ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Image.asset(
+              'assets/app_icon.png',
+              fit: BoxFit.cover,
             ),
           ),
         ),
@@ -262,6 +283,122 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ── Forgot Password Dialog ──
+  void _showForgotPasswordDialog(BuildContext context, ThemeData theme) {
+    final resetEmailController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSending = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          backgroundColor: AppColors.surface,
+          title: Text(
+            'Reset Password',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enter your email address and we\'ll send you a password reset link.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: resetEmailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _inputDecoration(
+                    label: 'Email',
+                    hint: 'you@example.com',
+                    prefixIcon: Icons.email_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+\$');
+                    if (!emailRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSending
+                  ? null
+                  : () async {
+                      if (!(formKey.currentState?.validate() ?? false)) return;
+                      setDialogState(() => isSending = true);
+                      try {
+                        await SupabaseConfig.auth.resetPasswordForEmail(
+                          resetEmailController.text.trim(),
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password reset link sent! Check your email inbox.'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.teal,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSending = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString().replaceFirst("AuthException: ", "")}'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.textOnAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Send Reset Link'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

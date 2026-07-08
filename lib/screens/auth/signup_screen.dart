@@ -397,7 +397,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     title: 'Free Trial',
                     priceText: '₦0',
                     limitsText: '2 Listings • 1 Partner',
-                    featuresText: 'Shared ScaleWealth App branding, 10 leads/month',
+                    featuresText: 'Shared Nissie App branding, 10 leads/month',
                     badgeText: '7-Day Trial',
                     isSelected: _selectedSubscriptionTier == 'free',
                     activeColor: Colors.blueGrey,
@@ -767,7 +767,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Registration Limit Reached'),
         content: Text(
-          'The agency "${company.name}" has reached the maximum partner registration limit for its current subscription tier.\n\nPlease ask the agency administrator to contact ScaleWealth Estate support to upgrade their subscription.'
+          'The agency "${company.name}" has reached the maximum partner registration limit for its current subscription tier.\n\nPlease ask the agency administrator to contact Nissie Ideal Shelters support to upgrade their subscription.'
         ),
         actions: [
           TextButton(
