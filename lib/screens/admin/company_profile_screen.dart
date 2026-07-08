@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/utils/validators.dart';
-import 'package:ppn/providers/company_provider.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/services/supabase_service.dart';
-import 'package:ppn/services/whatsapp_service.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/utils/validators.dart';
+import 'package:nissie_ideal_shelters/providers/company_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/services/whatsapp_service.dart';
 
 class CompanyProfileScreen extends ConsumerStatefulWidget {
   const CompanyProfileScreen({super.key});

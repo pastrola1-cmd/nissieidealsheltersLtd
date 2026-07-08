@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ppn/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

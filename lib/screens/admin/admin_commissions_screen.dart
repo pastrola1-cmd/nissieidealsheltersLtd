@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/earnings_provider.dart';
-import 'package:ppn/providers/lead_provider.dart';
-import 'package:ppn/providers/partner_provider.dart';
-import 'package:ppn/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/earnings_provider.dart';
+import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
+import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 
 class AdminCommissionsScreen extends ConsumerStatefulWidget {
   const AdminCommissionsScreen({super.key});

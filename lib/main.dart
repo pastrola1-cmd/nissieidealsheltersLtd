@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ppn/config/supabase_config.dart';
-import 'package:ppn/config/routes.dart';
-import 'package:ppn/core/theme/app_theme.dart';
-import 'package:ppn/core/constants/app_strings.dart';
+import 'package:nissie_ideal_shelters/config/supabase_config.dart';
+import 'package:nissie_ideal_shelters/config/routes.dart';
+import 'package:nissie_ideal_shelters/core/theme/app_theme.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

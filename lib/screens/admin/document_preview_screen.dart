@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:printing/printing.dart';
-import 'package:ppn/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 
 class DocumentPreviewScreen extends StatelessWidget {
   final String fileUrl;

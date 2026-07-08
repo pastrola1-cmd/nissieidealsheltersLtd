@@ -5,13 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/analytics_provider.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/widgets/goals_dashboard_list.dart';
-import 'package:ppn/providers/sla_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/analytics_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/widgets/goals_dashboard_list.dart';
+import 'package:nissie_ideal_shelters/providers/sla_provider.dart';
 import 'package:intl/intl.dart';
 
 class AnalyticsDashboardScreen extends ConsumerStatefulWidget {

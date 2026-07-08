@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 
 class PartnerProfileScreen extends ConsumerStatefulWidget {
   const PartnerProfileScreen({super.key});

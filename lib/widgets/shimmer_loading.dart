@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ppn/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 
 class ShimmerPlaceholder extends StatefulWidget {
   final double width;

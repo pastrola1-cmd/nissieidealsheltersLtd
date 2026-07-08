@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ppn/screens/shared/landing_page_screen.dart';
+import 'package:nissie_ideal_shelters/screens/shared/landing_page_screen.dart';
 
 void main() {
   group('White Label Custom Domain Helper Tests', () {

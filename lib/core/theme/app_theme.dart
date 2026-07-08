@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/constants/app_spacing.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_spacing.dart';
 
 /// App-wide Material theme configuration
 class AppTheme {

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/property_provider.dart';
-import 'package:ppn/providers/inspection_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/providers/inspection_provider.dart';
 
 class BookInspectionScreen extends ConsumerStatefulWidget {
   final String propertyId;

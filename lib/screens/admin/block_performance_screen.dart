@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/campaign/block_library.dart';
-import 'package:ppn/core/campaign/block_types.dart';
-import 'package:ppn/providers/performance_provider.dart';
-import 'package:ppn/services/performance_service.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/campaign/block_library.dart';
+import 'package:nissie_ideal_shelters/core/campaign/block_types.dart';
+import 'package:nissie_ideal_shelters/providers/performance_provider.dart';
+import 'package:nissie_ideal_shelters/services/performance_service.dart';
 
 class BlockPerformanceScreen extends ConsumerStatefulWidget {
   const BlockPerformanceScreen({super.key});

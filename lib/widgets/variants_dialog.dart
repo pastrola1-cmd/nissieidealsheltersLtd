@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 class LandingPageVariantsDialog extends ConsumerStatefulWidget {
   final Property property;

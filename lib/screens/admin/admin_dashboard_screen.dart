@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/company_provider.dart';
-import 'package:ppn/providers/dashboard_provider.dart';
-import 'package:ppn/providers/notification_provider.dart';
-import 'package:ppn/widgets/lead_usage_progress_bar.dart';
-import 'package:ppn/widgets/goals_dashboard_list.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/company_provider.dart';
+import 'package:nissie_ideal_shelters/providers/dashboard_provider.dart';
+import 'package:nissie_ideal_shelters/providers/notification_provider.dart';
+import 'package:nissie_ideal_shelters/widgets/lead_usage_progress_bar.dart';
+import 'package:nissie_ideal_shelters/widgets/goals_dashboard_list.dart';
 
 
 class AdminDashboardScreen extends ConsumerWidget {

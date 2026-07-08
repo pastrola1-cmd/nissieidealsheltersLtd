@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import 'package:intl/intl.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/providers/lead_provider.dart';
-import 'package:ppn/providers/property_provider.dart';
-import 'package:ppn/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 
 class LeadImportScreen extends ConsumerStatefulWidget {
   const LeadImportScreen({super.key});

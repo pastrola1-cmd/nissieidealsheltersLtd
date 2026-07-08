@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/report_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/report_provider.dart';
 
 class DailyReportsScreen extends ConsumerStatefulWidget {
   const DailyReportsScreen({super.key});

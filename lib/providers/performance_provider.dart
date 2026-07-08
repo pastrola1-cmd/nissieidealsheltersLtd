@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/services/performance_service.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/services/performance_service.dart';
 
 class PerformanceState {
   final List<CampaignBlockStat> blockStats;

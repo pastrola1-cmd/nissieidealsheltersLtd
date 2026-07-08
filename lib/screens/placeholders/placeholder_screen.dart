@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ppn/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 
 /// A generic placeholder screen used for routes that are not yet implemented.
 ///

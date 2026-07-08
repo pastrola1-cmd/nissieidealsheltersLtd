@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/core/campaign/platform_formatter.dart';
-import 'package:ppn/core/campaign/block_types.dart';
-import 'package:ppn/core/campaign/campaign_assembler.dart';
-import 'package:ppn/models/models.dart';
+import 'package:nissie_ideal_shelters/core/campaign/platform_formatter.dart';
+import 'package:nissie_ideal_shelters/core/campaign/block_types.dart';
+import 'package:nissie_ideal_shelters/core/campaign/campaign_assembler.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
 
 void main() {
   group('Campaign Tracking & Attribution Tests', () {

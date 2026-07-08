@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/models/models.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
 
 void main() {
   group('Models serialization & deserialization tests', () {

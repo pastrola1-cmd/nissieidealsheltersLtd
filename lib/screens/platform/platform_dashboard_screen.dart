@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/platform_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/platform_provider.dart';
 
 class PlatformDashboardScreen extends ConsumerWidget {
   const PlatformDashboardScreen({super.key});

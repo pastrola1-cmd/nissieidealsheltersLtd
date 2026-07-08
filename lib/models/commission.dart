@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:ppn/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 
 @immutable
 class Commission {

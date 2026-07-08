@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
-import 'package:ppn/models/models.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
 
 class DocumentTemplateService {
   /// Fetches company logo from network and compiles it into a pw.MemoryImage

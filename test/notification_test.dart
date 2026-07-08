@@ -3,13 +3,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/auth_state.dart';
-import 'package:ppn/services/supabase_service.dart';
-import 'package:ppn/services/notification_service.dart';
-import 'package:ppn/providers/notification_provider.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_state.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/services/notification_service.dart';
+import 'package:nissie_ideal_shelters/providers/notification_provider.dart';
 
 // Fake implementations for testing
 class FakeAuthNotifier extends AuthNotifier {

@@ -6,17 +6,17 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/campaign/campaign_assembler.dart';
-import 'package:ppn/core/campaign/validation_engine.dart';
-import 'package:ppn/core/campaign/platform_formatter.dart';
-import 'package:ppn/core/intelligence/audience_registry.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/property_provider.dart';
-import 'package:ppn/providers/campaign_provider.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/services/supabase_service.dart';
-import 'package:ppn/providers/performance_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/campaign/campaign_assembler.dart';
+import 'package:nissie_ideal_shelters/core/campaign/validation_engine.dart';
+import 'package:nissie_ideal_shelters/core/campaign/platform_formatter.dart';
+import 'package:nissie_ideal_shelters/core/intelligence/audience_registry.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/providers/campaign_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/providers/performance_provider.dart';
 
 class CampaignGeneratorScreen extends ConsumerStatefulWidget {
   final String? propertyId;

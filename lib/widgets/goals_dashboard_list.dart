@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/goal_provider.dart';
-import 'package:ppn/widgets/goal_card.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/goal_provider.dart';
+import 'package:nissie_ideal_shelters/widgets/goal_card.dart';
 
 class GoalsDashboardList extends ConsumerStatefulWidget {
   const GoalsDashboardList({super.key});

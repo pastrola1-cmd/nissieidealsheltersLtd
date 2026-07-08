@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ppn/core/utils/js_helper.dart';
-import 'package:ppn/services/whatsapp_service.dart';
+import 'package:nissie_ideal_shelters/core/utils/js_helper.dart';
+import 'package:nissie_ideal_shelters/services/whatsapp_service.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 

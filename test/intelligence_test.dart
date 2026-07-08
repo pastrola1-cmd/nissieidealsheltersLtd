@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/core/intelligence/intelligence.dart';
-import 'package:ppn/models/models.dart';
+import 'package:nissie_ideal_shelters/core/intelligence/intelligence.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
 
 void main() {
   group('CityRegistry Tests', () {

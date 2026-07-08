@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/property_provider.dart';
-import 'package:ppn/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:ppn/core/intelligence/intelligence.dart';
+import 'package:nissie_ideal_shelters/core/intelligence/intelligence.dart';
 
 class PropertyFormScreen extends ConsumerStatefulWidget {
   final String? propertyId;

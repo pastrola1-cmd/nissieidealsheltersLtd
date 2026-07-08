@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:ppn/models/models.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
 
 @immutable
 class AuthState {

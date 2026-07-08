@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ppn/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 
 class MarketerLeadsScreen extends ConsumerWidget {
   const MarketerLeadsScreen({super.key});

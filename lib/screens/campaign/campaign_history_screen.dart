@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/models/models.dart';
-import 'package:ppn/providers/campaign_provider.dart';
-import 'package:ppn/providers/property_provider.dart';
-import 'package:ppn/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/campaign_provider.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 
 class CampaignHistoryScreen extends ConsumerWidget {
   const CampaignHistoryScreen({super.key});

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/providers/analytics_provider.dart';
+import 'package:nissie_ideal_shelters/providers/analytics_provider.dart';
 
 void main() {
   group('Analytics State & MonthlyRevenue Model Tests', () {

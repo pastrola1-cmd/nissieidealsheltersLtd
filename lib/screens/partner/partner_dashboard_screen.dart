@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/core/enums/enums.dart';
-import 'package:ppn/providers/auth_provider.dart';
-import 'package:ppn/providers/company_provider.dart';
-import 'package:ppn/providers/dashboard_provider.dart';
-import 'package:ppn/providers/notification_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/company_provider.dart';
+import 'package:nissie_ideal_shelters/providers/dashboard_provider.dart';
+import 'package:nissie_ideal_shelters/providers/notification_provider.dart';
 
 class PartnerDashboardScreen extends ConsumerWidget {
   const PartnerDashboardScreen({super.key});

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 
 class MarketerDashboardScreen extends ConsumerWidget {
   const MarketerDashboardScreen({super.key});

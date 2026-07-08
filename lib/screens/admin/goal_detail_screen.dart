@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:ppn/core/constants/app_colors.dart';
-import 'package:ppn/providers/goal_provider.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/providers/goal_provider.dart';
 
 class GoalDetailScreen extends ConsumerWidget {
   final String goalId;

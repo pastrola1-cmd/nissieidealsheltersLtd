@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/core/campaign/block_types.dart';
-import 'package:ppn/core/campaign/block_library.dart';
-import 'package:ppn/core/campaign/strategy_engine.dart';
-import 'package:ppn/services/performance_service.dart';
+import 'package:nissie_ideal_shelters/core/campaign/block_types.dart';
+import 'package:nissie_ideal_shelters/core/campaign/block_library.dart';
+import 'package:nissie_ideal_shelters/core/campaign/strategy_engine.dart';
+import 'package:nissie_ideal_shelters/services/performance_service.dart';
 
 void main() {
   group('Performance Evolution Loop Tests', () {

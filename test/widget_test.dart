@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/core/utils/validators.dart';
+import 'package:nissie_ideal_shelters/core/utils/validators.dart';
 
 void main() {
   group('Validators tests', () {

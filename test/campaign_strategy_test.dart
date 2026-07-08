@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ppn/core/intelligence/intelligence.dart';
+import 'package:nissie_ideal_shelters/core/intelligence/intelligence.dart';
 
 void main() {
   group('Campaign Block System & Strategy Engine Tests', () {
