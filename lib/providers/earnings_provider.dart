@@ -39,7 +39,7 @@ class EarningsState {
 }
 
 class EarningsNotifier extends Notifier<EarningsState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   String? _loadedProfileId;
 
   @override

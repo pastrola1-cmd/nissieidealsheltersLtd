@@ -31,7 +31,7 @@ class PropertyState {
 }
 
 class PropertyNotifier extends Notifier<PropertyState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   String? _loadedCompanyId;
 
   @override

@@ -32,7 +32,7 @@ class LeadState {
 }
 
 class LeadNotifier extends Notifier<LeadState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   final _secureStorage = const FlutterSecureStorage();
   String? _loadedProfileId;
 

@@ -32,8 +32,8 @@ class NotificationState {
 }
 
 class NotificationNotifier extends Notifier<NotificationState> {
-  late final SupabaseService _supabaseService;
-  late final NotificationService _notificationService;
+  late SupabaseService _supabaseService;
+  late NotificationService _notificationService;
   RealtimeChannel? _subscriptionChannel;
   String? _subscribedUserId;
 

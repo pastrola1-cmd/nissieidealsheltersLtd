@@ -30,7 +30,7 @@ class DocumentState {
 }
 
 class DocumentNotifier extends Notifier<DocumentState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   String? _loadedCompanyId;
 
   @override

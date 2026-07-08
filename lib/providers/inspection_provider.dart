@@ -31,7 +31,7 @@ class InspectionState {
 }
 
 class InspectionNotifier extends Notifier<InspectionState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   final _secureStorage = const FlutterSecureStorage();
   String? _loadedProfileId;
 

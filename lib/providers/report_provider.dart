@@ -28,7 +28,7 @@ class ReportState {
 }
 
 class ReportNotifier extends Notifier<ReportState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
 
   @override
   ReportState build() {

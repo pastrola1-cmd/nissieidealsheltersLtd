@@ -32,7 +32,7 @@ class PartnerState {
 
 /// Riverpod Notifier that manages loading and changing status of partners.
 class PartnerNotifier extends Notifier<PartnerState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   String? _loadedCompanyId;
 
   @override

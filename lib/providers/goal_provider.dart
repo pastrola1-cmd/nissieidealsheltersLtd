@@ -53,7 +53,7 @@ class GoalState {
 }
 
 class GoalNotifier extends Notifier<GoalState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
 
   @override
   GoalState build() {

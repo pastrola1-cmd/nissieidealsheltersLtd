@@ -90,7 +90,7 @@ class AnalyticsState {
 }
 
 class AnalyticsNotifier extends Notifier<AnalyticsState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
 
   @override
   AnalyticsState build() {

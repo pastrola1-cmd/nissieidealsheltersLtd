@@ -27,7 +27,7 @@ class PerformanceState {
 }
 
 class PerformanceNotifier extends Notifier<PerformanceState> {
-  late final PerformanceService _performanceService;
+  late PerformanceService _performanceService;
   String? _loadedCompanyId;
 
   @override

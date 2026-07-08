@@ -28,7 +28,7 @@ class CampaignState {
 }
 
 class CampaignNotifier extends Notifier<CampaignState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   String? _loadedCompanyId;
 
   @override

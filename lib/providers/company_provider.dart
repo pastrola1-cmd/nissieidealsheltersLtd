@@ -45,7 +45,7 @@ final selectedCompanyIdProvider = NotifierProvider<SelectedCompanyIdNotifier, St
 });
 
 class CompanyNotifier extends Notifier<CompanyState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   String? _loadedCompanyId;
 
   @override

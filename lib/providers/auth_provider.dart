@@ -17,7 +17,7 @@ final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {
 });
 
 class AuthNotifier extends Notifier<AuthState> {
-  late final SupabaseService _supabaseService;
+  late SupabaseService _supabaseService;
   final sb.SupabaseClient _client = SupabaseConfig.client;
   StreamSubscription<sb.AuthState>? _authSubscription;
 
@@ -39,28 +39,30 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   void _initialize() {
-    // Check current session immediately on startup
-    final currentSession = _client.auth.currentSession;
-    if (currentSession != null) {
-      _fetchProfile(currentSession.user.id);
-    }
-
-    // Listen to subsequent auth changes
-    _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
-      final session = data.session;
-      if (session != null) {
-        // If a fetch is already running for this user, just wait for it.
-        if (_activeFetch != null && !_activeFetch!.isCompleted) {
-          await _activeFetch!.future;
-          return;
-        }
-        // Only fetch if we don't already have this user's profile loaded.
-        if (state.profile?.id != session.user.id) {
-          await _fetchProfile(session.user.id);
-        }
-      } else {
-        state = const AuthState(isAuthenticated: false);
+    Future.microtask(() {
+      // Check current session immediately on startup
+      final currentSession = _client.auth.currentSession;
+      if (currentSession != null) {
+        _fetchProfile(currentSession.user.id);
       }
+
+      // Listen to subsequent auth changes
+      _authSubscription = _client.auth.onAuthStateChange.listen((data) async {
+        final session = data.session;
+        if (session != null) {
+          // If a fetch is already running for this user, just wait for it.
+          if (_activeFetch != null && !_activeFetch!.isCompleted) {
+            await _activeFetch!.future;
+            return;
+          }
+          // Only fetch if we don't already have this user's profile loaded.
+          if (state.profile?.id != session.user.id) {
+            await _fetchProfile(session.user.id);
+          }
+        } else {
+          state = const AuthState(isAuthenticated: false);
+        }
+      });
     });
   }
 
