@@ -24,23 +24,26 @@ void main() {
       final backToJson = company.toJson();
       expect(backToJson['id'], 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6');
       expect(backToJson['is_hidden'], false);
-      expect(company.subscriptionTier, 'basic');
+      expect(company.subscriptionTier, 'free');
       expect(company.subscriptionStatus, 'trialing');
-      expect(company.plan.maxLeadsPerMonth, 150);
-      expect(company.effectiveLeadLimit, 150);
+      expect(company.plan.maxLeadsPerMonth, 10);
+      expect(company.effectiveLeadLimit, 10);
+
+      final futureDate = DateTime.now().add(const Duration(days: 30));
+      final futureDateStr = futureDate.toIso8601String();
 
       final companyWithCustomPlan = Company.fromJson({
         ...json,
         'subscription_tier': 'growth',
         'subscription_status': 'active',
-        'subscription_expires_at': '2026-06-24T10:00:00.000Z',
+        'subscription_expires_at': futureDateStr,
         'is_hidden': true,
         'custom_lead_limit': 300,
         'custom_domain': 'agency.com',
       });
       expect(companyWithCustomPlan.subscriptionTier, 'growth');
       expect(companyWithCustomPlan.subscriptionStatus, 'active');
-      expect(companyWithCustomPlan.subscriptionExpiresAt, DateTime.parse('2026-06-24T10:00:00.000Z'));
+      expect(companyWithCustomPlan.subscriptionExpiresAt, DateTime.parse(futureDateStr));
       expect(companyWithCustomPlan.plan.maxListings, 50);
       expect(companyWithCustomPlan.plan.maxPartners, 25);
       expect(companyWithCustomPlan.plan.maxLeadsPerMonth, 500);
