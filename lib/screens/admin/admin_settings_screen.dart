@@ -21,16 +21,20 @@ class AdminSettingsScreen extends ConsumerStatefulWidget {
 class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _profileFormKey = GlobalKey<FormState>();
   final _passwordFormKey = GlobalKey<FormState>();
+  final _smsFormKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _termiiApiKeyController = TextEditingController();
+  final _termiiSenderIdController = TextEditingController();
 
   String? _avatarUrl;
   bool _isUploadingAvatar = false;
   bool _isSavingProfile = false;
   bool _isSavingPassword = false;
+  bool _isSavingSms = false;
 
   @override
   void initState() {
@@ -41,6 +45,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       _phoneController.text = profile.phone ?? '';
       _avatarUrl = profile.avatarUrl;
     }
+    final company = ref.read(authProvider).company;
+    if (company != null) {
+      _termiiApiKeyController.text = company.termiiApiKey ?? '';
+      _termiiSenderIdController.text = company.termiiSenderId ?? 'Nissie';
+    }
   }
 
   @override
@@ -49,6 +58,8 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _termiiApiKeyController.dispose();
+    _termiiSenderIdController.dispose();
     super.dispose();
   }
 
@@ -188,6 +199,45 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     } finally {
       if (mounted) {
         setState(() => _isSavingPassword = false);
+      }
+    }
+  }
+
+  Future<void> _handleSaveSmsSettings() async {
+    setState(() => _isSavingSms = true);
+    try {
+      final company = ref.read(authProvider).company;
+      if (company != null) {
+        final service = ref.read(supabaseServiceProvider);
+        await service.update('companies', company.id, {
+          'termii_api_key': _termiiApiKeyController.text.trim(),
+          'termii_sender_id': _termiiSenderIdController.text.trim(),
+        });
+        
+        await ref.read(authProvider.notifier).refreshProfile();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('SMS Settings updated successfully!'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update SMS settings: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingSms = false);
       }
     }
   }
@@ -397,6 +447,62 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                         const Icon(
                           Icons.chevron_right_rounded,
                           color: AppColors.textSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Card(
+                color: AppColors.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Form(
+                    key: _smsFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SMS Configuration (Termii)',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _termiiApiKeyController,
+                          decoration: _inputDecoration(label: 'Termii API Key', icon: Icons.key_rounded),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _termiiSenderIdController,
+                          decoration: _inputDecoration(label: 'Termii Sender ID', icon: Icons.message_outlined),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: _isSavingSms
+                              ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                              : ElevatedButton(
+                                  onPressed: _handleSaveSmsSettings,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.accent,
+                                    foregroundColor: AppColors.textOnAccent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Text('Save SMS Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
                         ),
                       ],
                     ),

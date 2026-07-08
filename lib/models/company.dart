@@ -23,6 +23,8 @@ class Company {
   final bool whatsappEnabled;
   final String whatsappTemplateName;
   final String? customDomain;
+  final String? termiiApiKey;
+  final String? termiiSenderId;
 
   const Company({
     required this.id,
@@ -46,6 +48,8 @@ class Company {
     this.whatsappEnabled = false,
     this.whatsappTemplateName = 'property_inquiry_auto',
     this.customDomain,
+    this.termiiApiKey,
+    this.termiiSenderId = 'Nissie',
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
@@ -73,6 +77,8 @@ class Company {
       whatsappEnabled: (json['whatsapp_enabled'] as bool?) ?? false,
       whatsappTemplateName: (json['whatsapp_template_name'] as String?) ?? 'property_inquiry_auto',
       customDomain: json['custom_domain'] as String?,
+      termiiApiKey: json['termii_api_key'] as String?,
+      termiiSenderId: json['termii_sender_id'] as String? ?? 'Nissie',
     );
   }
 
@@ -99,6 +105,8 @@ class Company {
       'whatsapp_enabled': whatsappEnabled,
       'whatsapp_template_name': whatsappTemplateName,
       'custom_domain': customDomain,
+      'termii_api_key': termiiApiKey,
+      'termii_sender_id': termiiSenderId,
     };
   }
 
@@ -124,6 +132,8 @@ class Company {
     bool? whatsappEnabled,
     String? whatsappTemplateName,
     Object? customDomain = const Object(),
+    String? termiiApiKey,
+    String? termiiSenderId,
   }) {
     return Company(
       id: id ?? this.id,
@@ -151,6 +161,8 @@ class Company {
       customDomain: customDomain == const Object()
           ? this.customDomain
           : (customDomain as String?),
+      termiiApiKey: termiiApiKey ?? this.termiiApiKey,
+      termiiSenderId: termiiSenderId ?? this.termiiSenderId,
     );
   }
 }

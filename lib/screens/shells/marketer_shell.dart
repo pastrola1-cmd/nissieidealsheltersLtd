@@ -51,6 +51,11 @@ class MarketerShell extends StatelessWidget {
               label: 'Dashboard',
             ),
             NavigationDestination(
+              icon: Icon(Icons.home_work_outlined),
+              selectedIcon: Icon(Icons.home_work_rounded, color: AppColors.accent),
+              label: 'Properties',
+            ),
+            NavigationDestination(
               icon: Icon(Icons.person_search_outlined),
               selectedIcon: Icon(Icons.person_search_rounded, color: AppColors.accent),
               label: 'My Leads',
@@ -59,6 +64,11 @@ class MarketerShell extends StatelessWidget {
               icon: Icon(Icons.task_outlined),
               selectedIcon: Icon(Icons.task_rounded, color: AppColors.accent),
               label: 'Follow-ups',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(Icons.bar_chart_rounded, color: AppColors.accent),
+              label: 'Reports',
             ),
           ],
         ),

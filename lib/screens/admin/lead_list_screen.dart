@@ -12,6 +12,7 @@ import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/widgets/shimmer_loading.dart';
 import 'package:nissie_ideal_shelters/widgets/empty_state.dart';
+import 'package:nissie_ideal_shelters/services/sms_service.dart';
 
 class LeadListScreen extends ConsumerStatefulWidget {
   final String? initialStageFilter;
@@ -242,14 +243,14 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
               left: 24,
               right: 24,
               bottom: 24,
-              child: _buildBulkActionToolbar(context),
+              child: _buildBulkActionToolbar(context, filteredLeads),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildBulkActionToolbar(BuildContext context) {
+  Widget _buildBulkActionToolbar(BuildContext context, List<Lead> filteredLeads) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -266,6 +267,11 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
+          _buildToolbarButton(
+            icon: Icons.sms_outlined,
+            label: 'SMS',
+            onTap: () => _showBulkSmsDialog(context, filteredLeads),
+          ),
           _buildToolbarButton(
             icon: Icons.person_add_alt_1_outlined,
             label: 'Assign',
@@ -314,6 +320,129 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
   }
 
   // ── Bulk Dialogs ──
+
+  Future<void> _showBulkSmsDialog(BuildContext context, List<Lead> filteredLeads) async {
+    final smsController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSending = false;
+
+    final selectedLeads = filteredLeads.where((l) => _selectedLeadIds.contains(l.id)).toList();
+    final phoneNumbers = selectedLeads.map((l) => l.buyerPhone).where((p) => p.isNotEmpty).toList();
+
+    if (phoneNumbers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No valid phone numbers found for selected leads.')),
+      );
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.sms_rounded, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Text('Send Bulk SMS (${phoneNumbers.length})'),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter the message you want to broadcast to these leads:',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: smsController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Type your message here...',
+                    filled: true,
+                    fillColor: AppColors.surfaceVariant,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a message';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: isSending
+                  ? null
+                  : () async {
+                      if (!(formKey.currentState?.validate() ?? false)) return;
+                      setDialogState(() => isSending = true);
+
+                      final company = ref.read(authProvider).company;
+                      final apiKey = company?.termiiApiKey;
+                      final senderId = company?.termiiSenderId ?? 'Nissie';
+
+                      final service = ref.read(smsServiceProvider);
+                      final sentCount = await service.sendBulkSms(
+                        phoneNumbers: phoneNumbers,
+                        message: smsController.text.trim(),
+                        apiKey: apiKey,
+                        senderId: senderId,
+                      );
+
+                      if (dialogCtx.mounted) {
+                        Navigator.pop(dialogCtx);
+                      }
+
+                      if (mounted) {
+                        final isLive = apiKey != null && apiKey.trim().isNotEmpty;
+                        final modeMsg = isLive 
+                            ? 'Successfully sent $sentCount / ${phoneNumbers.length} SMS via Termii!'
+                            : 'Simulation Mode: Simulated sending $sentCount SMS to console.';
+                        
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(
+                            content: Text(modeMsg),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: isLive ? AppColors.success : AppColors.info,
+                          ),
+                        );
+                        setState(() => _selectedLeadIds.clear());
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Send SMS'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _showBulkAssignDialog(BuildContext context) async {
     final marketers = ref.read(agencyMarketersProvider).value ?? [];

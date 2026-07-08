@@ -573,6 +573,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/manager/properties',
+                name: 'managerProperties',
+                builder: (context, state) => const PartnerPropertiesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/manager/team',
                 name: 'managerTeam',
                 builder: (context, state) => const ManagerTeamScreen(),
@@ -646,6 +655,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/marketer/properties',
+                name: ' marketerProperties',
+                builder: (context, state) => const PartnerPropertiesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/marketer/leads',
                 name: 'marketerLeads',
                 builder: (context, state) {
@@ -686,6 +704,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/marketer/followups',
                 name: 'marketerFollowups',
                 builder: (context, state) => const MarketerFollowupsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/marketer/reports',
+                name: 'marketerReports',
+                builder: (context, state) => const DailyReportsScreen(),
               ),
             ],
           ),

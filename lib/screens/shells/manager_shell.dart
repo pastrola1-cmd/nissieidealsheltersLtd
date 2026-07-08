@@ -51,6 +51,11 @@ class ManagerShell extends StatelessWidget {
               label: 'Dashboard',
             ),
             NavigationDestination(
+              icon: Icon(Icons.home_work_outlined),
+              selectedIcon: Icon(Icons.home_work_rounded, color: AppColors.accent),
+              label: 'Properties',
+            ),
+            NavigationDestination(
               icon: Icon(Icons.groups_outlined),
               selectedIcon: Icon(Icons.groups_rounded, color: AppColors.accent),
               label: 'Team',
