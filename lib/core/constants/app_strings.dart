@@ -3,10 +3,12 @@ class AppStrings {
   AppStrings._();
 
   // ── App ──
-  static const String appName = 'ScaleWealth';
-  static const String appFullName = 'ScaleWealth Estate';
-  static const String appTagline = 'Premium Real Estate & Partnership Network';
-  static const String companyName = 'ScaleWealthEstate';
+  static const String appName = 'NissieShelters';
+  static const String appFullName = 'Nissie Ideal Shelters Ltd';
+  static const String appTagline = 'Your Trusted Real Estate & Property Partner';
+  static const String companyName = 'NissieIdealShelters';
+  static const String defaultCompanyId = 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6';
+  static const String currency = '₦';
 
   // ── Auth ──
   static const String login = 'Login';

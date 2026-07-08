@@ -6,19 +6,19 @@ class AppColors {
   AppColors._();
 
   // ── Primary Brand ──
-  static const Color primary = Color(0xFF1A1A2E);
-  static const Color primaryLight = Color(0xFF16213E);
-  static const Color primaryDark = Color(0xFF0F0F1A);
+  static const Color primary = Color(0xFF1E6BE6);
+  static const Color primaryLight = Color(0xFF4C8DF5);
+  static const Color primaryDark = Color(0xFF0B4CB0);
 
   // ── Accent ──
-  static const Color accent = Color(0xFF10B981);
-  static const Color accentLight = Color(0xFF34D399);
-  static const Color accentDark = Color(0xFF059669);
+  static const Color accent = Color(0xFF7C3AED);
+  static const Color accentLight = Color(0xFFA78BFA);
+  static const Color accentDark = Color(0xFF5B21B6);
 
   // ── Secondary ──
-  static const Color secondary = Color(0xFFF59E0B);
-  static const Color secondaryLight = Color(0xFFFEF3C7);
-  static const Color secondaryDark = Color(0xFFD97706);
+  static const Color secondary = Color(0xFF05664F);
+  static const Color secondaryLight = Color(0xFFD2EBE4);
+  static const Color secondaryDark = Color(0xFF023F31);
 
   // ── Success / Green ──
   static const Color success = Color(0xFF10B981);
@@ -49,7 +49,7 @@ class AppColors {
   static const Color divider = Color(0xFFE2E8F0);
 
   // ── Text ──
-  static const Color textPrimary = Color(0xFF1A1A2E);
+  static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
   static const Color textTertiary = Color(0xFF94A3B8);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
@@ -70,8 +70,8 @@ class AppColors {
   static const Color commissionDisputed = Color(0xFFEF4444);
 
   // ── Dark Surfaces (for premium sections) ──
-  static const Color darkSurface = Color(0xFF1A1A2E);
-  static const Color darkSurfaceLight = Color(0xFF232946);
+  static const Color darkSurface = Color(0xFF0F172A);
+  static const Color darkSurfaceLight = Color(0xFF1E293B);
 
   // ── Gradients ──
   static const LinearGradient primaryGradient = LinearGradient(
@@ -94,14 +94,14 @@ class AppColors {
 
   /// Premium gradient for dashboard welcome banners and hero sections
   static const LinearGradient dashboardHeaderGradient = LinearGradient(
-    colors: [Color(0xFF0D9488), Color(0xFF10B981), Color(0xFF059669)],
+    colors: [Color(0xFF1E6BE6), Color(0xFF0D9488), Color(0xFF05664F)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   /// CTA / Primary action button gradient (matches landing page)
   static const LinearGradient ctaGradient = LinearGradient(
-    colors: [Color(0xFF10B981), Color(0xFF0D9488)],
+    colors: [Color(0xFF1E6BE6), Color(0xFF05664F)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

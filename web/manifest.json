@@ -1,11 +1,11 @@
 {
-    "name": "ppn",
-    "short_name": "ppn",
+    "name": "Nissie Ideal Shelters",
+    "short_name": "Nissie Ideal",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Property Partner Network - Real estate sales and commission system",
+    "background_color": "#1E6BE6",
+    "theme_color": "#1E6BE6",
+    "description": "Nissie Ideal Shelters - Premium real estate sales and commission system",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
