@@ -7,9 +7,11 @@ import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/utils/validators.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/core/theme/app_theme.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminSettingsScreen extends ConsumerStatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -29,6 +31,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _confirmPasswordController = TextEditingController();
   final _termiiApiKeyController = TextEditingController();
   final _termiiSenderIdController = TextEditingController();
+  final _geminiApiKeyController = TextEditingController();
 
   String? _avatarUrl;
   bool _isUploadingAvatar = false;
@@ -49,6 +52,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     if (company != null) {
       _termiiApiKeyController.text = company.termiiApiKey ?? '';
       _termiiSenderIdController.text = company.termiiSenderId ?? 'Nissie';
+      _geminiApiKeyController.text = company.geminiApiKey ?? '';
     }
   }
 
@@ -60,6 +64,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _confirmPasswordController.dispose();
     _termiiApiKeyController.dispose();
     _termiiSenderIdController.dispose();
+    _geminiApiKeyController.dispose();
     super.dispose();
   }
 
@@ -212,6 +217,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         await service.update('companies', company.id, {
           'termii_api_key': _termiiApiKeyController.text.trim(),
           'termii_sender_id': _termiiSenderIdController.text.trim(),
+          'gemini_api_key': _geminiApiKeyController.text.trim(),
         });
         
         await ref.read(authProvider.notifier).refreshProfile();
@@ -219,7 +225,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('SMS Settings updated successfully!'),
+              content: Text('Integration settings updated successfully!'),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -229,7 +235,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update SMS settings: $e'),
+            content: Text('Failed to update integration settings: $e'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -469,7 +475,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'SMS Configuration (Termii)',
+                          'Integrations (SMS & AI)',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -484,6 +490,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                         TextFormField(
                           controller: _termiiSenderIdController,
                           decoration: _inputDecoration(label: 'Termii Sender ID', icon: Icons.message_outlined),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _geminiApiKeyController,
+                          decoration: _inputDecoration(label: 'Gemini API Key (AI Coach)', icon: Icons.psychology_outlined),
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
@@ -501,7 +512,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  child: const Text('Save SMS Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  child: const Text('Save Integration Settings', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                         ),
                       ],
@@ -577,7 +588,70 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+             const SizedBox(height: 24),
+
+             // ── Theme Customization Preferences Card ──
+             Card(
+               color: theme.cardColor,
+               elevation: 0,
+               shape: RoundedRectangleBorder(
+                 borderRadius: BorderRadius.circular(16),
+                 side: BorderSide(color: theme.dividerColor),
+               ),
+               child: Padding(
+                 padding: const EdgeInsets.all(20),
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       'App Theme Preferences',
+                       style: theme.textTheme.titleMedium?.copyWith(
+                         fontWeight: FontWeight.bold,
+                         color: theme.colorScheme.onSurface,
+                       ),
+                     ),
+                     const SizedBox(height: 8),
+                     const Text(
+                       'Switch between Light and Dark mode options.',
+                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                     ),
+                     const SizedBox(height: 20),
+                     Row(
+                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                       children: [
+                         Row(
+                           children: [
+                             Icon(
+                               ref.watch(themeModeProvider) == ThemeMode.dark
+                                   ? Icons.dark_mode_rounded
+                                   : Icons.light_mode_rounded,
+                               color: AppColors.accent,
+                             ),
+                             const SizedBox(width: 12),
+                             Text(
+                               ref.watch(themeModeProvider) == ThemeMode.dark
+                                   ? 'Dark Theme Enabled'
+                                   : 'Light Theme Enabled',
+                               style: const TextStyle(fontWeight: FontWeight.bold),
+                             ),
+                           ],
+                         ),
+                          Switch(
+                            value: ref.watch(themeModeProvider) == ThemeMode.dark,
+                            activeColor: AppColors.accent,
+                            onChanged: (val) async {
+                              ref.read(themeModeProvider.notifier).setTheme(val ? ThemeMode.dark : ThemeMode.light);
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('is_dark_theme', val);
+                            },
+                          ),
+                       ],
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+             const SizedBox(height: 40),
 
             // ── Log Out Button (Destructive action) ──
             SizedBox(

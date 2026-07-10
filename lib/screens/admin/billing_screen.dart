@@ -108,7 +108,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'ScaleWealth Estate Billing',
+          'Nissie Ideal Shelters Billing',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.surface,
@@ -682,7 +682,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                   const Divider(height: 16),
                   _buildDetailRow('Account Number', '0092384712'),
                   const Divider(height: 16),
-                  _buildDetailRow('Account Name', 'ScaleWealth Estate Ltd'),
+                  _buildDetailRow('Account Name', 'Nissie Ideal Shelters Ltd'),
                   const Divider(height: 16),
                   _buildDetailRow('Amount', _currencyFormat.format(targetPlan.price)),
                   const Divider(height: 16),
@@ -753,10 +753,10 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                     onPressed: () async {
                       final emailUri = Uri(
                         scheme: 'mailto',
-                        path: 'support@scalewealth.com',
+                        path: 'support@nissie-ideal-shelters.com',
                         queryParameters: {
                           'subject': 'Subscription Upgrade Request: ${company.name}',
-                          'body': 'Hello ScaleWealth Support,\n\nWe have initiated a payment to upgrade our agency subscription to the ${targetPlan.name}.\n\nTenant ID: ${company.id}\nCompany Name: ${company.name}\n\nPlease find the payment confirmation receipt attached.\n\nThank you!',
+                          'body': 'Hello Nissie Support,\n\nWe have initiated a payment to upgrade our agency subscription to the ${targetPlan.name}.\n\nTenant ID: ${company.id}\nCompany Name: ${company.name}\n\nPlease find the payment confirmation receipt attached.\n\nThank you!',
                         },
                       );
                       if (await canLaunchUrl(emailUri)) {
@@ -789,7 +789,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                     ),
                     onPressed: () async {
                       final message = Uri.encodeComponent(
-                        'Hello Support, we want to upgrade our ScaleWealth Estate subscription to the ${targetPlan.name}.\n\nTenant ID: ${company.id}\nCompany: ${company.name}',
+                        'Hello Support, we want to upgrade our Nissie Ideal Shelters subscription to the ${targetPlan.name}.\n\nTenant ID: ${company.id}\nCompany: ${company.name}',
                       );
                       final whatsappUrl = Uri.parse('https://wa.me/2348000000000?text=$message');
                       if (await canLaunchUrl(whatsappUrl)) {
@@ -988,10 +988,10 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                     onPressed: () async {
                       final emailUri = Uri(
                         scheme: 'mailto',
-                        path: 'support@scalewealth.com',
+                        path: 'support@nissie-ideal-shelters.com',
                         queryParameters: {
                           'subject': 'Dedicated App Request: ${company.name}',
-                          'body': 'Hello ScaleWealth Support,\n\nWe would like to request a dedicated custom-branded app for our agency.\n\nTenant ID: ${company.id}\nCompany Name: ${company.name}\n\nPlease let us know the next steps and pricing details.\n\nThank you!',
+                          'body': 'Hello Nissie Support,\n\nWe would like to request a dedicated custom-branded app for our agency.\n\nTenant ID: ${company.id}\nCompany Name: ${company.name}\n\nPlease let us know the next steps and pricing details.\n\nThank you!',
                         },
                       );
                       if (await canLaunchUrl(emailUri)) {

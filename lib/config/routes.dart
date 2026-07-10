@@ -52,6 +52,12 @@ import 'package:nissie_ideal_shelters/screens/partner/earnings_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_commissions_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_withdrawals_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/staff_invite_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/staff_management_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/admin_training_manager_screen.dart';
+import 'package:nissie_ideal_shelters/screens/shared/training_dashboard_screen.dart';
+import 'package:nissie_ideal_shelters/screens/shared/training_material_detail_screen.dart';
+import 'package:nissie_ideal_shelters/screens/shared/simulator_play_screen.dart';
+import 'package:nissie_ideal_shelters/screens/shared/exam_take_screen.dart';
 import 'package:nissie_ideal_shelters/screens/partner/partner_dashboard_screen.dart';
 import 'package:nissie_ideal_shelters/screens/buyer/buyer_home_screen.dart';
 import 'package:nissie_ideal_shelters/screens/campaign/campaign_generator_screen.dart';
@@ -64,6 +70,8 @@ import 'package:nissie_ideal_shelters/screens/admin/document_generator_screen.da
 import 'package:nissie_ideal_shelters/screens/admin/document_preview_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/document_list_screen.dart';
 import 'package:nissie_ideal_shelters/screens/shared/landing_page_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/admin_sms_portal_screen.dart';
+
 
 
 
@@ -200,8 +208,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (location.startsWith('/admin')) {
         final isAdminOrPlatform = profile.role == UserRole.admin || profile.role == UserRole.platformAdmin;
-        final isManagerBilling = profile.role == UserRole.manager && location == '/admin/billing';
-        if (!isAdminOrPlatform && !isManagerBilling) {
+        final isManagerAllowedPath = profile.role == UserRole.manager && (
+          location.startsWith('/admin/properties') || 
+          location == '/admin/billing'
+        );
+        if (!isAdminOrPlatform && !isManagerAllowedPath) {
           return _getDefaultRouteForRole(profile.role);
         }
       }
@@ -214,7 +225,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (location.startsWith('/partner') && profile.role != UserRole.partner) {
         return _getDefaultRouteForRole(profile.role);
       }
-      if (location.startsWith('/buyer') && profile.role != UserRole.buyer) {
+      if (location.startsWith('/training') && profile.role == UserRole.buyer) {
+        return _getDefaultRouteForRole(profile.role);
+      }
+      if (location == '/training/manage' && profile.role != UserRole.admin && profile.role != UserRole.manager) {
         return _getDefaultRouteForRole(profile.role);
       }
 
@@ -339,6 +353,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminWithdrawalsScreen(),
       ),
       GoRoute(
+        path: '/admin/staff',
+        name: 'adminStaff',
+        builder: (context, state) => const StaffManagementScreen(),
+      ),
+      GoRoute(
         path: '/admin/invite-staff',
         name: 'adminInviteStaff',
         builder: (context, state) => const StaffInviteScreen(),
@@ -371,10 +390,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/admin/sms-portal',
+        name: 'adminSmsPortal',
+        builder: (context, state) => const AdminSmsPortalScreen(),
+      ),
+      GoRoute(
         path: '/admin/campaigns',
         name: 'adminCampaigns',
         builder: (context, state) => const CampaignHistoryScreen(),
       ),
+
       GoRoute(
         path: '/admin/campaigns/generator',
         name: 'adminCampaignGenerator',
@@ -452,10 +477,69 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'marketerCampaigns',
         builder: (context, state) => const CampaignHistoryScreen(),
       ),
+      // ── Nissie Training Academy Routes ──
+      GoRoute(
+        path: '/training',
+        name: 'trainingDashboard',
+        builder: (context, state) => const TrainingDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/training/manage',
+        name: 'trainingManage',
+        builder: (context, state) => const AdminTrainingManagerScreen(),
+      ),
+      GoRoute(
+        path: '/training/material/:id',
+        name: 'trainingMaterialDetail',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return TrainingMaterialDetailScreen(materialId: id);
+        },
+      ),
+      GoRoute(
+        path: '/training/simulator/:id',
+        name: 'trainingSimulatorPlay',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SimulatorPlayScreen(simulatorId: id);
+        },
+      ),
+      GoRoute(
+        path: '/training/exam/:id',
+        name: 'trainingExamTake',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ExamTakeScreen(examId: id);
+        },
+      ),
       GoRoute(
         path: '/partner/inspections',
         name: 'partnerInspections',
         builder: (context, state) => const PartnerInspectionsScreen(),
+        routes: [
+          GoRoute(
+            path: 'book',
+            name: 'partnerInspectionBook',
+            builder: (context, state) {
+              final propertyId = state.uri.queryParameters['propertyId']!;
+              return BookInspectionScreen(propertyId: propertyId);
+            },
+          ),
+          GoRoute(
+            path: 'confirm',
+            name: 'partnerInspectionConfirm',
+            builder: (context, state) {
+              final date = state.uri.queryParameters['date']!;
+              final time = state.uri.queryParameters['time']!;
+              final propTitle = state.uri.queryParameters['propTitle']!;
+              return InspectionConfirmationScreen(
+                date: date,
+                time: time,
+                propTitle: propTitle,
+              );
+            },
+          ),
+        ],
       ),
 
 
@@ -575,7 +659,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/manager/properties',
                 name: 'managerProperties',
-                builder: (context, state) => const PartnerPropertiesScreen(),
+                builder: (context, state) => const AdminPropertiesScreen(),
               ),
             ],
           ),

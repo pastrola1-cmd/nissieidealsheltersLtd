@@ -25,6 +25,7 @@ class Company {
   final String? customDomain;
   final String? termiiApiKey;
   final String? termiiSenderId;
+  final String? geminiApiKey;
 
   const Company({
     required this.id,
@@ -50,6 +51,7 @@ class Company {
     this.customDomain,
     this.termiiApiKey,
     this.termiiSenderId = 'Nissie',
+    this.geminiApiKey,
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
@@ -79,6 +81,7 @@ class Company {
       customDomain: json['custom_domain'] as String?,
       termiiApiKey: json['termii_api_key'] as String?,
       termiiSenderId: json['termii_sender_id'] as String? ?? 'Nissie',
+      geminiApiKey: json['gemini_api_key'] as String?,
     );
   }
 
@@ -107,6 +110,7 @@ class Company {
       'custom_domain': customDomain,
       'termii_api_key': termiiApiKey,
       'termii_sender_id': termiiSenderId,
+      'gemini_api_key': geminiApiKey,
     };
   }
 
@@ -134,6 +138,7 @@ class Company {
     Object? customDomain = const Object(),
     String? termiiApiKey,
     String? termiiSenderId,
+    String? geminiApiKey,
   }) {
     return Company(
       id: id ?? this.id,
@@ -163,6 +168,7 @@ class Company {
           : (customDomain as String?),
       termiiApiKey: termiiApiKey ?? this.termiiApiKey,
       termiiSenderId: termiiSenderId ?? this.termiiSenderId,
+      geminiApiKey: geminiApiKey ?? this.geminiApiKey,
     );
   }
 }

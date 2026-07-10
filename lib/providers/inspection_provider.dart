@@ -85,7 +85,7 @@ class InspectionNotifier extends Notifier<InspectionState> {
     }
   }
 
-  /// Books an inspection as a buyer, auto-creating a lead if none exists.
+  /// Books an inspection, supporting both buyers and partners.
   Future<bool> bookInspection({
     required String propertyId,
     required String scheduledDate,
@@ -100,65 +100,72 @@ class InspectionNotifier extends Notifier<InspectionState> {
 
     state = state.copyWith(isLoading: true);
     try {
-      final leadNotifier = ref.read(leadProvider.notifier);
-      final leadState = ref.read(leadProvider);
-
-      // 1. Try to find an existing lead for this buyer & property listing
-      Lead? lead = leadState.leads.cast<Lead?>().firstWhere(
-            (l) => l?.propertyId == propertyId && l?.buyerId == authProfile.id,
-            orElse: () => null,
-          );
-
-      // 2. If no lead exists, auto-provision one (checking secure storage for referral attribution)
-      if (lead == null) {
-        final lastRefCode = await _secureStorage.read(key: 'last_referral_code');
-        final lastRefPropId = await _secureStorage.read(key: 'last_referral_property_id');
-
-        String? partnerId;
-        String sourceChannel = 'website';
-
-        if (lastRefCode != null && lastRefPropId == propertyId) {
-          final partner = await _supabaseService.getProfileByReferralCode(lastRefCode);
-          if (partner != null) {
-            partnerId = partner.id;
-            sourceChannel = 'whatsapp';
-          }
-        }
-
-        final Map<String, dynamic> leadInsertData = {
-          'company_id': authProfile.companyId,
-          'property_id': propertyId,
-          'partner_id': partnerId,
-          'buyer_id': authProfile.id,
-          'buyer_name': authProfile.fullName ?? 'Buyer Client',
-          'buyer_phone': authProfile.phone ?? '',
-          'buyer_email': authProfile.email,
-          'source_channel': sourceChannel,
-          'stage': LeadStage.newLead.value,
-        };
-
-        lead = await _supabaseService.createLead(leadInsertData);
-        // Refresh leads in the notifier
-        await leadNotifier.loadLeads();
-      }
-
-      // 3. Create the inspection record
       final Map<String, dynamic> inspectionInsertData = {
         'company_id': authProfile.companyId,
         'property_id': propertyId,
-        'lead_id': lead.id,
-        'buyer_id': authProfile.id,
-        'partner_id': lead.partnerId,
         'scheduled_date': scheduledDate,
         'scheduled_time': scheduledTime,
         'status': InspectionStatus.pending.value,
         'notes': notes,
       };
 
-      final newInspection = await _supabaseService.createInspection(inspectionInsertData);
+      if (authProfile.role == UserRole.partner) {
+        inspectionInsertData['partner_id'] = authProfile.id;
+        inspectionInsertData['buyer_id'] = null;
+        inspectionInsertData['lead_id'] = null;
+      } else {
+        // Buyer flow
+        final leadNotifier = ref.read(leadProvider.notifier);
+        final leadState = ref.read(leadProvider);
 
-      // 4. Update the lead stage to 'inspection_booked'
-      await leadNotifier.updateStage(lead.id, LeadStage.inspectionBooked);
+        // 1. Try to find an existing lead for this buyer & property listing
+        Lead? lead = leadState.leads.cast<Lead?>().firstWhere(
+              (l) => l?.propertyId == propertyId && l?.buyerId == authProfile.id,
+              orElse: () => null,
+            );
+
+        // 2. If no lead exists, auto-provision one (checking secure storage for referral attribution)
+        if (lead == null) {
+          final lastRefCode = await _secureStorage.read(key: 'last_referral_code');
+          final lastRefPropId = await _secureStorage.read(key: 'last_referral_property_id');
+
+          String? partnerId;
+          String sourceChannel = 'website';
+
+          if (lastRefCode != null && lastRefPropId == propertyId) {
+            final partner = await _supabaseService.getProfileByReferralCode(lastRefCode);
+            if (partner != null) {
+              partnerId = partner.id;
+              sourceChannel = 'whatsapp';
+            }
+          }
+
+          final Map<String, dynamic> leadInsertData = {
+            'company_id': authProfile.companyId,
+            'property_id': propertyId,
+            'partner_id': partnerId,
+            'buyer_id': authProfile.id,
+            'buyer_name': authProfile.fullName ?? 'Buyer Client',
+            'buyer_phone': authProfile.phone ?? '',
+            'buyer_email': authProfile.email,
+            'source_channel': sourceChannel,
+            'stage': LeadStage.newLead.value,
+          };
+
+          lead = await _supabaseService.createLead(leadInsertData);
+          // Refresh leads in the notifier
+          await leadNotifier.loadLeads();
+        }
+
+        inspectionInsertData['lead_id'] = lead.id;
+        inspectionInsertData['buyer_id'] = authProfile.id;
+        inspectionInsertData['partner_id'] = lead.partnerId;
+
+        // Update the lead stage to 'inspection_booked'
+        await leadNotifier.updateStage(lead.id, LeadStage.inspectionBooked);
+      }
+
+      final newInspection = await _supabaseService.createInspection(inspectionInsertData);
 
       // Update local inspections list
       state = state.copyWith(

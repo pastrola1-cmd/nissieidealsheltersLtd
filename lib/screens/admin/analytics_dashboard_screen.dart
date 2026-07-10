@@ -91,11 +91,9 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
                     _buildFunnelChart(context, analytics, rolePath),
                     const SizedBox(height: 28),
 
-                    // Monthly Revenue Trend Chart (Hidden for managers)
-                    if (!isManager) ...[
-                      _buildRevenueTrendChart(analytics),
-                      const SizedBox(height: 28),
-                    ],
+                    // Monthly Revenue Trend Chart (Visible to admins and managers)
+                    _buildRevenueTrendChart(analytics),
+                    const SizedBox(height: 28),
 
                     // Staff Performance Table Card
                     _buildStaffLeaderboardCard(analytics),
@@ -165,15 +163,14 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
         delta: convDelta,
         unit: '%',
       ),
-      if (!isManager)
-        _KpiData(
-          title: 'Closed Revenue',
-          value: '₦${_formatCompact(state.revenueCurrent)}',
-          icon: Icons.monetization_on_outlined,
-          color: Colors.teal,
-          delta: revDelta,
-          unit: 'revenue',
-        ),
+      _KpiData(
+        title: 'Closed Revenue',
+        value: '₦${_formatCompact(state.revenueCurrent)}',
+        icon: Icons.monetization_on_outlined,
+        color: Colors.teal,
+        delta: revDelta,
+        unit: 'revenue',
+      ),
       _KpiData(
         title: 'Active Campaigns',
         value: state.activeCampaignsCount.toString(),
@@ -684,7 +681,7 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
     try {
       final csvBuffer = StringBuffer();
       
-      csvBuffer.writeln('ScaleWealth Estate Analytics Report');
+      csvBuffer.writeln('Nissie Ideal Shelters Analytics Report');
       csvBuffer.writeln('Period,${state.startDate.toIso8601String().split('T').first} to ${state.endDate.toIso8601String().split('T').first}');
       csvBuffer.writeln();
 
@@ -692,9 +689,7 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
       csvBuffer.writeln('Metric,Current value,Previous value');
       csvBuffer.writeln('Total Leads,${state.totalLeadsCurrent},${state.totalLeadsPrevious}');
       csvBuffer.writeln('Conversion Rate,${state.conversionRateCurrent.toStringAsFixed(2)}%,${state.conversionRatePrevious.toStringAsFixed(2)}%');
-      if (!isManager) {
-        csvBuffer.writeln('Closed Sales Volume,₦${state.revenueCurrent},₦${state.revenuePrevious}');
-      }
+      csvBuffer.writeln('Closed Sales Volume,₦${state.revenueCurrent},₦${state.revenuePrevious}');
       csvBuffer.writeln('Active Campaigns,${state.activeCampaignsCount},N/A');
       csvBuffer.writeln();
 
@@ -717,7 +712,7 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        subject: 'ScaleWealth Estate Analytics Report',
+        subject: 'Nissie Ideal Shelters Analytics Report',
       );
     } catch (e) {
       if (context.mounted) {

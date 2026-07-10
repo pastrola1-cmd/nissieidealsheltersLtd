@@ -300,6 +300,21 @@ class AdminDashboardScreen extends ConsumerWidget {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.sms_rounded, color: Colors.green),
+                          ),
+                          title: const Text('Bulk SMS Broadcast', style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text('Send targeted SMS campaigns to leads or partners via Termii'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push('/admin/sms-portal'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
                               color: Colors.blue.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -439,7 +454,37 @@ class AdminDashboardScreen extends ConsumerWidget {
                               color: Colors.indigo.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.person_add_rounded, color: Colors.indigo),
+                            child: const Icon(Icons.people_rounded, color: Colors.indigo),
+                          ),
+                          title: const Text('Manage Staff Team', style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text('View, manage, and monitor all staff members & performance'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push('/admin/staff'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.school_rounded, color: Colors.amber),
+                          ),
+                          title: const Text('Nissie Academy', style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text('Access sales training, client objections simulator, and exams'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push('/training'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.person_add_rounded, color: Colors.purple),
                           ),
                           title: const Text('Invite Staff Members', style: TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: const Text('Register managers or marketers for your agency'),

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/providers/inspection_provider.dart';
 
@@ -104,8 +106,10 @@ class _BookInspectionScreenState extends ConsumerState<BookInspectionScreen> {
     if (mounted) {
       setState(() => _isSaving = false);
       if (success) {
+        final profile = ref.read(authProvider).profile;
+        final baseRolePath = profile?.role == UserRole.partner ? 'partner' : 'buyer';
         context.go(
-          '/buyer/inspections/confirm?date=${Uri.encodeComponent(DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate!))}&time=${Uri.encodeComponent(_selectedTimeSlot!)}&propTitle=${Uri.encodeComponent(property.title)}',
+          '/$baseRolePath/inspections/confirm?date=${Uri.encodeComponent(DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate!))}&time=${Uri.encodeComponent(_selectedTimeSlot!)}&propTitle=${Uri.encodeComponent(property.title)}',
         );
       } else {
         final error = ref.read(inspectionProvider).errorMessage ?? 'Failed to book inspection';

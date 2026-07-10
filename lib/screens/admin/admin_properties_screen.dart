@@ -709,7 +709,9 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                         IconButton(
                           icon: const Icon(Icons.link_rounded, size: 18, color: AppColors.accent),
                           onPressed: () async {
-                            final lpUrl = '${Uri.base.origin}/#/lp/${property.id}';
+                            final origin = Uri.base.origin;
+                            const portalPath = '/portal-new/#/lp';
+                            final lpUrl = '$origin$portalPath/${property.id}';
                             await Clipboard.setData(ClipboardData(text: lpUrl));
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

@@ -172,6 +172,21 @@ class ManagerDashboardScreen extends ConsumerWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.school_rounded, color: Colors.amber),
+                      ),
+                      title: const Text('Nissie Academy', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Access sales training, client objections simulator, and exams'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/training'),
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
                           color: Colors.blueGrey.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),

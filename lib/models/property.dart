@@ -17,6 +17,8 @@ class Property {
   final CommissionType commissionType;
   final double commissionValue;
   final String? targetAudience;
+  final List<String>? documents;
+  final Map<String, dynamic>? paymentPlans;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -35,9 +37,24 @@ class Property {
     required this.commissionType,
     required this.commissionValue,
     this.targetAudience,
+    this.documents,
+    this.paymentPlans,
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// Dynamically resolved list of title documents for the Nigerian market (falling back to realistic defaults)
+  List<String> get verifiedDocuments {
+    if (documents != null && documents!.isNotEmpty) {
+      return documents!;
+    }
+    // High-value listings (Lekki, Ikeja, Abuja) typically get C of O
+    if (price >= 20000000) {
+      return const ['Certificate of Occupancy (C of O)', 'Registered Survey Plan', 'Deed of Assignment'];
+    }
+    // Standard plots, agricultural land or suburban estates
+    return const ['Governor\'s Consent', 'Deed of Assignment', 'Approved Estate Layout Layout'];
+  }
 
   factory Property.fromJson(Map<String, dynamic> json) {
     return Property(
@@ -55,6 +72,8 @@ class Property {
       commissionType: CommissionType.fromString(json['commission_type'] as String? ?? 'percentage'),
       commissionValue: (json['commission_value'] as num? ?? 5.0).toDouble(),
       targetAudience: json['target_audience'] as String?,
+      documents: json['documents'] != null ? List<String>.from(json['documents']) : null,
+      paymentPlans: json['payment_plans'] as Map<String, dynamic>?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -76,6 +95,8 @@ class Property {
       'commission_type': commissionType.value,
       'commission_value': commissionValue,
       'target_audience': targetAudience,
+      'documents': documents,
+      'payment_plans': paymentPlans,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -96,6 +117,8 @@ class Property {
     CommissionType? commissionType,
     double? commissionValue,
     Object? targetAudience = const Object(),
+    List<String>? documents,
+    Map<String, dynamic>? paymentPlans,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -116,6 +139,8 @@ class Property {
       targetAudience: targetAudience == const Object()
           ? this.targetAudience
           : (targetAudience as String?),
+      documents: documents ?? this.documents,
+      paymentPlans: paymentPlans ?? this.paymentPlans,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -20,9 +20,11 @@ bool isCustomDomain(String hostname) {
   final excluded = [
     'localhost',
     '127.0.0.1',
-    'scalewealth.app',
-    'scalewealth.co',
-    'scalewealth.com',
+    'nissie-ideal-shelters.com',
+    'nissie-ideal-shelters.co',
+    'nissie-ideal-shelters.app',
+    'nissieidealshelters.com.ng',
+    'www.nissieidealshelters.com.ng',
     'property-partner-network-94301.web.app',
     'property-partner-network-94301.firebaseapp.com',
   ];
@@ -586,7 +588,7 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
                     const Icon(Icons.real_estate_agent_rounded, color: AppColors.accent, size: 36),
                   const SizedBox(width: 12),
                   Text(
-                    _company?.name ?? 'ScaleWealth Estate',
+                    _company?.name ?? 'Nissie Ideal Shelters',
                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: AppColors.textPrimary),
                   ),
                 ],
@@ -629,19 +631,19 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
               child: Column(
                 children: [
                   Text(
-                    _company?.name ?? 'ScaleWealth Estate',
+                    _company?.name ?? 'Nissie Ideal Shelters',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _company?.email ?? 'info@scalewealth.com',
+                    _company?.email ?? 'info@nissie-ideal-shelters.com',
                     style: const TextStyle(color: Colors.white60, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
                   const Divider(color: Colors.white12),
                   const SizedBox(height: 16),
                   Text(
-                    '© 2026 ${_company?.name ?? 'ScaleWealth Estate'}. All rights reserved.',
+                    '© 2026 ${_company?.name ?? 'Nissie Ideal Shelters'}. All rights reserved.',
                     style: const TextStyle(color: Colors.white30, fontSize: 11),
                   ),
                   const SizedBox(height: 4),
@@ -824,6 +826,19 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
           ),
         ),
         const SizedBox(height: 24),
+
+        // ── Trust & Verification Document Vault ──
+        _buildDocumentVault(theme),
+
+        // ── Installment Calculator ──
+        _InstallmentCalculator(
+          propertyPrice: _property!.price,
+          onSelectPlan: _applyInstallmentPlan,
+        ),
+        const SizedBox(height: 24),
+
+        // ── Saturday Shuttle Scheduler ──
+        _buildInspectionScheduler(theme),
 
         // Video Tour
         if (_property!.videoUrl != null && _property!.videoUrl!.isNotEmpty) ...[
@@ -1347,6 +1362,303 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
     }
   }
 
+  DateTime? _selectedSaturday;
+  String _selectedPickupPoint = 'Lekki Phase 1 Office (Free SUV Shuttle)';
+
+  void _applyInstallmentPlan(String planNotes) {
+    setState(() {
+      _notesController.text = planNotes;
+    });
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOut,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Payment plan pre-filled! Fill in your details below to submit request.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Widget _buildSaturdayPicker() {
+    final upcomingSaturdays = <DateTime>[];
+    DateTime date = DateTime.now();
+    while (upcomingSaturdays.length < 3) {
+      if (date.weekday == DateTime.saturday) {
+        upcomingSaturdays.add(date);
+      }
+      date = date.add(const Duration(days: 1));
+    }
+
+    _selectedSaturday ??= upcomingSaturdays.first;
+
+    return Row(
+      children: upcomingSaturdays.map((sat) {
+        final formatted = DateFormat('MMM d').format(sat);
+        final isSelected = _selectedSaturday == sat;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: ChoiceChip(
+            label: Text(formatted),
+            selected: isSelected,
+            onSelected: (selected) {
+              if (selected) {
+                setState(() => _selectedSaturday = sat);
+              }
+            },
+            selectedColor: AppColors.accent.withValues(alpha: 0.15),
+            labelStyle: TextStyle(
+              color: isSelected ? AppColors.accent : AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPickupPointDropdown() {
+    final pickups = [
+      'Lekki Phase 1 Office (Free SUV Shuttle)',
+      'Ikeja GRA Office (Free Luxury Coaster)',
+      'Abuja Wuse II Office (Free Land Cruiser)',
+      'Self-Drive (Meet Agent at Location)'
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedPickupPoint,
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down, color: AppColors.accent),
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              setState(() => _selectedPickupPoint = newValue);
+            }
+          },
+          items: pickups.map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value, style: const TextStyle(fontSize: 14)),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _triggerWhatsAppInspection() {
+    final companyPhone = _company?.phone ?? '+2348000000000';
+    final cleanPhone = companyPhone.replaceAll(RegExp(r'[^\d+]'), '');
+    final dateStr = DateFormat('EEEE, MMMM d, y').format(_selectedSaturday ?? DateTime.now());
+    
+    final message = 'Hello Nissie Ideal Shelters! I would like to book a free weekend site inspection for the property: "${_property!.title}" on $dateStr. My preferred pickup location is "$_selectedPickupPoint". Please secure my seat booking.';
+    final url = 'https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}';
+    
+    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  Widget _buildDocumentVault(ThemeData theme) {
+    final docs = _property!.verifiedDocuments;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Land Registry & Title Verification',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: AppColors.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.gavel_rounded, color: AppColors.accent, size: 22),
+                    SizedBox(width: 10),
+                    Text(
+                      'Verified Title Documents',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ...docs.map((doc) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.successLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check, color: AppColors.successDark, size: 14),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          doc,
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+                const Divider(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Security Status:',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.successLight,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.verified_user_rounded, color: AppColors.successDark, size: 12),
+                          SizedBox(width: 4),
+                          Text(
+                            '100% Free From Acquisition',
+                            style: TextStyle(color: AppColors.successDark, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeInOut,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please fill out the contact form to request document verification scans.'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.folder_shared_rounded, size: 18),
+                    label: const Text('Request Verification Layout Plan'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildInspectionScheduler(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Book a Free Site Inspection',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: AppColors.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.directions_bus_rounded, color: AppColors.accent, size: 22),
+                    SizedBox(width: 10),
+                    Text(
+                      'Free Weekend Shuttle Tour',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'We run free site inspections every Saturday with pickup options from our central office locations in Lagos and Abuja. Select your seat below.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                
+                const Text('Choose Upcoming Saturday:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                _buildSaturdayPicker(),
+                const SizedBox(height: 16),
+                
+                const Text('Select Pickup Preference:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                _buildPickupPointDropdown(),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _triggerWhatsAppInspection,
+                    icon: const Icon(Icons.share_arrival_time_rounded),
+                    label: const Text('Book Inspection on WhatsApp'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
   void _logVideoMilestone(int milestone) async {
     // Fire Pixel event
     if (_company?.fbPixelId != null && _company!.fbPixelId!.isNotEmpty) {
@@ -1376,3 +1688,147 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
     }
   }
 }
+
+class _InstallmentCalculator extends StatefulWidget {
+  final double propertyPrice;
+  final Function(String notes) onSelectPlan;
+
+  const _InstallmentCalculator({
+    required this.propertyPrice,
+    required this.onSelectPlan,
+  });
+
+  @override
+  State<_InstallmentCalculator> createState() => _InstallmentCalculatorState();
+}
+
+class _InstallmentCalculatorState extends State<_InstallmentCalculator> {
+  int _selectedMonths = 12;
+  double _downPaymentPercent = 30; // default 30%
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0);
+    
+    final downPayment = widget.propertyPrice * (_downPaymentPercent / 100);
+    final remainingBalance = widget.propertyPrice - downPayment;
+    
+    // Add interest rate (e.g., 0% for 6mo, 10% for 12mo)
+    final interestRate = _selectedMonths == 12 ? 0.10 : 0.0;
+    final totalRemaining = remainingBalance * (1 + interestRate);
+    final monthlyInstallment = totalRemaining / _selectedMonths;
+
+    return Card(
+      color: AppColors.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.calculate_rounded, color: AppColors.accent, size: 22),
+                SizedBox(width: 10),
+                Text(
+                  'Installment Plan Calculator',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            Row(
+              children: [
+                const Text('Duration:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 16),
+                ...[6, 12].map((m) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text('$m Months'),
+                    selected: _selectedMonths == m,
+                    onSelected: (selected) {
+                      if (selected) setState(() => _selectedMonths = m);
+                    },
+                    selectedColor: AppColors.accent.withValues(alpha: 0.15),
+                    labelStyle: TextStyle(
+                      color: _selectedMonths == m ? AppColors.accent : AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )).toList(),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Down Payment:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  '${_downPaymentPercent.toInt()}% (${currencyFormat.format(downPayment)})',
+                  style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            Slider(
+              value: _downPaymentPercent,
+              min: 10,
+              max: 90,
+              divisions: 8,
+              activeColor: AppColors.accent,
+              inactiveColor: AppColors.border,
+              onChanged: (val) {
+                setState(() => _downPaymentPercent = val);
+              },
+            ),
+            const Divider(height: 32),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Monthly Dues:', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  '${currencyFormat.format(monthlyInstallment)}/month',
+                  style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.successDark, fontSize: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Interest Rate:', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  _selectedMonths == 12 ? '10% (Installment Premium)' : '0% (Interest-Free)',
+                  style: TextStyle(
+                    color: _selectedMonths == 12 ? Colors.amber.shade800 : AppColors.successDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  final notes = 'Selected $_selectedMonths Months plan with ${_downPaymentPercent.toInt()}% Down-Payment (${currencyFormat.format(downPayment)}). Est Monthly Dues: ${currencyFormat.format(monthlyInstallment)}.';
+                  widget.onSelectPlan(notes);
+                },
+                child: const Text('Apply for this Installment Plan'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

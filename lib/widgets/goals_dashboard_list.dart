@@ -25,7 +25,9 @@ class _GoalsDashboardListState extends ConsumerState<GoalsDashboardList> {
   Widget build(BuildContext context) {
     final goalState = ref.watch(goalProvider);
     final userProfile = ref.watch(authProvider).profile;
-    final isAdmin = userProfile?.role == UserRole.admin;
+    final isAdmin = userProfile?.role == UserRole.admin || userProfile?.role == UserRole.platformAdmin;
+    final isManager = userProfile?.role == UserRole.manager;
+    final canManageGoals = isAdmin || isManager;
     final rolePath = isAdmin ? 'admin' : 'manager';
 
     if (goalState.goals.isEmpty) {
@@ -115,27 +117,28 @@ class _GoalsDashboardListState extends ConsumerState<GoalsDashboardList> {
                 color: AppColors.textPrimary,
               ),
             ),
-            TextButton(
-              onPressed: () => context.push('/$rolePath/goals'),
-              child: Row(
-                children: const [
-                  Text(
-                    'View All',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+            if (canManageGoals)
+              TextButton(
+                onPressed: () => context.push('/$rolePath/goals'),
+                child: Row(
+                  children: const [
+                    Text(
+                      'View All',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                    SizedBox(width: 2),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
                       color: AppColors.accent,
                     ),
-                  ),
-                  SizedBox(width: 2),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: AppColors.accent,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -169,7 +172,7 @@ class _GoalsDashboardListState extends ConsumerState<GoalsDashboardList> {
                 margin: const EdgeInsets.only(right: 16),
                 child: GoalCard(
                   progress: progress,
-                  onTap: () => context.push('/$rolePath/goals/${goal.id}'),
+                  onTap: canManageGoals ? () => context.push('/$rolePath/goals/${goal.id}') : null,
                 ),
               );
             },

@@ -78,7 +78,7 @@ class _PartnerDetailScreenState extends ConsumerState<PartnerDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final partnerState = ref.watch(partnerProvider);
-    final companyName = ref.watch(companyProvider).company?.name ?? 'ScaleWealthEstate';
+    final companyName = ref.watch(companyProvider).company?.name ?? 'Nissie Ideal Shelters';
 
     // Find the partner in local state
     final Profile? partner = partnerState.partners.cast<Profile?>().firstWhere(

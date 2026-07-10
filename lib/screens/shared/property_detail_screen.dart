@@ -193,9 +193,12 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     }
 
     // Dynamic Referral Link Building
-    final origin = kIsWeb ? Uri.base.origin : 'https://scalewealth.com';
+    // Use portal-new/#/lp/ path so the hash-routed Flutter app correctly opens
+    // the PUBLIC property landing page without requiring login.
+    final origin = kIsWeb ? Uri.base.origin : 'https://nissieidealshelters.com.ng';
+    const portalPath = '/portal-new/#/lp';
     final refCode = userProfile?.referralCode ?? 'PPN-PENDING';
-    final referralLink = '$origin/properties/${property.id}?ref=$refCode';
+    final referralLink = '$origin$portalPath/${property.id}?ref=$refCode';
 
     final isUserAdmin = userProfile?.role == UserRole.admin || userProfile?.role == UserRole.platformAdmin;
     final isUserPartner = userProfile?.role == UserRole.partner;
@@ -688,7 +691,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         ],
                       ),
                     ),
-                  ] else if (userProfile.role == UserRole.buyer) ...[
+                  ] else if (userProfile.role == UserRole.buyer || userProfile.role == UserRole.partner) ...[
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 16),
@@ -697,7 +700,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                       height: 52,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          context.push('/buyer/inspections/book?propertyId=${property.id}');
+                          final rolePath = userProfile.role.value;
+                          context.push('/$rolePath/inspections/book?propertyId=${property.id}');
                         },
                         icon: const Icon(Icons.calendar_month_rounded),
                         label: const Text('Schedule Property Inspection', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

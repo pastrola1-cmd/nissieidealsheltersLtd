@@ -99,9 +99,35 @@ class SmsService {
 
     return successCount;
   }
+
+  /// Checks the Termii account wallet balance.
+  /// If [apiKey] is null or empty, it returns a mock balance.
+  Future<({double balance, String currency, String? error})> checkBalance(String? apiKey) async {
+    if (apiKey == null || apiKey.trim().isEmpty) {
+      return (balance: 5000.0, currency: 'NGN', error: null);
+    }
+    try {
+      final response = await _client.get(
+        Uri.parse('https://api.ng.termii.com/api/get-balance?api_key=$apiKey'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final balanceStr = data['balance']?.toString() ?? '0.0';
+        final currency = data['currency']?.toString() ?? 'NGN';
+        final balance = double.tryParse(balanceStr) ?? 0.0;
+        return (balance: balance, currency: currency, error: null);
+      } else {
+        final data = jsonDecode(response.body);
+        return (balance: 0.0, currency: 'NGN', error: data['message']?.toString() ?? 'Failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      return (balance: 0.0, currency: 'NGN', error: e.toString());
+    }
+  }
 }
 
 // Provider for SmsService
 final smsServiceProvider = Provider<SmsService>((ref) {
   return SmsService();
 });
+

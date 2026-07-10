@@ -53,6 +53,98 @@ class _PartnerPropertiesScreenState extends ConsumerState<PartnerPropertiesScree
     );
   }
 
+  void _showMarketingKitDialog(BuildContext context, Property property, String referralLink) {
+    final currencyFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0);
+    
+    // Generate hot, high-converting Nigerian sales copy for WhatsApp/Social Media
+    final promoText = '''
+🔥 HOT PROMO: ${property.title.toUpperCase()} 🔥
+
+📍 LOCATION: ${property.location ?? 'Prime Location'}
+💰 VALUE: ${currencyFormat.format(property.price)}
+📄 TITLE: ${property.verifiedDocuments.join(' or ')}
+
+✨ Why you must lock this:
+• 100% dry tableland, secure and free from government acquisition.
+• Flexible installment plans (spread payment up to 12 months).
+• Central access roads, luxury drainage, and round-the-clock security.
+
+Secure your future investment today. Free site inspections happen every Saturday! 🚌
+
+👉 Click below to view layout plan and secure your slot:
+$referralLink
+''';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.campaign_rounded, color: Colors.orange.shade800),
+              const SizedBox(width: 10),
+              const Text('Agent Marketing Kit'),
+            ],
+          ),
+          content: Container(
+            width: 500,
+            constraints: const BoxConstraints(maxHeight: 450),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Copy this high-converting WhatsApp pitch to post on your status or group chats. Your referral link is already pre-embedded!',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: SelectableText(
+                      promoText,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: promoText));
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('WhatsApp promo kit copied to clipboard!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.copy, size: 16),
+              label: const Text('Copy Promo Kit'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(propertyProvider);
@@ -246,9 +338,12 @@ class _PartnerPropertiesScreenState extends ConsumerState<PartnerPropertiesScree
       estimatedPayout = property.commissionValue;
     }
 
-    final origin = kIsWeb ? Uri.base.origin : 'https://scalewealth.com';
+    // Use portal-new/#/lp/ path so the hash-routed Flutter app correctly opens
+    // the PUBLIC property landing page without requiring login.
+    final origin = kIsWeb ? Uri.base.origin : 'https://nissieidealshelters.com.ng';
+    const portalPath = '/portal-new/#/lp';
     final refCode = profile?.referralCode ?? 'PPN-PENDING';
-    final referralLink = '$origin/properties/${property.id}?ref=$refCode';
+    final referralLink = '$origin$portalPath/${property.id}?ref=$refCode';
 
     return Card(
       color: AppColors.surface,
@@ -423,6 +518,14 @@ class _PartnerPropertiesScreenState extends ConsumerState<PartnerPropertiesScree
                               icon: const Icon(Icons.share_rounded, size: 18, color: AppColors.accent),
                               onPressed: () => _shareReferralLink(referralLink, property.title),
                               tooltip: 'Share Referral Link',
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(4),
+                            ),
+                            const SizedBox(width: 16),
+                            IconButton(
+                              icon: const Icon(Icons.campaign_rounded, size: 18, color: Colors.orange),
+                              onPressed: () => _showMarketingKitDialog(context, property, referralLink),
+                              tooltip: 'Realtor Marketing Kit',
                               constraints: const BoxConstraints(),
                               padding: const EdgeInsets.all(4),
                             ),

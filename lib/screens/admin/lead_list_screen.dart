@@ -66,8 +66,13 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     final properties = ref.watch(propertyProvider).properties;
     final partners = ref.watch(partnerProvider).partners;
 
+    // Filter leads list scoped by user role (marketer can only see their assigned leads)
+    final myLeads = role == UserRole.marketer
+        ? state.leads.where((l) => l.assignedAgentId == authState.profile?.id).toList()
+        : state.leads;
+
     // Apply filtering
-    final filteredLeads = state.leads.where((lead) {
+    final filteredLeads = myLeads.where((lead) {
       final property = properties.cast<Property?>().firstWhere((p) => p?.id == lead.propertyId, orElse: () => null);
       final partner = partners.cast<Profile?>().firstWhere((p) => p?.id == lead.partnerId, orElse: () => null);
 
@@ -90,9 +95,9 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     }).toList();
 
     // Stats calculations
-    final totalCount = state.leads.length;
-    final newCount = state.leads.where((l) => l.stage == LeadStage.newLead).length;
-    final closedCount = state.leads.where((l) => l.stage == LeadStage.closed).length;
+    final totalCount = myLeads.length;
+    final newCount = myLeads.where((l) => l.stage == LeadStage.newLead).length;
+    final closedCount = myLeads.where((l) => l.stage == LeadStage.closed).length;
 
     return Scaffold(
       backgroundColor: AppColors.background,

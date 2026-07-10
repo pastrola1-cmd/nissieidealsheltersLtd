@@ -15,10 +15,10 @@ void main() {
       expect(isCustomDomain(''), false);
       expect(isCustomDomain('localhost'), false);
       expect(isCustomDomain('127.0.0.1'), false);
-      expect(isCustomDomain('scalewealth.app'), false);
-      expect(isCustomDomain('scalewealth.co'), false);
-      expect(isCustomDomain('scalewealth.com'), false);
-      expect(isCustomDomain('sub.scalewealth.app'), false);
+      expect(isCustomDomain('nissie-ideal-shelters.app'), false);
+      expect(isCustomDomain('nissie-ideal-shelters.co'), false);
+      expect(isCustomDomain('nissie-ideal-shelters.com'), false);
+      expect(isCustomDomain('sub.nissie-ideal-shelters.app'), false);
       expect(isCustomDomain('property-partner-network-94301.web.app'), false);
       expect(isCustomDomain('property-partner-network-94301.firebaseapp.com'), false);
     });

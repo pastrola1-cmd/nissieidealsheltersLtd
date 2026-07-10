@@ -21,7 +21,7 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
   DailyReport? _report;
   bool _isLoadingReport = false;
   String? _error;
-  bool _isWeekly = false;
+  String _reportType = 'daily'; // 'daily', 'weekly', 'monthly'
 
   @override
   void initState() {
@@ -117,6 +117,94 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
     );
   }
 
+  Future<DailyReport> _compileMonthlyReport() async {
+    final companyId = ref.read(authProvider).profile?.companyId ?? '';
+    final list = <DailyReport>[];
+    
+    // Fetch reports for the last 30 days (ending on _selectedDate)
+    for (int i = 0; i < 30; i++) {
+      final date = _selectedDate.subtract(Duration(days: i));
+      final rep = await ref.read(reportProvider.notifier).fetchReportForDate(date);
+      if (rep != null) {
+        list.add(rep);
+      }
+    }
+
+    if (list.isEmpty) {
+      return DailyReport(
+        id: 'monthly',
+        companyId: companyId,
+        reportDate: _selectedDate,
+        newLeads: 0,
+        followUps: 0,
+        inspectionsBooked: 0,
+        inspectionsCompleted: 0,
+        closedDeals: 0,
+        revenueToday: 0,
+        topStaff: [],
+        leadsByStage: {},
+      );
+    }
+
+    // Aggregate
+    int newLeads = 0;
+    int followUps = 0;
+    int inspectionsBooked = 0;
+    int inspectionsCompleted = 0;
+    int closedDeals = 0;
+    double revenue = 0;
+    
+    final staffMap = <String, StaffPerformance>{};
+    final stageMap = <String, int>{};
+
+    for (final r in list) {
+      newLeads += r.newLeads;
+      followUps += r.followUps;
+      inspectionsBooked += r.inspectionsBooked;
+      inspectionsCompleted += r.inspectionsCompleted;
+      closedDeals += r.closedDeals;
+      revenue += r.revenueToday;
+
+      for (final s in r.topStaff) {
+        if (staffMap.containsKey(s.profileId)) {
+          final prev = staffMap[s.profileId]!;
+          final totalLeads = prev.leadsHandled + s.leadsHandled;
+          final totalConv = prev.conversions + s.conversions;
+          staffMap[s.profileId] = StaffPerformance(
+            profileId: s.profileId,
+            name: s.name,
+            leadsHandled: totalLeads,
+            conversions: totalConv,
+            conversionRate: totalLeads == 0 ? 0 : (totalConv / totalLeads) * 100,
+          );
+        } else {
+          staffMap[s.profileId] = s;
+        }
+      }
+
+      r.leadsByStage.forEach((key, val) {
+        stageMap[key] = (stageMap[key] ?? 0) + val;
+      });
+    }
+
+    final sortedStaff = staffMap.values.toList()
+      ..sort((a, b) => b.conversions.compareTo(a.conversions));
+
+    return DailyReport(
+      id: 'monthly',
+      companyId: companyId,
+      reportDate: _selectedDate,
+      newLeads: newLeads,
+      followUps: followUps,
+      inspectionsBooked: inspectionsBooked,
+      inspectionsCompleted: inspectionsCompleted,
+      closedDeals: closedDeals,
+      revenueToday: revenue,
+      topStaff: sortedStaff,
+      leadsByStage: stageMap,
+    );
+  }
+
   Future<void> _loadReport() async {
     setState(() {
       _isLoadingReport = true;
@@ -125,8 +213,10 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
 
     try {
       DailyReport? report;
-      if (_isWeekly) {
+      if (_reportType == 'weekly') {
         report = await _compileWeeklyReport();
+      } else if (_reportType == 'monthly') {
+        report = await _compileMonthlyReport();
       } else {
         report = await ref.read(reportProvider.notifier).fetchReportForDate(_selectedDate);
       }
@@ -147,8 +237,14 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
   }
 
   void _changeDate(int multiplier) {
+    int days = 1;
+    if (_reportType == 'weekly') {
+      days = 7;
+    } else if (_reportType == 'monthly') {
+      days = 30;
+    }
     setState(() {
-      _selectedDate = _selectedDate.add(Duration(days: multiplier * (_isWeekly ? 7 : 1)));
+      _selectedDate = _selectedDate.add(Duration(days: multiplier * days));
     });
     _loadReport();
   }
@@ -159,9 +255,11 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
 
     final doc = pw.Document();
     
-    final formattedDate = _isWeekly 
+    final formattedDate = _reportType == 'weekly'
         ? "${DateFormat('MMM d').format(_selectedDate.subtract(const Duration(days: 6)))} - ${DateFormat('yMMMMd').format(_selectedDate)}"
-        : DateFormat('yMMMMd').format(_selectedDate);
+        : _reportType == 'monthly'
+            ? "${DateFormat('MMM d').format(_selectedDate.subtract(const Duration(days: 29)))} - ${DateFormat('yMMMMd').format(_selectedDate)}"
+            : DateFormat('yMMMMd').format(_selectedDate);
     
     final currencyFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0);
     final company = ref.read(authProvider).company;
@@ -190,7 +288,11 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(
-                      _isWeekly ? 'Weekly Performance Report' : 'Daily Performance Report',
+                      _reportType == 'weekly'
+                          ? 'Weekly Performance Report'
+                          : _reportType == 'monthly'
+                              ? 'Monthly Performance Report'
+                              : 'Daily Performance Report',
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,
@@ -304,9 +406,11 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
     try {
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async => doc.save(),
-        name: _isWeekly 
+        name: _reportType == 'weekly'
             ? 'weekly_report_${_selectedDate.toIso8601String().split("T").first}.pdf'
-            : 'daily_report_${_selectedDate.toIso8601String().split("T").first}.pdf',
+            : _reportType == 'monthly'
+                ? 'monthly_report_${_selectedDate.toIso8601String().split("T").first}.pdf'
+                : 'daily_report_${_selectedDate.toIso8601String().split("T").first}.pdf',
       );
     } catch (e) {
       if (mounted) {
@@ -396,23 +500,28 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: SegmentedButton<bool>(
+                  child: SegmentedButton<String>(
                     segments: const [
-                      ButtonSegment<bool>(
-                        value: false,
+                      ButtonSegment<String>(
+                        value: 'daily',
                         label: Text('Daily Report'),
                         icon: Icon(Icons.today),
                       ),
-                      ButtonSegment<bool>(
-                        value: true,
+                      ButtonSegment<String>(
+                        value: 'weekly',
                         label: Text('Weekly Report'),
                         icon: Icon(Icons.date_range),
                       ),
+                      ButtonSegment<String>(
+                        value: 'monthly',
+                        label: Text('Monthly Report'),
+                        icon: Icon(Icons.calendar_month),
+                      ),
                     ],
-                    selected: {_isWeekly},
+                    selected: {_reportType},
                     onSelectionChanged: (value) {
                       setState(() {
-                        _isWeekly = value.first;
+                        _reportType = value.first;
                       });
                       _loadReport();
                     },
@@ -452,9 +561,11 @@ class _DailyReportsScreenState extends ConsumerState<DailyReportsScreen> {
                         const Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.accent),
                         const SizedBox(width: 8),
                         Text(
-                          _isWeekly 
+                          _reportType == 'weekly'
                               ? "${DateFormat('MMM d').format(_selectedDate.subtract(const Duration(days: 6)))} - ${DateFormat('yMMMMd').format(_selectedDate)}"
-                              : DateFormat('yMMMMd').format(_selectedDate),
+                              : _reportType == 'monthly'
+                                  ? "${DateFormat('MMM d').format(_selectedDate.subtract(const Duration(days: 29)))} - ${DateFormat('yMMMMd').format(_selectedDate)}"
+                                  : DateFormat('yMMMMd').format(_selectedDate),
                           style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                       ],

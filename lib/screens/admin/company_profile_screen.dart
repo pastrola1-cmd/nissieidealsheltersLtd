@@ -557,7 +557,7 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
                           label: 'Custom Domain',
                           icon: Icons.link_rounded,
                         ).copyWith(
-                          helperText: 'Point your domain (CNAME) to scalewealth.app. Example: agency.com',
+                          helperText: 'Point your domain (CNAME) to property-partner-network-94301.web.app. Example: agency.com',
                         ),
                       ),
                     ],

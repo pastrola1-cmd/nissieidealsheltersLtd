@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_spacing.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// App-wide Material theme configuration
 class AppTheme {
@@ -323,5 +325,97 @@ class AppTheme {
         ),
       ),
     );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.primary,
+        onPrimary: AppColors.white,
+        secondary: AppColors.secondary,
+        onSecondary: AppColors.white,
+        tertiary: AppColors.accent,
+        onTertiary: AppColors.white,
+        error: AppColors.error,
+        onError: AppColors.white,
+        surface: Color(0xFF1E293B),
+        onSurface: Colors.white,
+      ),
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF1E293B),
+        selectedItemColor: AppColors.accent,
+        unselectedItemColor: Colors.white38,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1E293B),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppSpacing.borderRadiusMd,
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppSpacing.borderRadiusMd,
+          ),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF334155),
+        thickness: 1,
+      ),
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white, height: 1.2),
+        displayMedium: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
+        headlineLarge: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white),
+        headlineMedium: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+        titleLarge: const TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+        titleMedium: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+        titleSmall: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+        bodyLarge: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w400, color: Colors.white70),
+        bodyMedium: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w400, color: Colors.white60),
+        bodySmall: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w400, color: Colors.white38),
+      ),
+    );
+  }
+}
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(() {
+  return ThemeModeNotifier();
+});
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  final ThemeMode initialMode;
+  ThemeModeNotifier([this.initialMode = ThemeMode.light]);
+
+  @override
+  ThemeMode build() {
+    return initialMode;
+  }
+
+  void setTheme(ThemeMode mode) {
+    state = mode;
   }
 }

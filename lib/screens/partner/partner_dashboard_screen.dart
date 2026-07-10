@@ -8,6 +8,7 @@ import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/company_provider.dart';
 import 'package:nissie_ideal_shelters/providers/dashboard_provider.dart';
 import 'package:nissie_ideal_shelters/providers/notification_provider.dart';
+import 'package:nissie_ideal_shelters/widgets/goals_dashboard_list.dart';
 
 class PartnerDashboardScreen extends ConsumerWidget {
   const PartnerDashboardScreen({super.key});
@@ -182,6 +183,10 @@ class PartnerDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 28),
 
+                // ── Active Performance Goals ──
+                const GoalsDashboardList(),
+                const SizedBox(height: 28),
+
                 // ── Quick Actions Row ──
                 Text(
                   'Quick Actions',
@@ -191,43 +196,60 @@ class PartnerDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Row(
+                Column(
                   children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: Icons.home_work_outlined,
-                        label: 'Browse Listings',
-                        onTap: () => context.go('/partner/properties'),
-                        color: AppColors.accent,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.home_work_outlined,
+                            label: 'Browse Listings',
+                            onTap: () => context.go('/partner/properties'),
+                            color: AppColors.accent,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.wallet_giftcard_rounded,
+                            label: 'Payout Wallet',
+                            onTap: () => context.go('/partner/earnings'),
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: Icons.wallet_giftcard_rounded,
-                        label: 'Payout Wallet',
-                        onTap: () => context.go('/partner/earnings'),
-                        color: Colors.purple,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        icon: Icons.copy_rounded,
-                        label: 'Copy Code',
-                        onTap: () {
-                          if (profile?.referralCode != null) {
-                            Clipboard.setData(ClipboardData(text: profile!.referralCode!));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Referral Code Copied: ${profile.referralCode}'),
-                                backgroundColor: AppColors.accent,
-                              ),
-                            );
-                          }
-                        },
-                        color: Colors.teal,
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.school_outlined,
+                            label: 'Nissie Academy',
+                            onTap: () => context.push('/training'),
+                            color: Colors.amber.shade800,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.copy_rounded,
+                            label: 'Copy Code',
+                            onTap: () {
+                              if (profile?.referralCode != null) {
+                                Clipboard.setData(ClipboardData(text: profile!.referralCode!));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Referral Code Copied: ${profile.referralCode}'),
+                                    backgroundColor: AppColors.accent,
+                                  ),
+                                );
+                              }
+                            },
+                            color: Colors.teal,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

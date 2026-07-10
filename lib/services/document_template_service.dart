@@ -331,7 +331,7 @@ class DocumentTemplateService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'Generated via ScalewealthEstate Document Engine (SDE)',
+                    'Generated via Nissie Ideal Shelters Document Engine (NDE)',
                     style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
                   ),
                   pw.Text(

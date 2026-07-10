@@ -37,12 +37,14 @@ Future<void> main() async {
     // ── Initialize SharedPreferences ──
     final prefs = await SharedPreferences.getInstance();
     final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+    final isDark = prefs.getBool('is_dark_theme') ?? false;
 
     // ── Run app ──
     runApp(
       ProviderScope(
         overrides: [
           onboardingCompletedProvider.overrideWithValue(onboardingCompleted),
+          themeModeProvider.overrideWith(() => ThemeModeNotifier(isDark ? ThemeMode.dark : ThemeMode.light)),
         ],
         child: const PPNApp(),
       ),
@@ -160,11 +162,14 @@ class PPNApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: AppStrings.appFullName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }
