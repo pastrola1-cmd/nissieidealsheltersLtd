@@ -22,7 +22,7 @@ class SmsService {
 
     try {
       final response = await _client.post(
-        Uri.parse('https://api.ng.termii.com/api/sms/send'),
+        Uri.parse('https://v4.api.termii.com/api/sms/send'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'to': formattedTo,
@@ -108,7 +108,7 @@ class SmsService {
     }
     try {
       final response = await _client.get(
-        Uri.parse('https://api.ng.termii.com/api/get-balance?api_key=$apiKey'),
+        Uri.parse('https://v4.api.termii.com/api/get-balance?api_key=$apiKey'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
