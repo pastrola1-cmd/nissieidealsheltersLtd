@@ -20,6 +20,7 @@ class Lead {
   final String intentScore;
   final Map<String, dynamic> engagementSignals;
   final DateTime? firstResponseAt;
+  final DateTime? followupDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -41,6 +42,7 @@ class Lead {
     this.intentScore = 'Cold',
     this.engagementSignals = const {},
     this.firstResponseAt,
+    this.followupDate,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -64,6 +66,7 @@ class Lead {
       intentScore: json['intent_score'] as String? ?? 'Cold',
       engagementSignals: json['engagement_signals'] as Map<String, dynamic>? ?? {},
       firstResponseAt: json['first_response_at'] != null ? DateTime.parse(json['first_response_at'] as String) : null,
+      followupDate: json['followup_date'] != null ? DateTime.parse(json['followup_date'] as String) : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -88,6 +91,7 @@ class Lead {
       'intent_score': intentScore,
       'engagement_signals': engagementSignals,
       'first_response_at': firstResponseAt?.toIso8601String(),
+      'followup_date': followupDate?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -111,6 +115,7 @@ class Lead {
     String? intentScore,
     Map<String, dynamic>? engagementSignals,
     DateTime? firstResponseAt,
+    DateTime? followupDate,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -132,6 +137,7 @@ class Lead {
       intentScore: intentScore ?? this.intentScore,
       engagementSignals: engagementSignals ?? this.engagementSignals,
       firstResponseAt: firstResponseAt ?? this.firstResponseAt,
+      followupDate: followupDate ?? this.followupDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

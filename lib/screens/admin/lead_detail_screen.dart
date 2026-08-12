@@ -28,7 +28,7 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
   @override
   void initState() {
     super.initState();
-    final lead = ref.read(leadProvider).leads.cast<Lead?>().firstWhere((l) => l?.id == widget.leadId, orElse: () => null);
+    final lead = ref.read(leadProvider).leads.where((l) => l.id == widget.leadId).firstOrNull;
     _notesController = TextEditingController(text: lead?.notes ?? '');
   }
 
@@ -40,10 +40,18 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
 
   Future<void> _changeStage(LeadStage stage) async {
     if (stage == LeadStage.closed) {
-      final lead = ref.read(leadProvider).leads.cast<Lead?>().firstWhere((l) => l?.id == widget.leadId, orElse: () => null);
-      final property = ref.read(propertyProvider).properties.cast<Property?>().firstWhere((p) => p?.id == lead?.propertyId, orElse: () => null);
+      final lead = ref.read(leadProvider).leads.where((l) => l.id == widget.leadId).firstOrNull;
+      final property = ref.read(propertyProvider).properties.where((p) => p.id == lead?.propertyId).firstOrNull;
       if (lead != null) {
         _showCloseLeadDialog(lead, property);
+      }
+      return;
+    }
+
+    if (stage == LeadStage.inspectionBooked) {
+      final lead = ref.read(leadProvider).leads.where((l) => l.id == widget.leadId).firstOrNull;
+      if (lead != null) {
+        _showBookInspectionDialog(lead);
       }
       return;
     }
@@ -245,6 +253,228 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
     }
   }
 
+  Future<void> _showBookInspectionDialog(Lead lead) async {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    String? selectedPropertyId = lead.propertyId;
+    final venueNotesController = TextEditingController();
+    final properties = ref.read(propertyProvider).properties;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final dateStr = selectedDate != null
+                ? DateFormat('yyyy-MM-dd').format(selectedDate!)
+                : 'Select Date *';
+            final timeStr = selectedTime != null
+                ? selectedTime!.format(context)
+                : 'Select Time *';
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Book Inspection for ${lead.buyerName}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Schedule an inspection date and time for this lead.',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Property Selection Dropdown
+                    DropdownButtonFormField<String?>(
+                      initialValue: selectedPropertyId,
+                      decoration: const InputDecoration(
+                        labelText: 'Property Listing',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: properties.map((p) {
+                        return DropdownMenuItem<String?>(
+                          value: p.id,
+                          child: Text(
+                            p.title,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedPropertyId = val;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Date Picker Tile
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedDate = picked;
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Inspection Date *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.calendar_today_rounded),
+                        ),
+                        child: Text(dateStr),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Time Picker Tile
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: const TimeOfDay(hour: 10, minute: 0),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedTime = picked;
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Inspection Time *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.access_time_rounded),
+                        ),
+                        child: Text(timeStr),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Venue / Notes Controller
+                    TextFormField(
+                      controller: venueNotesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Venue / Notes (Optional)',
+                        hintText: 'e.g. Meeting at site gate B',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedDate == null || selectedTime == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please select both an inspection date and time.'),
+                          backgroundColor: AppColors.error,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
+                    final formattedTime =
+                        '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}';
+
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(dialogCtx);
+
+                    setState(() => _isSaving = true);
+                    try {
+                      // Insert to inspections table
+                      await ref.read(supabaseServiceProvider).insert('inspections', {
+                        'company_id': lead.companyId,
+                        'lead_id': lead.id,
+                        'property_id': selectedPropertyId,
+                        'partner_id': lead.partnerId,
+                        'buyer_id': lead.buyerId,
+                        'scheduled_date': formattedDate,
+                        'scheduled_time': formattedTime,
+                        'status': 'pending',
+                        'notes': venueNotesController.text.trim().isNotEmpty
+                            ? venueNotesController.text.trim()
+                            : null,
+                        'created_at': DateTime.now().toIso8601String(),
+                      });
+
+                      // Update lead stage to inspection_booked
+                      final success = await ref.read(leadProvider.notifier).updateStage(
+                            lead.id,
+                            LeadStage.inspectionBooked,
+                            notes: _notesController.text.trim(),
+                          );
+
+                      if (mounted) {
+                        setState(() => _isSaving = false);
+                        if (success) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Inspection booked for $formattedDate at $formattedTime.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        } else {
+                          final error = ref.read(leadProvider).errorMessage ?? 'Stage update failed';
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(error),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        setState(() => _isSaving = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to book inspection: $e'),
+                            backgroundColor: AppColors.error,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                  child: const Text('Book & Update Stage'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _saveNotes(LeadStage currentStage) async {
     setState(() => _isSaving = true);
     final success = await ref.read(leadProvider.notifier).updateStage(
@@ -274,6 +504,223 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
     }
   }
 
+  Future<void> _confirmDeleteLead(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Lead?', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error)),
+        content: const Text('Are you sure you want to delete this lead? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isSaving = true);
+    final ok = await ref.read(leadProvider.notifier).bulkDeleteLeads([widget.leadId]);
+    if (mounted) {
+      setState(() => _isSaving = false);
+      if (ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lead deleted.'), behavior: SnackBarBehavior.floating),
+        );
+        context.pop();
+      }
+    }
+  }
+
+  void _showEditLeadModal(BuildContext context, Lead lead) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: lead.buyerName);
+    final phoneController = TextEditingController(text: lead.buyerPhone);
+    final emailController = TextEditingController(text: lead.buyerEmail ?? '');
+    final notesController = TextEditingController(text: lead.notes ?? '');
+    String? selectedPropertyId = lead.propertyId;
+    String selectedSource = lead.sourceChannel;
+
+    final properties = ref.read(propertyProvider).properties;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Edit Lead Details',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded),
+                              onPressed: () => Navigator.pop(modalCtx),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(),
+                      Expanded(
+                        child: Form(
+                          key: formKey,
+                          child: ListView(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(24),
+                            children: [
+                              TextFormField(
+                                controller: nameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Buyer Name *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (v) => v == null || v.trim().isEmpty ? 'Enter buyer name' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: phoneController,
+                                keyboardType: TextInputType.phone,
+                                decoration: const InputDecoration(
+                                  labelText: 'Phone Number *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (v) => v == null || v.trim().isEmpty ? 'Enter phone number' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email Address',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String?>(
+                                initialValue: selectedPropertyId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Property Interest',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<String?>(
+                                    value: null,
+                                    child: Text('None / General Inquiry'),
+                                  ),
+                                  ...properties.map((p) => DropdownMenuItem<String?>(
+                                        value: p.id,
+                                        child: Text(p.title),
+                                      )),
+                                ],
+                                onChanged: (v) => setModalState(() => selectedPropertyId = v),
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: notesController,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                  labelText: 'Notes / Remarks',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    if (!formKey.currentState!.validate()) return;
+                                    Navigator.pop(modalCtx);
+                                    setState(() => _isSaving = true);
+                                    final ok = await ref.read(leadProvider.notifier).updateLead(
+                                          leadId: lead.id,
+                                          buyerName: nameController.text.trim(),
+                                          buyerPhone: phoneController.text.trim(),
+                                          buyerEmail: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                                          propertyId: selectedPropertyId,
+                                          sourceChannel: selectedSource,
+                                          notes: notesController.text.trim(),
+                                        );
+                                    if (mounted) {
+                                      setState(() => _isSaving = false);
+                                      if (ok) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Lead updated successfully!'),
+                                            behavior: SnackBarBehavior.floating,
+                                            backgroundColor: AppColors.success,
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Failed to update lead: ${ref.read(leadProvider).errorMessage}'),
+                                            behavior: SnackBarBehavior.floating,
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.accent,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -281,27 +728,42 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
     final authState = ref.watch(authProvider);
     final currentRole = authState.profile?.role;
 
-    final Lead? lead = leadState.leads.cast<Lead?>().firstWhere(
-          (l) => l?.id == widget.leadId,
-          orElse: () => null,
-        );
+    final Lead? leadInState = leadState.leads.where((l) => l.id == widget.leadId).firstOrNull;
 
-    if (lead == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Lead Details')),
-        body: const Center(child: Text('Lead details loading or not found...')),
+    if (leadInState == null) {
+      final singleAsync = ref.watch(singleLeadProvider(widget.leadId));
+      return singleAsync.when(
+        loading: () => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(title: const Text('Lead Overview')),
+          body: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        ),
+        error: (e, _) => Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(title: const Text('Lead Overview')),
+          body: Center(child: Text('Error loading lead details: $e')),
+        ),
+        data: (fetchedLead) {
+          if (fetchedLead == null) {
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              appBar: AppBar(title: const Text('Lead Overview')),
+              body: const Center(child: Text('Lead details not found or deleted.')),
+            );
+          }
+          return _buildLeadUI(context, fetchedLead, currentRole, theme);
+        },
       );
     }
 
-    final property = ref.watch(propertyProvider).properties.cast<Property?>().firstWhere(
-          (p) => p?.id == lead.propertyId,
-          orElse: () => null,
-        );
+    return _buildLeadUI(context, leadInState, currentRole, theme);
+  }
 
-    final partner = ref.watch(partnerProvider).partners.cast<Profile?>().firstWhere(
-          (p) => p?.id == lead.partnerId,
-          orElse: () => null,
-        );
+  Widget _buildLeadUI(BuildContext context, Lead lead, UserRole? currentRole, ThemeData theme) {
+
+    final property = ref.watch(propertyProvider).properties.where((p) => p.id == lead.propertyId).firstOrNull;
+
+    final partner = ref.watch(partnerProvider).partners.where((p) => p.id == lead.partnerId).firstOrNull;
 
     final currencyFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0);
     final regDate = DateFormat('MMMM d, yyyy').format(lead.createdAt);
@@ -339,6 +801,20 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          if (currentRole == UserRole.admin || currentRole == UserRole.manager) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: AppColors.accent),
+              tooltip: 'Edit Lead Details',
+              onPressed: () => _showEditLeadModal(context, lead),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+              tooltip: 'Delete Lead',
+              onPressed: () => _confirmDeleteLead(context),
+            ),
+          ],
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -441,6 +917,8 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
                     value: regDate,
                     icon: Icons.calendar_month_outlined,
                   ),
+                  const SizedBox(height: 16),
+                  _buildFollowupDateRow(context, ref, lead),
                   const SizedBox(height: 16),
                   _buildAssignedAgentRow(context, ref, lead, currentRole),
                 ],
@@ -753,6 +1231,90 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen> {
     final currentIndex = list.indexOf(current);
     final targetIndex = list.indexOf(target);
     return currentIndex >= targetIndex || current == LeadStage.closed || current == LeadStage.lost;
+  }
+
+  Widget _buildFollowupDateRow(BuildContext context, WidgetRef ref, Lead lead) {
+    final followupStr = lead.followupDate != null
+        ? DateFormat('MMMM d, yyyy').format(lead.followupDate!)
+        : 'Not scheduled';
+    final isPast = lead.followupDate != null && lead.followupDate!.isBefore(DateTime.now());
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.event_outlined, size: 20, color: AppColors.textTertiary),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'NEXT FOLLOW-UP DATE',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    followupStr,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: lead.followupDate == null
+                          ? AppColors.textTertiary
+                          : (isPast ? AppColors.error : AppColors.primary),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: lead.followupDate ?? DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        await ref.read(supabaseServiceProvider).update('leads', lead.id, {
+                          'followup_date': picked.toIso8601String(),
+                          'updated_at': DateTime.now().toIso8601String(),
+                        });
+                        await ref.read(leadProvider.notifier).loadLeads();
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Follow-up scheduled for ${DateFormat('MMMM d, yyyy').format(picked)}.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Text(
+                        lead.followupDate != null ? 'Reschedule' : 'Set Date',
+                        style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDetailRow({

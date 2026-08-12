@@ -25,12 +25,12 @@ void main() {
     test('onboardingCompletedProvider reads correct override value', () {
       final container = ProviderContainer(
         overrides: [
-          onboardingCompletedProvider.overrideWithValue(true),
+          onboardingCompletedProvider.overrideWithValue(const AsyncValue.data(true)),
         ],
       );
       addTearDown(container.dispose);
 
-      final isCompleted = container.read(onboardingCompletedProvider);
+      final isCompleted = container.read(onboardingCompletedProvider).value;
       expect(isCompleted, isTrue);
     });
   });

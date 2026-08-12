@@ -57,17 +57,6 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
   Future<void> _handleSave() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    if (_selectedPropertyId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a property listing.'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isSaving = true);
 
     // ── Duplicate Check ──
@@ -145,7 +134,7 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
     }
 
     final success = await notifier.createLead(
-          propertyId: _selectedPropertyId!,
+          propertyId: _selectedPropertyId,
           buyerName: _buyerNameController.text.trim(),
           buyerPhone: _buyerPhoneController.text.trim(),
           buyerEmail: _buyerEmailController.text.trim().isEmpty ? null : _buyerEmailController.text.trim(),
@@ -287,22 +276,27 @@ class _ManualLeadScreenState extends ConsumerState<ManualLeadScreen> {
                       const SizedBox(height: 20),
 
                       // Property Dropdown
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedPropertyId,
-                        decoration: _inputDecoration(label: 'Select Property Listing', icon: Icons.home_work_outlined),
-                        items: properties.map((property) {
-                          return DropdownMenuItem<String>(
-                            value: property.id,
-                            child: Text(
-                              '${property.title} (${currencyFormat.format(property.price)})',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
+                      DropdownButtonFormField<String?>(
+                        value: _selectedPropertyId,
+                        decoration: _inputDecoration(label: 'Select Property Listing (Optional)', icon: Icons.home_work_outlined),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Direct Client (No Property Attribution)'),
+                          ),
+                          ...properties.map((property) {
+                            return DropdownMenuItem<String?>(
+                              value: property.id,
+                              child: Text(
+                                '${property.title} (${currencyFormat.format(property.price)})',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }),
+                        ],
                         onChanged: (val) {
                           setState(() => _selectedPropertyId = val);
                         },
-                        validator: (value) => value == null ? 'Please select a property listing' : null,
                       ),
                       
                       if (!isPartner) ...[

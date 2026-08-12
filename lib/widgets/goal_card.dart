@@ -18,8 +18,46 @@ class GoalCard extends StatelessWidget {
     final metricTitle = _getMetricTitle(goal.metric);
     final horizonTitle = _getHorizonTitle(goal.horizon);
 
-    final Color statusColor = _getStatusColor(progress.pace);
-    final Color statusBg = statusColor.withValues(alpha: 0.1);
+    final now = DateTime.now();
+    final totalDays = goal.periodEnd.difference(goal.periodStart).inDays;
+    final daysElapsed = now.difference(goal.periodStart).inDays.clamp(0, totalDays > 0 ? totalDays : 1);
+    final expectedProgress = totalDays <= 0 ? 1.0 : daysElapsed / totalDays;
+    final actualProgress = goal.targetValue == 0 ? 0.0 : progress.currentValue / goal.targetValue;
+    final paceRatio = expectedProgress == 0 ? 1.0 : actualProgress / expectedProgress;
+
+    final isEnded = now.isAfter(goal.periodEnd);
+
+    late String paceLabel;
+    late Color paceBgColor;
+    late Color paceTextColor;
+
+    if (isEnded) {
+      paceLabel = 'Period Ended';
+      paceBgColor = AppColors.border.withValues(alpha: 0.5);
+      paceTextColor = AppColors.textTertiary;
+    } else if (paceRatio >= 1.0) {
+      paceLabel = 'On Track ✓';
+      paceBgColor = AppColors.success.withValues(alpha: 0.15);
+      paceTextColor = AppColors.success;
+    } else if (paceRatio >= 0.75) {
+      paceLabel = 'At Risk ⚠️';
+      paceBgColor = Colors.orange.withValues(alpha: 0.15);
+      paceTextColor = Colors.orange.shade800;
+    } else {
+      paceLabel = 'Behind 🔴';
+      paceBgColor = AppColors.error.withValues(alpha: 0.15);
+      paceTextColor = AppColors.error;
+    }
+
+    String projectedText;
+    if (isEnded) {
+      projectedText = 'Ended at ${(actualProgress * 100).toStringAsFixed(0)}% of target';
+    } else if (paceRatio >= 1.0) {
+      projectedText = 'Projected: Will hit target';
+    } else {
+      final projectedPct = (actualProgress / (expectedProgress > 0 ? expectedProgress : 1.0) * 100).clamp(0.0, 999.0);
+      projectedText = 'Projected: ~${projectedPct.toStringAsFixed(0)}% of target';
+    }
 
     final isRevenue = goal.metric == 'revenue';
     final currentStr = isRevenue 
@@ -54,7 +92,7 @@ class GoalCard extends StatelessWidget {
                         Text(
                           horizonTitle,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary,
                             letterSpacing: 0.5,
@@ -64,7 +102,7 @@ class GoalCard extends StatelessWidget {
                         Text(
                           metricTitle,
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                           ),
@@ -76,17 +114,17 @@ class GoalCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusBg,
+                      color: paceBgColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      progress.pace.replaceAll('_', ' ').toUpperCase(),
+                      paceLabel,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: statusColor,
+                        color: paceTextColor,
                       ),
                     ),
                   ),
@@ -97,22 +135,22 @@ class GoalCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: 50,
-                    height: 50,
+                    width: 48,
+                    height: 48,
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
                         CircularProgressIndicator(
-                          value: progress.progressPercent / 100,
+                          value: (progress.progressPercent / 100).clamp(0.0, 1.0),
                           strokeWidth: 5,
                           backgroundColor: AppColors.border,
-                          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                          valueColor: AlwaysStoppedAnimation<Color>(paceTextColor),
                         ),
                         Center(
                           child: Text(
                             '${progress.progressPercent.toStringAsFixed(0)}%',
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: AppColors.textPrimary,
                             ),
@@ -121,7 +159,7 @@ class GoalCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,18 +167,23 @@ class GoalCard extends StatelessWidget {
                         Text(
                           '$currentStr / $targetStr',
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
-                          'Projected: ${isRevenue ? "₦" : ""}${_formatCompact(progress.projectedValue)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
+                          projectedText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: paceRatio < 0.75 && !isEnded ? AppColors.error : AppColors.textSecondary,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -179,21 +222,6 @@ class GoalCard extends StatelessWidget {
         return 'YEARLY GOAL';
       default:
         return horizon.toUpperCase();
-    }
-  }
-
-  Color _getStatusColor(String pace) {
-    switch (pace) {
-      case 'ahead':
-        return AppColors.success;
-      case 'on_track':
-        return AppColors.info;
-      case 'behind':
-        return AppColors.warning;
-      case 'critical':
-        return AppColors.error;
-      default:
-        return AppColors.textTertiary;
     }
   }
 

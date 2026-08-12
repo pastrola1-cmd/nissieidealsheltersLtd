@@ -13,3 +13,5 @@ export 'document_record.dart';
 export 'landing_page_variant.dart';
 export 'training.dart';
 export 'sms_campaign.dart';
+export 'email_campaign.dart';
+

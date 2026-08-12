@@ -9,22 +9,26 @@ import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 
 class LeadState {
   final List<Lead> leads;
+  final int totalCount;
   final bool isLoading;
   final String? errorMessage;
 
   const LeadState({
     this.leads = const [],
+    this.totalCount = 0,
     this.isLoading = false,
     this.errorMessage,
   });
 
   LeadState copyWith({
     List<Lead>? leads,
+    int? totalCount,
     bool? isLoading,
     String? errorMessage,
   }) {
     return LeadState(
       leads: leads ?? this.leads,
+      totalCount: totalCount ?? this.totalCount,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
     );
@@ -35,6 +39,12 @@ class LeadNotifier extends Notifier<LeadState> {
   late SupabaseService _supabaseService;
   final _secureStorage = const FlutterSecureStorage();
   String? _loadedProfileId;
+
+  int _page = 0;
+  static const int _pageSize = 50;
+  bool _hasMore = true;
+
+  bool get hasMore => _hasMore;
 
   @override
   LeadState build() {
@@ -56,29 +66,81 @@ class LeadNotifier extends Notifier<LeadState> {
     }
   }
 
-  /// Loads leads scoped by role and company.
+  /// Loads the initial page of leads scoped by role and company.
   Future<void> loadLeads() async {
     final profile = ref.read(authProvider).profile;
     if (profile == null) return;
 
+    _page = 0;
+    _hasMore = true;
     state = state.copyWith(isLoading: true);
     try {
       List<Lead> list;
+      int totalCount = 0;
       if (profile.role == UserRole.partner) {
         list = await _supabaseService.getLeads(
+          companyId: profile.companyId,
+          partnerId: profile.id,
+          limit: _pageSize,
+          offset: 0,
+        );
+        totalCount = await _supabaseService.getTotalLeadCount(
           companyId: profile.companyId,
           partnerId: profile.id,
         );
       } else {
         list = await _supabaseService.getLeads(
           companyId: profile.companyId,
+          limit: _pageSize,
+          offset: 0,
+        );
+        totalCount = await _supabaseService.getTotalLeadCount(
+          companyId: profile.companyId,
         );
       }
-      // Sort by updated_at or created_at descending
-      list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      state = LeadState(leads: list, isLoading: false);
+      if (list.length < _pageSize) {
+        _hasMore = false;
+      }
+      state = LeadState(leads: list, totalCount: totalCount, isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
+  /// Fetches the next page of leads and appends them to the current list.
+  Future<void> loadMoreLeads() async {
+    if (!_hasMore || state.isLoading) return;
+    final profile = ref.read(authProvider).profile;
+    if (profile == null) return;
+
+    _page++;
+    final offset = _page * _pageSize;
+
+    try {
+      List<Lead> nextChunk;
+      if (profile.role == UserRole.partner) {
+        nextChunk = await _supabaseService.getLeads(
+          companyId: profile.companyId,
+          partnerId: profile.id,
+          limit: _pageSize,
+          offset: offset,
+        );
+      } else {
+        nextChunk = await _supabaseService.getLeads(
+          companyId: profile.companyId,
+          limit: _pageSize,
+          offset: offset,
+        );
+      }
+
+      if (nextChunk.length < _pageSize) {
+        _hasMore = false;
+      }
+
+      final updatedLeads = [...state.leads, ...nextChunk];
+      state = state.copyWith(leads: updatedLeads);
+    } catch (e) {
+      debugPrint('Error loading more leads: $e');
     }
   }
 
@@ -124,10 +186,49 @@ class LeadNotifier extends Notifier<LeadState> {
     }
   }
 
+  /// Updates lead details (buyerName, buyerPhone, buyerEmail, propertyId, sourceChannel, notes, assignedAgentId).
+  Future<bool> updateLead({
+    required String leadId,
+    String? buyerName,
+    String? buyerPhone,
+    String? buyerEmail,
+    String? propertyId,
+    String? sourceChannel,
+    String? notes,
+    String? assignedAgentId,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final Map<String, dynamic> data = {
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (buyerName != null) data['buyer_name'] = buyerName;
+      if (buyerPhone != null) data['buyer_phone'] = buyerPhone;
+      data['buyer_email'] = buyerEmail;
+      data['property_id'] = propertyId;
+      if (sourceChannel != null) data['source_channel'] = sourceChannel;
+      if (notes != null) data['notes'] = notes;
+      data['assigned_agent_id'] = assignedAgentId;
+
+      final response = await _supabaseService.update('leads', leadId, data);
+      final updatedLead = Lead.fromJson(response);
+
+      final updatedLeads = state.leads.map((l) {
+        return l.id == leadId ? updatedLead : l;
+      }).toList();
+
+      state = state.copyWith(leads: updatedLeads, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
+
   /// Creates a lead manually (Admin function).
   /// Creates a lead manually (Admin function).
   Future<bool> createLead({
-    required String propertyId,
+    String? propertyId,
     required String buyerName,
     required String buyerPhone,
     String? buyerEmail,
@@ -177,6 +278,7 @@ class LeadNotifier extends Notifier<LeadState> {
       
       state = state.copyWith(
         leads: [newLead, ...state.leads],
+        totalCount: state.totalCount + 1,
         isLoading: false,
       );
       return true;
@@ -338,7 +440,11 @@ class LeadNotifier extends Notifier<LeadState> {
       final Set<String> deletedSet = leadIds.toSet();
       final newList = state.leads.where((l) => !deletedSet.contains(l.id)).toList();
 
-      state = state.copyWith(leads: newList, isLoading: false);
+      state = state.copyWith(
+        leads: newList,
+        totalCount: state.totalCount - leadIds.length,
+        isLoading: false,
+      );
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -386,6 +492,7 @@ class LeadNotifier extends Notifier<LeadState> {
 
       state = state.copyWith(
         leads: [...insertedLeads, ...state.leads],
+        totalCount: state.totalCount + insertedLeads.length,
         isLoading: false,
       );
       return true;
@@ -426,4 +533,16 @@ final monthlyLeadCountProvider = FutureProvider.autoDispose<int>((ref) async {
   // Also watch leadProvider to refresh this count when leads are created/inserted/deleted
   ref.watch(leadProvider);
   return service.getMonthlyLeadCount(companyId);
+});
+
+/// Fetches a single lead by ID directly from Supabase.
+final singleLeadProvider = FutureProvider.autoDispose.family<Lead?, String>((ref, leadId) async {
+  final service = ref.watch(supabaseServiceProvider);
+  try {
+    final data = await service.client.from('leads').select().eq('id', leadId).maybeSingle();
+    if (data == null) return null;
+    return Lead.fromJson(data as Map<String, dynamic>);
+  } catch (_) {
+    return null;
+  }
 });

@@ -32,7 +32,17 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _termiiApiKeyController = TextEditingController();
   final _termiiSenderIdController = TextEditingController();
   final _geminiApiKeyController = TextEditingController();
+  final _smtpHostController = TextEditingController();
+  final _smtpPortController = TextEditingController();
+  final _smtpUsernameController = TextEditingController();
+  final _smtpPasswordController = TextEditingController();
+  final _smtpSenderNameController = TextEditingController();
+  final _smtpSenderEmailController = TextEditingController();
+  final _brevoApiKeyController = TextEditingController();
+  final _brevoSenderNameController = TextEditingController();
+  final _brevoSenderEmailController = TextEditingController();
 
+  String _emailProvider = 'simulation';
   String? _avatarUrl;
   bool _isUploadingAvatar = false;
   bool _isSavingProfile = false;
@@ -53,6 +63,16 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       _termiiApiKeyController.text = company.termiiApiKey ?? '';
       _termiiSenderIdController.text = company.termiiSenderId ?? 'Nissie';
       _geminiApiKeyController.text = company.geminiApiKey ?? '';
+      _emailProvider = company.emailProvider ?? 'simulation';
+      _smtpHostController.text = company.smtpHost ?? '';
+      _smtpPortController.text = (company.smtpPort ?? 587).toString();
+      _smtpUsernameController.text = company.smtpUsername ?? '';
+      _smtpPasswordController.text = company.smtpPassword ?? '';
+      _smtpSenderNameController.text = company.smtpSenderName ?? '';
+      _smtpSenderEmailController.text = company.smtpSenderEmail ?? '';
+      _brevoApiKeyController.text = company.brevoApiKey ?? '';
+      _brevoSenderNameController.text = company.brevoSenderName ?? '';
+      _brevoSenderEmailController.text = company.brevoSenderEmail ?? '';
     }
   }
 
@@ -65,6 +85,15 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _termiiApiKeyController.dispose();
     _termiiSenderIdController.dispose();
     _geminiApiKeyController.dispose();
+    _smtpHostController.dispose();
+    _smtpPortController.dispose();
+    _smtpUsernameController.dispose();
+    _smtpPasswordController.dispose();
+    _smtpSenderNameController.dispose();
+    _smtpSenderEmailController.dispose();
+    _brevoApiKeyController.dispose();
+    _brevoSenderNameController.dispose();
+    _brevoSenderEmailController.dispose();
     super.dispose();
   }
 
@@ -218,6 +247,17 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           'termii_api_key': _termiiApiKeyController.text.trim(),
           'termii_sender_id': _termiiSenderIdController.text.trim(),
           'gemini_api_key': _geminiApiKeyController.text.trim(),
+          'email_provider': _emailProvider,
+          'smtp_host': _smtpHostController.text.trim(),
+          'smtp_port': int.tryParse(_smtpPortController.text.trim()) ?? 587,
+          'smtp_username': _smtpUsernameController.text.trim(),
+          'smtp_password': _smtpPasswordController.text.trim(),
+          'smtp_sender_name': _smtpSenderNameController.text.trim(),
+          'smtp_sender_email': _smtpSenderEmailController.text.trim(),
+          'brevo_api_key': _brevoApiKeyController.text.trim(),
+          'brevo_sender_name': _brevoSenderNameController.text.trim(),
+          'brevo_sender_email': _brevoSenderEmailController.text.trim(),
+          'updated_at': DateTime.now().toIso8601String(),
         });
         
         await ref.read(authProvider.notifier).refreshProfile();
@@ -484,18 +524,117 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _termiiApiKeyController,
-                          decoration: _inputDecoration(label: 'Termii API Key', icon: Icons.key_rounded),
+                          decoration: _inputDecoration(label: 'SMS API Token (SmartSMS Solutions)', icon: Icons.key_rounded),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _termiiSenderIdController,
-                          decoration: _inputDecoration(label: 'Termii Sender ID', icon: Icons.message_outlined),
+                          decoration: _inputDecoration(label: 'SMS Sender ID (SmartSMS Solutions)', icon: Icons.message_outlined),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _geminiApiKeyController,
                           decoration: _inputDecoration(label: 'Gemini API Key (AI Coach)', icon: Icons.psychology_outlined),
                         ),
+                        const SizedBox(height: 24),
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Bulk Email Integration',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: _emailProvider,
+                          decoration: _inputDecoration(label: 'Email Provider', icon: Icons.mail_outline_rounded),
+                          items: const [
+                            DropdownMenuItem(value: 'simulation', child: Text('Simulation Mode (Logs only)')),
+                            DropdownMenuItem(value: 'smtp', child: Text('Custom SMTP (Gmail, Custom Mail)')),
+                            DropdownMenuItem(value: 'brevo', child: Text('Brevo (Sendinblue) HTTP API')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _emailProvider = val);
+                            }
+                          },
+                        ),
+                        if (_emailProvider == 'simulation') ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded, color: AppColors.accent),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'In Simulation Mode, campaigns will run normally and save delivery logs in history, but no real emails will be sent.',
+                                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (_emailProvider == 'smtp') ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _smtpHostController,
+                            decoration: _inputDecoration(label: 'SMTP Host', icon: Icons.dns_outlined),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _smtpPortController,
+                            keyboardType: TextInputType.number,
+                            decoration: _inputDecoration(label: 'SMTP Port (e.g. 587, 465)', icon: Icons.numbers_outlined),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _smtpUsernameController,
+                            decoration: _inputDecoration(label: 'SMTP Username', icon: Icons.alternate_email_rounded),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _smtpPasswordController,
+                            obscureText: true,
+                            decoration: _inputDecoration(label: 'SMTP Password', icon: Icons.lock_outline_rounded),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _smtpSenderNameController,
+                            decoration: _inputDecoration(label: 'Sender Display Name', icon: Icons.person_outline_rounded),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _smtpSenderEmailController,
+                            decoration: _inputDecoration(label: 'Sender Email Address', icon: Icons.email_outlined),
+                          ),
+                        ],
+                        if (_emailProvider == 'brevo') ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _brevoApiKeyController,
+                            decoration: _inputDecoration(label: 'Brevo API Key', icon: Icons.key_rounded),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _brevoSenderNameController,
+                            decoration: _inputDecoration(label: 'Sender Display Name', icon: Icons.person_outline_rounded),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _brevoSenderEmailController,
+                            decoration: _inputDecoration(label: 'Sender Email Address', icon: Icons.email_outlined),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,

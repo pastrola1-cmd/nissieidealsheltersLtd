@@ -43,7 +43,7 @@ Future<void> main() async {
     runApp(
       ProviderScope(
         overrides: [
-          onboardingCompletedProvider.overrideWithValue(onboardingCompleted),
+          onboardingCompletedProvider.overrideWithValue(AsyncValue.data(onboardingCompleted)),
           themeModeProvider.overrideWith(() => ThemeModeNotifier(isDark ? ThemeMode.dark : ThemeMode.light)),
         ],
         child: const PPNApp(),

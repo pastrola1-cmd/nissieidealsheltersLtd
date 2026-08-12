@@ -352,7 +352,7 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
               children: [
                 const SizedBox(height: 8),
                 const Text(
-                  'Type a message to broadcast via Termii SMS:',
+                  'Type a message to broadcast via SmartSMS Solutions:',
                   style: TextStyle(
                       color: AppColors.textSecondary, fontSize: 13),
                 ),
@@ -360,7 +360,6 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
                 TextFormField(
                   controller: smsController,
                   maxLines: 5,
-                  maxLength: 160,
                   decoration: InputDecoration(
                     hintText: 'Hello {{name}}, this is Nissie...',
                     filled: true,
@@ -447,7 +446,7 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
                         final isLive =
                             apiKey != null && apiKey.trim().isNotEmpty;
                         final modeMsg = isLive
-                            ? '✅ Sent $sentCount / ${phoneNumbers.length} SMS via Termii!'
+                            ? '✅ Sent $sentCount / ${phoneNumbers.length} SMS via SmartSMS Solutions!'
                             : '🔵 Simulation: $sentCount messages printed to console.';
 
                         ScaffoldMessenger.of(this.context).showSnackBar(
@@ -688,6 +687,85 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
       );
       setState(() => _selectedPartnerIds.clear());
     }
+  }
+
+  Future<void> _showEditContactDialog(BuildContext context, Profile partner) async {
+    final nameController = TextEditingController(text: partner.fullName ?? '');
+    final emailController = TextEditingController(text: partner.email ?? '');
+    final phoneController = TextEditingController(text: partner.phone ?? '');
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Edit Partner Contact', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: isSaving ? null : () async {
+                setDialogState(() => isSaving = true);
+                final ok = await ref.read(partnerProvider.notifier).updatePartnerContact(
+                  partner.id,
+                  fullName: nameController.text.trim(),
+                  email: emailController.text.trim(),
+                  phone: phoneController.text.trim(),
+                );
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                if (mounted) {
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok ? '✅ Partner contact updated successfully!' : '❌ Update failed.'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: ok ? AppColors.success : AppColors.error,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(isSaving ? 'Saving...' : 'Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -1070,6 +1148,13 @@ class _PartnerListScreenState extends ConsumerState<PartnerListScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.edit_note_rounded,
+                            size: 20, color: AppColors.accent),
+                        tooltip: 'Edit Contact Details',
+                        onPressed: () => _showEditContactDialog(context, partner),
                       ),
                     ],
                   ),

@@ -11,6 +11,9 @@ import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/inspection_provider.dart';
+import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
+import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
@@ -207,6 +210,13 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
         userProfile?.role == UserRole.platformAdmin ||
         userProfile?.role == UserRole.manager ||
         userProfile?.role == UserRole.marketer;
+
+    final allLeads = ref.watch(leadProvider).leads;
+    final allInspections = ref.watch(inspectionProvider).inspections;
+    final allPartners = ref.watch(partnerProvider).partners;
+    final isStaffAdminOrManager = userProfile?.role == UserRole.admin ||
+        userProfile?.role == UserRole.platformAdmin ||
+        userProfile?.role == UserRole.manager;
 
     Color statusColor;
     switch (property.status) {
@@ -437,6 +447,12 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // ── Property Intelligence Card (Admins / Managers only) ──
+                  if (isStaffAdminOrManager) ...[
+                    _buildPropertyIntelligenceCard(context, property, allLeads, allInspections, allPartners),
                     const SizedBox(height: 24),
                   ],
 
@@ -719,6 +735,209 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPropertyIntelligenceCard(
+    BuildContext context,
+    Property property,
+    List<Lead> allLeads,
+    List<Inspection> allInspections,
+    List<Profile> allPartners,
+  ) {
+    // 1. Active Leads in Pipeline (not closed, not lost)
+    final propertyLeads = allLeads.where((l) => l.propertyId == property.id).toList();
+    final activeLeadsCount = propertyLeads.where((l) => l.stage != LeadStage.closed && l.stage != LeadStage.lost).length;
+
+    // 2. Total Inspections Booked
+    final propertyInspections = allInspections.where((i) => i.propertyId == property.id).toList();
+    final totalInspectionsCount = propertyInspections.length;
+
+    // 3. Completed Inspections
+    final completedInspectionsCount = propertyInspections.where((i) => i.status == InspectionStatus.completed).length;
+
+    // 4. Deals Closed
+    final dealsClosedCount = propertyLeads.where((l) => l.stage == LeadStage.closed).length;
+
+    // 5. Top Referrer
+    final partnerLeadCounts = <String, int>{};
+    for (final l in propertyLeads) {
+      if (l.partnerId != null && l.partnerId!.isNotEmpty) {
+        partnerLeadCounts[l.partnerId!] = (partnerLeadCounts[l.partnerId!] ?? 0) + 1;
+      }
+    }
+
+    String topReferrerName = 'No partner leads yet';
+    if (partnerLeadCounts.isNotEmpty) {
+      String? topPartnerId;
+      int maxCount = -1;
+      partnerLeadCounts.forEach((id, count) {
+        if (count > maxCount) {
+          maxCount = count;
+          topPartnerId = id;
+        }
+      });
+
+      if (topPartnerId != null) {
+        final partner = allPartners.where((p) => p.id == topPartnerId).firstOrNull;
+        if (partner != null && partner.fullName != null && partner.fullName!.isNotEmpty) {
+          topReferrerName = '${partner.fullName} ($maxCount leads)';
+        } else {
+          topReferrerName = 'Partner ($maxCount leads)';
+        }
+      }
+    }
+
+    return Card(
+      color: AppColors.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.analytics_rounded, color: AppColors.accent, size: 22),
+                const SizedBox(width: 10),
+                Text(
+                  'Property Intelligence',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+
+            // 2-column grid of stat chips
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.0,
+              children: [
+                _buildStatChip(
+                  context,
+                  label: 'Active Pipeline Leads',
+                  value: activeLeadsCount.toString(),
+                  icon: Icons.person_search_outlined,
+                  color: AppColors.primary,
+                ),
+                _buildStatChip(
+                  context,
+                  label: 'Total Inspections',
+                  value: totalInspectionsCount.toString(),
+                  icon: Icons.event_available_outlined,
+                  color: AppColors.warning,
+                ),
+                _buildStatChip(
+                  context,
+                  label: 'Inspections Completed',
+                  value: completedInspectionsCount.toString(),
+                  icon: Icons.check_circle_outline,
+                  color: AppColors.info,
+                ),
+                _buildStatChip(
+                  context,
+                  label: 'Deals Closed',
+                  value: dealsClosedCount.toString(),
+                  icon: Icons.monetization_on_outlined,
+                  color: AppColors.success,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.handshake_outlined, size: 18, color: AppColors.accent),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'TOP REFERRER',
+                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          topReferrerName,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatChip(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

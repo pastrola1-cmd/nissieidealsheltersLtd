@@ -24,6 +24,7 @@ class LeadListScreen extends ConsumerStatefulWidget {
 
 class _LeadListScreenState extends ConsumerState<LeadListScreen> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   String _selectedStageFilter = 'All'; 
   String _searchQuery = '';
   Timer? _debounceTimer;
@@ -31,9 +32,16 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     final validStages = ['All', 'New', 'Contacted', 'Inspection Booked', 'Negotiation', 'Closed', 'Lost'];
     if (widget.initialStageFilter != null && validStages.contains(widget.initialStageFilter)) {
       _selectedStageFilter = widget.initialStageFilter!;
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(leadProvider.notifier).loadMoreLeads();
     }
   }
 
@@ -43,6 +51,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
@@ -95,7 +104,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
     }).toList();
 
     // Stats calculations
-    final totalCount = myLeads.length;
+    final totalCount = state.totalCount;
     final newCount = myLeads.where((l) => l.stage == LeadStage.newLead).length;
     final closedCount = myLeads.where((l) => l.stage == LeadStage.closed).length;
 
@@ -163,6 +172,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
                     await ref.read(leadProvider.notifier).loadLeads();
                   },
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(24, 24, 24, _isSelectionMode ? 100 : 24),
                     child: Column(
@@ -417,7 +427,7 @@ class _LeadListScreenState extends ConsumerState<LeadListScreen> {
                       if (mounted) {
                         final isLive = apiKey != null && apiKey.trim().isNotEmpty;
                         final modeMsg = isLive 
-                            ? 'Successfully sent $sentCount / ${phoneNumbers.length} SMS via Termii!'
+                            ? 'Successfully sent $sentCount / ${phoneNumbers.length} SMS via SmartSMS Solutions!'
                             : 'Simulation Mode: Simulated sending $sentCount SMS to console.';
                         
                         ScaffoldMessenger.of(this.context).showSnackBar(

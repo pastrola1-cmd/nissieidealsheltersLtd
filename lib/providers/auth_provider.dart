@@ -83,8 +83,33 @@ class AuthNotifier extends Notifier<AuthState> {
       // Retry mechanism to account for slight database trigger delays on signup
       for (int i = 0; i < 4; i++) {
         try {
-          final profile = await _supabaseService.getProfile(userId);
+          var profile = await _supabaseService.getProfile(userId);
           if (profile != null) {
+            // Auto-heal missing email or phone on profile if available in auth session
+            final user = _client.auth.currentUser;
+            if (user != null) {
+              final userEmail = user.email;
+              final userPhone = user.phone;
+              bool needUpdate = false;
+              final Map<String, dynamic> updates = {};
+
+              if (userEmail != null && userEmail.isNotEmpty && profile.email != userEmail) {
+                updates['email'] = userEmail;
+                needUpdate = true;
+              }
+              if (userPhone != null && userPhone.isNotEmpty && profile.phone != userPhone) {
+                updates['phone'] = userPhone;
+                needUpdate = true;
+              }
+              if (needUpdate) {
+                await _supabaseService.update('profiles', userId, updates);
+                profile = profile.copyWith(
+                  email: updates['email'] as String? ?? profile.email,
+                  phone: updates['phone'] as String? ?? profile.phone,
+                );
+              }
+            }
+
             Company? company;
             if (profile.companyId != null) {
               company = await _supabaseService.getCompany(profile.companyId!);
@@ -152,6 +177,8 @@ class AuthNotifier extends Notifier<AuthState> {
         password: password,
         data: {
           'full_name': fullName,
+          'phone': phone,
+          'email': email,
           'role': role.value,
           if (companyId != null) 'company_id': companyId,
           if (createCompanyName != null) 'create_company_name': createCompanyName,

@@ -13,6 +13,24 @@ class MonthlyRevenue {
   const MonthlyRevenue(this.monthLabel, this.revenue);
 }
 
+class CampaignAttribution {
+  final String campaignId;
+  final String campaignName;
+  final int totalLeads;
+  final int closedLeads;
+  final int lostLeads;
+  final double conversionRate;
+
+  const CampaignAttribution({
+    required this.campaignId,
+    required this.campaignName,
+    required this.totalLeads,
+    required this.closedLeads,
+    required this.lostLeads,
+    required this.conversionRate,
+  });
+}
+
 class AnalyticsState {
   final bool isLoading;
   final String? errorMessage;
@@ -33,6 +51,7 @@ class AnalyticsState {
   final Map<LeadStage, int> pipelineFunnel;
   final List<StaffPerformance> staffPerformance;
   final List<MonthlyRevenue> revenueTrend;
+  final List<CampaignAttribution> campaignAttributions;
 
   const AnalyticsState({
     this.isLoading = false,
@@ -50,6 +69,7 @@ class AnalyticsState {
     this.pipelineFunnel = const {},
     this.staffPerformance = const [],
     this.revenueTrend = const [],
+    this.campaignAttributions = const [],
   });
 
   AnalyticsState copyWith({
@@ -68,6 +88,7 @@ class AnalyticsState {
     Map<LeadStage, int>? pipelineFunnel,
     List<StaffPerformance>? staffPerformance,
     List<MonthlyRevenue>? revenueTrend,
+    List<CampaignAttribution>? campaignAttributions,
   }) {
     return AnalyticsState(
       isLoading: isLoading ?? this.isLoading,
@@ -85,6 +106,7 @@ class AnalyticsState {
       pipelineFunnel: pipelineFunnel ?? this.pipelineFunnel,
       staffPerformance: staffPerformance ?? this.staffPerformance,
       revenueTrend: revenueTrend ?? this.revenueTrend,
+      campaignAttributions: campaignAttributions ?? this.campaignAttributions,
     );
   }
 }
@@ -253,6 +275,43 @@ class AnalyticsNotifier extends Notifier<AnalyticsState> {
         revenueTrend.add(MonthlyRevenue(monthFormat.format(targetMonth), sum));
       }
 
+      // Campaign Attribution Calculation
+      final campaignMap = <String, List<Lead>>{};
+      for (final l in allLeads) {
+        final key = l.campaignId ?? l.sourceChannel;
+        campaignMap.putIfAbsent(key, () => []).add(l);
+      }
+
+      final campaignAttributions = <CampaignAttribution>[];
+      for (final entry in campaignMap.entries) {
+        final key = entry.key;
+        final leadsList = entry.value;
+        final total = leadsList.length;
+        final closed = leadsList.where((l) => l.stage == LeadStage.closed).length;
+        final lost = leadsList.where((l) => l.stage == LeadStage.lost).length;
+        final rate = total > 0 ? (closed / total) * 100 : 0.0;
+
+        final matchedCampaign = campaignsList.where((c) => c.id == key).firstOrNull;
+        final name = matchedCampaign != null
+            ? '${matchedCampaign.platform.toUpperCase()} Campaign'
+            : (key == 'whatsapp' || key == 'facebook' || key == 'instagram' || key == 'referral' || key == 'website'
+                ? '${key[0].toUpperCase()}${key.substring(1)} Organic'
+                : key.toUpperCase());
+
+        campaignAttributions.add(
+          CampaignAttribution(
+            campaignId: key,
+            campaignName: name,
+            totalLeads: total,
+            closedLeads: closed,
+            lostLeads: lost,
+            conversionRate: rate,
+          ),
+        );
+      }
+
+      campaignAttributions.sort((a, b) => b.conversionRate.compareTo(a.conversionRate));
+
       state = state.copyWith(
         isLoading: false,
         totalLeadsCurrent: currentLeads.length,
@@ -265,6 +324,7 @@ class AnalyticsNotifier extends Notifier<AnalyticsState> {
         pipelineFunnel: funnel,
         staffPerformance: staffList,
         revenueTrend: revenueTrend,
+        campaignAttributions: campaignAttributions,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

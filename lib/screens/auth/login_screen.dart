@@ -209,35 +209,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.small(
-        backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.bug_report, color: Colors.white),
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Diagnostic Logs'),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 300,
-                child: ListView.builder(
-                  itemCount: globalLogBuffer.length,
-                  itemBuilder: (context, index) => Text(
-                    globalLogBuffer[index],
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
     );
   }
 

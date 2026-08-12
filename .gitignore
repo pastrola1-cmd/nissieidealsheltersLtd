@@ -43,7 +43,9 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Build artifacts and temporary scratch files
+*.zip
+build_output.txt
+nissie_web_portal/
+scratch/
+

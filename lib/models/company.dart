@@ -26,6 +26,16 @@ class Company {
   final String? termiiApiKey;
   final String? termiiSenderId;
   final String? geminiApiKey;
+  final String? emailProvider;
+  final String? smtpHost;
+  final int? smtpPort;
+  final String? smtpUsername;
+  final String? smtpPassword;
+  final String? smtpSenderName;
+  final String? smtpSenderEmail;
+  final String? brevoApiKey;
+  final String? brevoSenderName;
+  final String? brevoSenderEmail;
 
   const Company({
     required this.id,
@@ -52,6 +62,16 @@ class Company {
     this.termiiApiKey,
     this.termiiSenderId = 'Nissie',
     this.geminiApiKey,
+    this.emailProvider = 'simulation',
+    this.smtpHost,
+    this.smtpPort = 587,
+    this.smtpUsername,
+    this.smtpPassword,
+    this.smtpSenderName,
+    this.smtpSenderEmail,
+    this.brevoApiKey,
+    this.brevoSenderName,
+    this.brevoSenderEmail,
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
@@ -82,6 +102,16 @@ class Company {
       termiiApiKey: json['termii_api_key'] as String?,
       termiiSenderId: json['termii_sender_id'] as String? ?? 'Nissie',
       geminiApiKey: json['gemini_api_key'] as String?,
+      emailProvider: json['email_provider'] as String? ?? 'simulation',
+      smtpHost: json['smtp_host'] as String?,
+      smtpPort: json['smtp_port'] as int? ?? 587,
+      smtpUsername: json['smtp_username'] as String?,
+      smtpPassword: json['smtp_password'] as String?,
+      smtpSenderName: json['smtp_sender_name'] as String?,
+      smtpSenderEmail: json['smtp_sender_email'] as String?,
+      brevoApiKey: json['brevo_api_key'] as String?,
+      brevoSenderName: json['brevo_sender_name'] as String?,
+      brevoSenderEmail: json['brevo_sender_email'] as String?,
     );
   }
 
@@ -111,6 +141,16 @@ class Company {
       'termii_api_key': termiiApiKey,
       'termii_sender_id': termiiSenderId,
       'gemini_api_key': geminiApiKey,
+      'email_provider': emailProvider,
+      'smtp_host': smtpHost,
+      'smtp_port': smtpPort,
+      'smtp_username': smtpUsername,
+      'smtp_password': smtpPassword,
+      'smtp_sender_name': smtpSenderName,
+      'smtp_sender_email': smtpSenderEmail,
+      'brevo_api_key': brevoApiKey,
+      'brevo_sender_name': brevoSenderName,
+      'brevo_sender_email': brevoSenderEmail,
     };
   }
 
@@ -139,6 +179,16 @@ class Company {
     String? termiiApiKey,
     String? termiiSenderId,
     String? geminiApiKey,
+    String? emailProvider,
+    String? smtpHost,
+    int? smtpPort,
+    String? smtpUsername,
+    String? smtpPassword,
+    String? smtpSenderName,
+    String? smtpSenderEmail,
+    String? brevoApiKey,
+    String? brevoSenderName,
+    String? brevoSenderEmail,
   }) {
     return Company(
       id: id ?? this.id,
@@ -169,6 +219,16 @@ class Company {
       termiiApiKey: termiiApiKey ?? this.termiiApiKey,
       termiiSenderId: termiiSenderId ?? this.termiiSenderId,
       geminiApiKey: geminiApiKey ?? this.geminiApiKey,
+      emailProvider: emailProvider ?? this.emailProvider,
+      smtpHost: smtpHost ?? this.smtpHost,
+      smtpPort: smtpPort ?? this.smtpPort,
+      smtpUsername: smtpUsername ?? this.smtpUsername,
+      smtpPassword: smtpPassword ?? this.smtpPassword,
+      smtpSenderName: smtpSenderName ?? this.smtpSenderName,
+      smtpSenderEmail: smtpSenderEmail ?? this.smtpSenderEmail,
+      brevoApiKey: brevoApiKey ?? this.brevoApiKey,
+      brevoSenderName: brevoSenderName ?? this.brevoSenderName,
+      brevoSenderEmail: brevoSenderEmail ?? this.brevoSenderEmail,
     );
   }
 }

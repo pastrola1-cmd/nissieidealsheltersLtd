@@ -1,0 +1,21 @@
+# Apache configuration for Flutter Web Single Page Application (SPA)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /portal-new/
+
+  # Force HTTPS
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Disable caching for index.html & flutter_bootstrap.js to force fresh updates
+  <FilesMatch "(index\.html|flutter_bootstrap\.js)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # SPA Routing - fallback all non-file/non-directory requests to index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /portal-new/index.html [L]
+</IfModule>

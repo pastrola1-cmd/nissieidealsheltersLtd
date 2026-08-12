@@ -44,6 +44,12 @@ class AdminDashboardScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
+                        IconButton(
+                          icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary, size: 26),
+                          tooltip: 'Open Navigation Menu',
+                          onPressed: () => Scaffold.of(context).openDrawer(),
+                        ),
+                        const SizedBox(width: 4),
                         // Company Logo
                         Container(
                           width: 44,
@@ -306,9 +312,24 @@ class AdminDashboardScreen extends ConsumerWidget {
                             child: const Icon(Icons.sms_rounded, color: Colors.green),
                           ),
                           title: const Text('Bulk SMS Broadcast', style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: const Text('Send targeted SMS campaigns to leads or partners via Termii'),
+                          subtitle: const Text('Send targeted SMS campaigns to leads or partners via SmartSMS Solutions'),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => context.push('/admin/sms-portal'),
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.mark_email_unread_rounded, color: Colors.indigo),
+                          ),
+                          title: const Text('Bulk Email Broadcast', style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text('Send bulk marketing/transactional emails to leads or partners via SMTP/Brevo'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push('/admin/email-portal'),
                         ),
                         const Divider(),
                         ListTile(
@@ -805,6 +826,7 @@ class RecentActivityFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final displayActivities = activities.take(5).toList();
 
     return Card(
       color: AppColors.surface,
@@ -827,7 +849,7 @@ class RecentActivityFeed extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            if (activities.isEmpty)
+            if (displayActivities.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(
@@ -841,9 +863,9 @@ class RecentActivityFeed extends StatelessWidget {
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: activities.length,
+                itemCount: displayActivities.length,
                 itemBuilder: (context, index) {
-                  final log = activities[index];
+                  final log = displayActivities[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Row(

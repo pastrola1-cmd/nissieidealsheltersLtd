@@ -143,7 +143,7 @@ class _GoalsDashboardListState extends ConsumerState<GoalsDashboardList> {
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 155,
+          height: 165,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,

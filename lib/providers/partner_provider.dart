@@ -186,6 +186,34 @@ class PartnerNotifier extends Notifier<PartnerState> {
       return false;
     }
   }
+
+  /// Updates a partner's contact details (email, phone, fullName).
+  Future<bool> updatePartnerContact(
+    String partnerId, {
+    String? email,
+    String? phone,
+    String? fullName,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final updatedProfile = await _supabaseService.updateProfileContact(
+        partnerId,
+        email: email,
+        phone: phone,
+        fullName: fullName,
+      );
+
+      final updatedPartners = state.partners.map((p) {
+        return p.id == partnerId ? updatedProfile : p;
+      }).toList();
+
+      state = state.copyWith(partners: updatedPartners, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
 }
 
 /// Provider for managing partners listing and updates.

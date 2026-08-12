@@ -65,12 +65,20 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
     }
   }
 
-  /// Refresh wallet balance using Termii API
+  String? _getEffectiveApiKey(Company? company) {
+    final key = company?.termiiApiKey;
+    if (key != null && key.trim().isNotEmpty && !key.startsWith('tlv_')) {
+      return key.trim();
+    }
+    return null;
+  }
+
+  /// Refresh wallet balance using SmartSMS Solutions API
   Future<void> refreshWalletBalance() async {
     final company = ref.read(authProvider).company;
-    final apiKey = company?.termiiApiKey;
-    if (apiKey == null || apiKey.trim().isEmpty) {
-      state = state.copyWith(walletBalance: 5000.0, currency: 'NGN');
+    final apiKey = _getEffectiveApiKey(company);
+    if (apiKey == null || apiKey.isEmpty) {
+      state = state.copyWith(walletBalance: 0.0, errorMessage: 'SmartSMS Token not configured in Settings.');
       return;
     }
     try {
@@ -79,9 +87,10 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
         state = state.copyWith(
           walletBalance: response.balance,
           currency: response.currency,
+          errorMessage: null,
         );
       } else {
-        state = state.copyWith(errorMessage: 'Termii: ${response.error}');
+        state = state.copyWith(errorMessage: 'SmartSMS: ${response.error}');
       }
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
@@ -107,8 +116,9 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
           .toList();
       
       state = state.copyWith(campaigns: list, isLoading: false);
-    } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    } catch (_) {
+      // sms_campaigns table may not exist in database yet; fail gracefully
+      state = state.copyWith(campaigns: [], isLoading: false);
     }
   }
 
@@ -125,24 +135,31 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
 
     state = state.copyWith(isLoading: true);
     try {
-      final apiKey = company?.termiiApiKey;
-      final senderId = company?.termiiSenderId ?? 'Nissie';
+      final apiKey = _getEffectiveApiKey(company);
+      final senderId = (company?.termiiSenderId != null && company!.termiiSenderId!.trim().isNotEmpty)
+          ? company.termiiSenderId!.trim()
+          : 'NIS LTD';
 
-      // 1. Insert SMS campaign record as pending/sending
-      final campaignJson = await _supabaseService.client.from('sms_campaigns').insert({
-        'company_id': profile.companyId,
-        'title': title,
-        'message': message,
-        'channel': 'generic',
-        'sender_id': senderId,
-        'total_recipients': recipients.length,
-        'delivered_count': 0,
-        'failed_count': 0,
-        'status': 'sending',
-        'sent_by': profile.id,
-      }).select().single();
+      // 1. Insert SMS campaign record if table exists
+      SmsCampaign? campaign;
+      try {
+        final campaignJson = await _supabaseService.client.from('sms_campaigns').insert({
+          'company_id': profile.companyId,
+          'title': title,
+          'message': message,
+          'channel': 'generic',
+          'sender_id': senderId,
+          'total_recipients': recipients.length,
+          'delivered_count': 0,
+          'failed_count': 0,
+          'status': 'sending',
+          'sent_by': profile.id,
+        }).select().single();
 
-      final campaign = SmsCampaign.fromJson(campaignJson);
+        campaign = SmsCampaign.fromJson(campaignJson);
+      } catch (_) {
+        // sms_campaigns table does not exist in schema; proceed with sending without DB logging
+      }
 
       int delivered = 0;
       int failed = 0;
@@ -157,23 +174,26 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
         String? errorMsg;
 
         if (apiKey == null || apiKey.trim().isEmpty) {
-          // Simulation mode
-          success = true;
-          delivered++;
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: 'SmartSMS API Token not configured. Please enter your SmartSMS Token in Admin -> Settings.',
+          );
+          return false;
         } else {
           try {
             // Sequential sending with delay
-            success = await _smsService.sendSms(
+            final result = await _smsService.sendSmsResult(
               to: rec.phone,
               message: personalised,
               apiKey: apiKey,
               senderId: senderId,
             );
+            success = result.success;
             if (success) {
               delivered++;
             } else {
               failed++;
-              errorMsg = 'Termii failed to send';
+              errorMsg = result.message;
             }
           } catch (e) {
             failed++;
@@ -182,29 +202,38 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
           await Future.delayed(const Duration(milliseconds: 100));
         }
 
-        // 3. Log individual message
-        await _supabaseService.client.from('sms_messages').insert({
-          'campaign_id': campaign.id,
-          'recipient_name': recName,
-          'recipient_phone': rec.phone,
-          'recipient_type': rec.type,
-          'message_body': personalised,
-          'status': success ? 'delivered' : 'failed',
-          'error_message': errorMsg,
-        });
+        // 3. Log individual message if campaign record exists
+        if (campaign != null) {
+          try {
+            await _supabaseService.client.from('sms_messages').insert({
+              'campaign_id': campaign.id,
+              'recipient_name': recName,
+              'recipient_phone': rec.phone,
+              'recipient_type': rec.type,
+              'message_body': personalised,
+              'status': success ? 'delivered' : 'failed',
+              'error_message': errorMsg,
+            });
+          } catch (_) {}
+        }
       }
 
-      // 4. Update SMS campaign record status & counts
-      await _supabaseService.client.from('sms_campaigns').update({
-        'status': 'sent',
-        'delivered_count': delivered,
-        'failed_count': failed,
-        'sent_at': DateTime.now().toIso8601String(),
-      }).eq('id', campaign.id);
+      // 4. Update SMS campaign record status & counts if campaign record exists
+      if (campaign != null) {
+        try {
+          await _supabaseService.client.from('sms_campaigns').update({
+            'status': 'sent',
+            'delivered_count': delivered,
+            'failed_count': failed,
+            'sent_at': DateTime.now().toIso8601String(),
+          }).eq('id', campaign.id);
+        } catch (_) {}
+      }
 
       // Refresh data
       await loadSmsCampaigns();
       await refreshWalletBalance();
+      state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

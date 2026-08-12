@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/widgets/app_drawer.dart';
 
 /// Shell screen for Manager users.
 ///
@@ -12,7 +13,10 @@ class ManagerShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+
     return Scaffold(
+      drawer: AppDrawer(currentRoute: location),
       body: navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

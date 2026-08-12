@@ -174,9 +174,9 @@ class SupabaseService {
     return response as int;
   }
 
-  /// Fetches leads with optional company and partner filters.
-  Future<List<Lead>> getLeads({String? companyId, String? partnerId}) async {
-    var query = _client.from('leads').select();
+  /// Fetches the total lead count for a company or partner from the database.
+  Future<int> getTotalLeadCount({String? companyId, String? partnerId}) async {
+    var query = _client.from('leads').select('id');
     if (companyId != null) {
       query = query.eq('company_id', companyId);
     }
@@ -184,6 +184,27 @@ class SupabaseService {
       query = query.eq('partner_id', partnerId);
     }
     final response = await query;
+    return response.length;
+  }
+
+  /// Fetches leads with optional company/partner filters and range-based pagination.
+  Future<List<Lead>> getLeads({
+    String? companyId,
+    String? partnerId,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    var query = _client.from('leads').select();
+    if (companyId != null) {
+      query = query.eq('company_id', companyId);
+    }
+    if (partnerId != null) {
+      query = query.eq('partner_id', partnerId);
+    }
+    final response = await query
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
     return List<Map<String, dynamic>>.from(response)
         .map((json) => Lead.fromJson(json))
         .toList();
@@ -227,6 +248,21 @@ class SupabaseService {
     if (referralCode != null) {
       data['referral_code'] = referralCode;
     }
+    final response = await update('profiles', profileId, data);
+    return Profile.fromJson(response);
+  }
+
+  /// Updates profile email, phone, and name contact details.
+  Future<Profile> updateProfileContact(
+    String profileId, {
+    String? email,
+    String? phone,
+    String? fullName,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (email != null) data['email'] = email;
+    if (phone != null) data['phone'] = phone;
+    if (fullName != null) data['full_name'] = fullName;
     final response = await update('profiles', profileId, data);
     return Profile.fromJson(response);
   }

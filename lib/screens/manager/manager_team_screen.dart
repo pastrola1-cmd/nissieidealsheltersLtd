@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
+
 
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
@@ -337,128 +339,132 @@ class _ManagerTeamScreenState extends ConsumerState<ManagerTeamScreen> {
     final regDate = DateFormat('MMM d, yyyy').format(member.createdAt);
     final isSuspended = member.status == PartnerStatus.suspended;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          // Initials / Avatar
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              shape: BoxShape.circle,
-              image: member.avatarUrl != null
-                  ? DecorationImage(
-                      image: NetworkImage(member.avatarUrl!),
-                      fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () => context.push('/admin/staff/${member.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            // Initials / Avatar
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                shape: BoxShape.circle,
+                image: member.avatarUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(member.avatarUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: member.avatarUrl == null
+                  ? Center(
+                      child: Text(
+                        initials,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     )
                   : null,
             ),
-            child: member.avatarUrl == null
-                ? Center(
-                    child: Text(
-                      initials,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 16),
+            const SizedBox(width: 16),
 
-          // Member Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        member.fullName ?? 'Unnamed Agent',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isSuspended ? AppColors.textSecondary : AppColors.textPrimary,
-                          decoration: isSuspended ? TextDecoration.lineThrough : null,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isSuspended) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
-                        ),
-                        child: const Text(
-                          'SUSPENDED',
-                          style: TextStyle(
-                            color: AppColors.error,
-                            fontSize: 9,
+            // Member Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          member.fullName ?? 'Unnamed Agent',
+                          style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: isSuspended ? AppColors.textSecondary : AppColors.textPrimary,
+                            decoration: isSuspended ? TextDecoration.lineThrough : null,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isSuspended) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+                          ),
+                          child: const Text(
+                            'SUSPENDED',
+                            style: TextStyle(
+                              color: AppColors.error,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  member.email ?? 'No email',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  member.phone ?? 'No phone',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+                  const SizedBox(height: 4),
+                  Text(
+                    member.email ?? 'No email',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Joined: $regDate',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textTertiary,
+                  const SizedBox(height: 2),
+                  Text(
+                    member.phone ?? 'No phone',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Joined: $regDate',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Quick Actions + View arrow
+            Column(
+              children: [
+                if (member.phone != null && member.phone!.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.phone_in_talk_outlined, color: AppColors.primary),
+                    onPressed: () => _makeCall(member.phone, context),
+                    tooltip: 'Call Agent',
+                  ),
+                if (member.email != null && member.email!.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.mail_outline_rounded, color: AppColors.accent),
+                    onPressed: () => _sendEmail(member.email, context),
+                    tooltip: 'Email Agent',
+                  ),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
               ],
             ),
-          ),
-
-          // Quick Action Icons
-          Column(
-            children: [
-              if (member.phone != null && member.phone!.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.phone_in_talk_outlined, color: AppColors.primary),
-                  onPressed: () => _makeCall(member.phone, context),
-                  tooltip: 'Call Agent',
-                ),
-              if (member.email != null && member.email!.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.mail_outline_rounded, color: AppColors.accent),
-                  onPressed: () => _sendEmail(member.email, context),
-                  tooltip: 'Email Agent',
-                ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

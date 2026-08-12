@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/sms_provider.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
@@ -24,8 +25,11 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
   
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
+  final _customNumbersController = TextEditingController();
   
-  String _selectedGroup = 'leads'; // 'leads', 'partners', 'staff'
+  String _selectedGroup = 'leads'; // 'leads', 'partners', 'custom'
+  String _selectedStageFilter = 'all'; // 'all' or specific stage name
+  final List<String> _selectedIndividualIds = []; // empty means all matching targets selected
   int _charCount = 0;
 
   @override
@@ -37,6 +41,9 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
         _charCount = _messageController.text.length;
       });
     });
+    _customNumbersController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -44,6 +51,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     _tabController.dispose();
     _titleController.dispose();
     _messageController.dispose();
+    _customNumbersController.dispose();
     super.dispose();
   }
 
@@ -135,7 +143,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Termii Account Balance',
+                  'SmartSMS Solutions Live Balance',
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     color: Colors.white70,
@@ -193,11 +201,26 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     final partners = ref.watch(partnerProvider).partners;
     final leads = ref.watch(leadProvider).leads;
 
+    final leadsMatchingFilter = leads.where((l) {
+      if (l.buyerPhone.isEmpty) return false;
+      if (_selectedStageFilter != 'all' && l.stage.name != _selectedStageFilter) return false;
+      return true;
+    }).toList();
+
+    final partnersWithPhone = partners.where((p) => p.phone != null && p.phone!.isNotEmpty).toList();
+
     int recipientCount = 0;
     if (_selectedGroup == 'leads') {
-      recipientCount = leads.where((l) => l.buyerPhone.isNotEmpty).length;
+      recipientCount = _selectedIndividualIds.isEmpty ? leadsMatchingFilter.length : _selectedIndividualIds.length;
     } else if (_selectedGroup == 'partners') {
-      recipientCount = partners.where((p) => p.phone != null && p.phone!.isNotEmpty).length;
+      recipientCount = _selectedIndividualIds.isEmpty ? partnersWithPhone.length : _selectedIndividualIds.length;
+    } else if (_selectedGroup == 'custom') {
+      recipientCount = _customNumbersController.text
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList()
+          .length;
     }
 
     return SingleChildScrollView(
@@ -213,7 +236,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             ),
             const SizedBox(height: 4),
             const Text(
-              'Select a target group and compose your message template below.',
+              'Select a target group, apply filters or custom lists, and compose your message.',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 24),
@@ -226,11 +249,103 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildGroupChip('Leads', 'leads', Icons.trending_up_rounded, recipientCount),
-                const SizedBox(width: 12),
-                _buildGroupChip('Partners', 'partners', Icons.handshake_rounded, recipientCount),
+                _buildGroupChip('Leads', 'leads', Icons.trending_up_rounded),
+                const SizedBox(width: 8),
+                _buildGroupChip('Partners', 'partners', Icons.handshake_rounded),
+                const SizedBox(width: 8),
+                _buildGroupChip('Custom', 'custom', Icons.phone_android_rounded),
               ],
             ),
+
+            // Pipeline Stage Filter
+            if (_selectedGroup == 'leads') ...[
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                value: _selectedStageFilter,
+                decoration: InputDecoration(
+                  labelText: 'Filter by Pipeline Stage',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                ),
+                items: [
+                  const DropdownMenuItem(value: 'all', child: Text('All Pipeline Stages')),
+                  ...LeadStage.values.map((stage) {
+                    return DropdownMenuItem(value: stage.name, child: Text(stage.label));
+                  }),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _selectedStageFilter = val ?? 'all';
+                    _selectedIndividualIds.clear(); // Reset custom selections when filter changes
+                  });
+                },
+              ),
+            ],
+
+            // Select Specific Leads / Partners Selector Button
+            if (_selectedGroup == 'leads' || _selectedGroup == 'partners') ...[
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () {
+                  final targetList = _selectedGroup == 'leads' ? leadsMatchingFilter : partnersWithPhone;
+                  _showContactSelectionModal(context, targetList);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.people_outline_rounded, color: AppColors.accent, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _selectedIndividualIds.isEmpty
+                              ? 'Targeting all ${_selectedGroup == 'leads' ? 'matching leads' : 'partners'} (Tap to select specific)'
+                              : 'Targeting ${_selectedIndividualIds.length} specific ${_selectedGroup == 'leads' ? 'leads' : 'partners'}',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // Custom numbers field
+            if (_selectedGroup == 'custom') ...[
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _customNumbersController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Custom Phone Numbers (comma-separated)',
+                  hintText: 'e.g. +2348012345678, +2348098765432, 08022223333',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  alignLabelWithHint: true,
+                ),
+                validator: (val) {
+                  if (_selectedGroup == 'custom' && (val == null || val.trim().isEmpty)) {
+                    return 'Please enter at least one phone number';
+                  }
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 24),
 
             // Campaign Title field
@@ -259,7 +374,6 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             TextFormField(
               controller: _messageController,
               maxLines: 5,
-              maxLength: 160,
               decoration: InputDecoration(
                 labelText: 'Message Body',
                 hintText: 'Type your campaign message here... Use {{name}} to personalize.',
@@ -267,7 +381,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
                 fillColor: AppColors.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.border),
+                  borderSide: const BorderSide(color: AppColors.border),
                 ),
                 alignLabelWithHint: true,
               ),
@@ -279,23 +393,26 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
               },
             ),
             const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Tag: Use {{name}} for partner/buyer name.',
-                  style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
-                ),
-                Text(
-                  '$_charCount/160 chars',
-                  style: TextStyle(
-                    color: _charCount > 160 ? AppColors.error : AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+            Builder(builder: (context) {
+              final pages = _charCount == 0 ? 0 : (_charCount <= 160 ? 1 : ((_charCount - 1) ~/ 153) + 1);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tag: Use {{name}} for partner/buyer name.',
+                    style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
                   ),
-                ),
-              ],
-            ),
+                  Text(
+                    '$_charCount chars ($pages SMS page${pages == 1 ? '' : 's'})',
+                    style: TextStyle(
+                      color: pages > 1 ? AppColors.accent : AppColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              );
+            }),
             const SizedBox(height: 32),
 
             // Send Button
@@ -305,7 +422,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
               child: ElevatedButton.icon(
                 onPressed: smsState.isLoading || recipientCount == 0
                     ? null
-                    : () => _handleSendBroadcast(recipientCount, partners, leads),
+                    : () => _handleSendBroadcast(recipientCount, partnersWithPhone, leadsMatchingFilter),
                 icon: smsState.isLoading
                     ? const SizedBox(
                         width: 20,
@@ -330,18 +447,20 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     );
   }
 
-  Widget _buildGroupChip(String label, String value, IconData icon, int groupCount) {
+  Widget _buildGroupChip(String label, String value, IconData icon) {
     final isSelected = _selectedGroup == value;
     return Expanded(
       child: InkWell(
         onTap: () {
           setState(() {
             _selectedGroup = value;
+            _selectedStageFilter = 'all';
+            _selectedIndividualIds.clear();
           });
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.accent.withValues(alpha: 0.08) : AppColors.surface,
             border: Border.all(
@@ -353,14 +472,14 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: isSelected ? AppColors.accent : AppColors.textSecondary, size: 18),
-              const SizedBox(width: 8),
+              Icon(icon, color: isSelected ? AppColors.accent : AppColors.textSecondary, size: 16),
+              const SizedBox(width: 4),
               Text(
                 label,
                 style: TextStyle(
                   color: isSelected ? AppColors.accent : AppColors.textPrimary,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -370,7 +489,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     );
   }
 
-  Future<void> _handleSendBroadcast(int count, List<Profile> partners, List<Lead> leads) async {
+  Future<void> _handleSendBroadcast(int count, List<Profile> partnersWithPhone, List<Lead> leadsMatchingFilter) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final confirm = await showDialog<bool>(
@@ -402,7 +521,10 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     final List<({String? name, String phone, String? type})> recipients = [];
 
     if (_selectedGroup == 'leads') {
-      for (final lead in leads) {
+      final targets = _selectedIndividualIds.isEmpty 
+          ? leadsMatchingFilter 
+          : leadsMatchingFilter.where((l) => _selectedIndividualIds.contains(l.id)).toList();
+      for (final lead in targets) {
         if (lead.buyerPhone.isNotEmpty) {
           recipients.add((
             name: lead.buyerName,
@@ -412,12 +534,37 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
         }
       }
     } else if (_selectedGroup == 'partners') {
-      for (final p in partners) {
+      final targets = _selectedIndividualIds.isEmpty 
+          ? partnersWithPhone 
+          : partnersWithPhone.where((p) => _selectedIndividualIds.contains(p.id)).toList();
+      for (final p in targets) {
         if (p.phone != null && p.phone!.isNotEmpty) {
           recipients.add((
             name: p.fullName,
             phone: p.phone!,
             type: 'partner',
+          ));
+        }
+      }
+    } else if (_selectedGroup == 'custom') {
+      final customNumbers = _customNumbersController.text
+          .split(RegExp(r'[\s,\n;\r]+'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      for (final rawNum in customNumbers) {
+        String digits = rawNum.replaceAll(RegExp(r'\D'), '');
+        if (digits.startsWith('0') && digits.length == 11) {
+          digits = '234${digits.substring(1)}';
+        } else if (digits.length == 10 && RegExp(r'^[789]').hasMatch(digits)) {
+          digits = '234$digits';
+        }
+
+        if (digits.length >= 10 && digits.length <= 15) {
+          recipients.add((
+            name: 'Custom Recipient ($digits)',
+            phone: digits,
+            type: 'custom',
           ));
         }
       }
@@ -440,6 +587,8 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
         );
         _titleController.clear();
         _messageController.clear();
+        _customNumbersController.clear();
+        _selectedIndividualIds.clear();
         _tabController.animateTo(1); // switch to history tab
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -452,6 +601,172 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
       }
     }
   }
+
+  void _showContactSelectionModal(BuildContext context, List<dynamic> contacts) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final theme = Theme.of(context);
+            String searchQuery = '';
+            
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Select Recipients',
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                setModalState(() {
+                                  _selectedIndividualIds.clear();
+                                });
+                                setState(() {});
+                              },
+                              child: const Text('Reset / Select All', style: TextStyle(color: AppColors.accent)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search by name or phone...',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            filled: true,
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                          onChanged: (val) {
+                            setModalState(() {
+                              searchQuery = val.trim().toLowerCase();
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      Expanded(
+                        child: StatefulBuilder(
+                          builder: (context, setListState) {
+                            final filtered = contacts.where((c) {
+                              final name = (c is Lead ? c.buyerName : (c as Profile).fullName ?? 'Unnamed').toLowerCase();
+                              final phone = (c is Lead ? c.buyerPhone : (c as Profile).phone ?? '').toLowerCase();
+                              return name.contains(searchQuery) || phone.contains(searchQuery);
+                            }).toList();
+                            
+                            if (filtered.isEmpty) {
+                              return const Center(child: Text('No contacts found', style: TextStyle(color: AppColors.textSecondary)));
+                            }
+                            
+                            return ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final contact = filtered[index];
+                                final id = contact.id;
+                                final name = contact is Lead ? contact.buyerName : (contact as Profile).fullName ?? 'Unnamed';
+                                final phone = contact is Lead ? contact.buyerPhone : (contact as Profile).phone ?? 'No phone';
+                                
+                                final isChecked = _selectedIndividualIds.contains(id);
+                                
+                                return CheckboxListTile(
+                                  value: isChecked,
+                                  activeColor: AppColors.accent,
+                                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                  subtitle: Text(phone, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                  onChanged: (val) {
+                                    setModalState(() {
+                                      if (val == true) {
+                                        _selectedIndividualIds.add(id);
+                                      } else {
+                                        _selectedIndividualIds.remove(id);
+                                      }
+                                    });
+                                    setListState(() {});
+                                    setState(() {});
+                                  },
+                                );
+                              },
+                            );
+                          }
+                        ),
+                      ),
+                      
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text('Confirm (${_selectedIndividualIds.isEmpty ? contacts.length : _selectedIndividualIds.length} Selected)'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }
+        );
+      },
+    );
+  }
+
+
 
   Widget _buildHistoryTab(SmsCampaignState smsState) {
     if (smsState.isLoading && smsState.campaigns.isEmpty) {

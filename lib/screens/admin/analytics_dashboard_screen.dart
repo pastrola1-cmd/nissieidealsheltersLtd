@@ -99,6 +99,10 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
                     _buildStaffLeaderboardCard(analytics),
                     const SizedBox(height: 28),
 
+                    // Campaign Attribution Section
+                    _buildCampaignAttributionCard(analytics),
+                    const SizedBox(height: 28),
+
                     // SLA Performance Section
                     _buildSlaPerformanceSection(context),
                     const SizedBox(height: 32),
@@ -1006,6 +1010,152 @@ class _AnalyticsDashboardScreenState extends ConsumerState<AnalyticsDashboardScr
         ),
       ),
       error: (err, stack) => const Text('Error loading SLA metrics'),
+    );
+  }
+
+  Widget _buildCampaignAttributionCard(AnalyticsState analytics) {
+    final attributions = analytics.campaignAttributions;
+
+    double maxRate = 0.0;
+    for (final a in attributions) {
+      if (a.conversionRate > maxRate) maxRate = a.conversionRate;
+    }
+    if (maxRate == 0.0) maxRate = 1.0;
+
+    return Card(
+      color: AppColors.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.campaign_outlined, color: AppColors.primary, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Campaign Attribution',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Which channels are converting leads to sales',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+
+            if (attributions.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Text(
+                    'No campaign lead data recorded for this period',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: attributions.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 14),
+                itemBuilder: (context, index) {
+                  final attr = attributions[index];
+                  final rate = attr.conversionRate;
+
+                  Color rateColor;
+                  if (rate >= 10.0) {
+                    rateColor = AppColors.success;
+                  } else if (rate >= 5.0) {
+                    rateColor = Colors.orange;
+                  } else {
+                    rateColor = AppColors.error;
+                  }
+
+                  final relativeRatio = (rate / maxRate).clamp(0.05, 1.0);
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              attr.campaignName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                '${attr.totalLeads} leads',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: rateColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: rateColor.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  '${rate.toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    color: rateColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: relativeRatio,
+                          minHeight: 6,
+                          backgroundColor: AppColors.border.withValues(alpha: 0.3),
+                          valueColor: AlwaysStoppedAnimation<Color>(rateColor),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

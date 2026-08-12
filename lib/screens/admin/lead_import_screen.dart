@@ -187,18 +187,24 @@ class _LeadImportScreenState extends ConsumerState<LeadImportScreen> {
         const SizedBox(height: 20),
 
         // Target Property Selection
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String?>(
           value: _selectedPropertyId,
-          decoration: _dropdownDecoration(label: 'Attribute Listing (Required)', icon: Icons.home_work_outlined),
-          items: properties.map((property) {
-            return DropdownMenuItem<String>(
-              value: property.id,
-              child: Text(
-                '${property.title} (${currencyFormat.format(property.price)})',
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
+          decoration: _dropdownDecoration(label: 'Attribute Listing (Optional)', icon: Icons.home_work_outlined),
+          items: [
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Direct Client (No Property Attribution)'),
+            ),
+            ...properties.map((property) {
+              return DropdownMenuItem<String?>(
+                value: property.id,
+                child: Text(
+                  '${property.title} (${currencyFormat.format(property.price)})',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+          ],
           onChanged: (val) {
             setState(() => _selectedPropertyId = val);
           },
@@ -405,12 +411,6 @@ class _LeadImportScreenState extends ConsumerState<LeadImportScreen> {
       }
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
-      if (_selectedPropertyId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select an attribution property.'), backgroundColor: AppColors.error),
-        );
-        return;
-      }
       if (_nameColIdx == null || _phoneColIdx == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Name and Phone mapping are required.'), backgroundColor: AppColors.error),

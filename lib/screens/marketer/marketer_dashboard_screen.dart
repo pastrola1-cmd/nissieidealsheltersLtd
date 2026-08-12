@@ -43,13 +43,23 @@ class MarketerDashboardScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'My Dashboard',
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary, size: 26),
+                          tooltip: 'Open Navigation Menu',
+                          onPressed: () => Scaffold.of(context).openDrawer(),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'My Dashboard',
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                     Row(
                       children: [

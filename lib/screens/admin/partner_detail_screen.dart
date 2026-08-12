@@ -129,6 +129,13 @@ class _PartnerDetailScreenState extends ConsumerState<PartnerDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit Contact Details',
+            onPressed: () => _showEditContactDialog(context, partner),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -563,5 +570,84 @@ class _PartnerDetailScreenState extends ConsumerState<PartnerDetailScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _showEditContactDialog(BuildContext context, Profile partner) async {
+    final nameController = TextEditingController(text: partner.fullName ?? '');
+    final emailController = TextEditingController(text: partner.email ?? '');
+    final phoneController = TextEditingController(text: partner.phone ?? '');
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Edit Partner Contact', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: isSaving ? null : () async {
+                setDialogState(() => isSaving = true);
+                final ok = await ref.read(partnerProvider.notifier).updatePartnerContact(
+                  partner.id,
+                  fullName: nameController.text.trim(),
+                  email: emailController.text.trim(),
+                  phone: phoneController.text.trim(),
+                );
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                if (mounted) {
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok ? '✅ Partner contact updated successfully!' : '❌ Update failed.'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: ok ? AppColors.success : AppColors.error,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(isSaving ? 'Saving...' : 'Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

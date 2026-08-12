@@ -66,6 +66,10 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. ADD NEW COLUMNS TO COMPANIES TABLE
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS termii_api_key TEXT;
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS termii_sender_id TEXT DEFAULT 'Nissie';
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS gemini_api_key TEXT;
 ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS whatsapp_phone_number_id TEXT;
 ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS whatsapp_waba_id TEXT;
 ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS whatsapp_access_token TEXT;

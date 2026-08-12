@@ -10,6 +10,7 @@ import 'package:nissie_ideal_shelters/providers/earnings_provider.dart';
 import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
 import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 class AdminCommissionsScreen extends ConsumerStatefulWidget {
   const AdminCommissionsScreen({super.key});
@@ -285,6 +286,86 @@ class _AdminCommissionsScreenState extends ConsumerState<AdminCommissionsScreen>
     );
   }
 
+  Future<void> _handleMarkAsPaid(Commission commission, Profile? partner) async {
+    final partnerName = partner?.fullName ?? 'Partner';
+    final formattedAmount = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0).format(commission.commissionAmount);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Payment'),
+          content: Text('Mark commission of $formattedAmount to $partnerName as paid? This action records a payout transaction.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).pop(true),
+              icon: const Icon(Icons.payments_rounded, size: 16),
+              label: const Text('Confirm Payment'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      final currentUserId = ref.read(authProvider).profile?.id;
+      setState(() => _isActionInProgress = true);
+
+      try {
+        // Operation A: Update commission status to 'paid'
+        await ref.read(supabaseServiceProvider).update('commissions', commission.id, {
+          'status': 'paid',
+          'approved_at': DateTime.now().toIso8601String(),
+          'approved_by': currentUserId,
+        });
+
+        // Operation B: Insert transaction record
+        await ref.read(supabaseServiceProvider).insert('transactions', {
+          'company_id': commission.companyId,
+          'partner_id': commission.partnerId,
+          'commission_id': commission.id,
+          'type': 'credit',
+          'amount': commission.commissionAmount,
+          'status': 'completed',
+          'description': 'Commission payout for property sale',
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        await ref.read(earningsProvider.notifier).loadEarnings();
+
+        if (mounted) {
+          setState(() => _isActionInProgress = false);
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Payment recorded. $formattedAmount commission marked as paid.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isActionInProgress = false);
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Failed to record payment: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Widget _buildAdminCommissionCard(
     Commission commission,
     Property? property,
@@ -408,6 +489,33 @@ class _AdminCommissionsScreenState extends ConsumerState<AdminCommissionsScreen>
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+
+          if (commission.status == CommissionStatus.approved) ...[
+            const SizedBox(height: 18),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            if (_isActionInProgress)
+              const Center(child: CircularProgressIndicator(color: AppColors.accent))
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _handleMarkAsPaid(commission, partner),
+                      icon: const Icon(Icons.payments_rounded, size: 16),
+                      label: const Text('Mark as Paid'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),

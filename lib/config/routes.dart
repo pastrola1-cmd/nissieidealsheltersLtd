@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
@@ -53,6 +54,7 @@ import 'package:nissie_ideal_shelters/screens/admin/admin_commissions_screen.dar
 import 'package:nissie_ideal_shelters/screens/admin/admin_withdrawals_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/staff_invite_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/staff_management_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/staff_detail_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_training_manager_screen.dart';
 import 'package:nissie_ideal_shelters/screens/shared/training_dashboard_screen.dart';
 import 'package:nissie_ideal_shelters/screens/shared/training_material_detail_screen.dart';
@@ -71,6 +73,8 @@ import 'package:nissie_ideal_shelters/screens/admin/document_preview_screen.dart
 import 'package:nissie_ideal_shelters/screens/admin/document_list_screen.dart';
 import 'package:nissie_ideal_shelters/screens/shared/landing_page_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_sms_portal_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/admin_email_portal_screen.dart';
+
 
 
 
@@ -114,11 +118,14 @@ String _getDefaultRouteForRole(UserRole role) {
 }
 
 /// Provider to store onboarding completion status
-final onboardingCompletedProvider = Provider<bool>((ref) => false);
+final onboardingCompletedProvider = FutureProvider<bool>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool('onboarding_completed') ?? false;
+});
 
 /// Provides the application's [GoRouter] instance via Riverpod.
 final routerProvider = Provider<GoRouter>((ref) {
-  final onboardingCompleted = ref.watch(onboardingCompletedProvider);
+  final onboardingCompleted = ref.watch(onboardingCompletedProvider).value ?? false;
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -210,7 +217,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         final isAdminOrPlatform = profile.role == UserRole.admin || profile.role == UserRole.platformAdmin;
         final isManagerAllowedPath = profile.role == UserRole.manager && (
           location.startsWith('/admin/properties') || 
-          location == '/admin/billing'
+          location == '/admin/billing' ||
+          location == '/admin/transactions' ||
+          location.startsWith('/admin/staff/')
         );
         if (!isAdminOrPlatform && !isManagerAllowedPath) {
           return _getDefaultRouteForRole(profile.role);
@@ -348,6 +357,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AdminCommissionsScreen(),
       ),
       GoRoute(
+        path: '/admin/transactions',
+        name: 'adminTransactions',
+        builder: (context, state) => const AdminCommissionsScreen(),
+      ),
+      GoRoute(
         path: '/admin/withdrawals',
         name: 'adminWithdrawals',
         builder: (context, state) => const AdminWithdrawalsScreen(),
@@ -356,6 +370,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/staff',
         name: 'adminStaff',
         builder: (context, state) => const StaffManagementScreen(),
+      ),
+      GoRoute(
+        path: '/admin/staff/:id',
+        name: 'staffDetail',
+        builder: (context, state) {
+          final staffId = state.pathParameters['id']!;
+          return StaffDetailScreen(staffId: staffId);
+        },
       ),
       GoRoute(
         path: '/admin/invite-staff',
@@ -393,6 +415,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/sms-portal',
         name: 'adminSmsPortal',
         builder: (context, state) => const AdminSmsPortalScreen(),
+      ),
+      GoRoute(
+        path: '/admin/email-portal',
+        name: 'adminEmailPortal',
+        builder: (context, state) => const AdminEmailPortalScreen(),
       ),
       GoRoute(
         path: '/admin/campaigns',

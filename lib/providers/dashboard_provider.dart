@@ -181,7 +181,7 @@ class DashboardNotifier extends Notifier<DashboardState> {
     // ── 1. Admin Metrics ──
     final totalProperties = properties.length;
     final activePartners = partners.where((p) => p.status == PartnerStatus.approved).length;
-    final totalLeads = leads.length;
+    final totalLeads = leadsState.totalCount;
 
     final closedLeadsCount = leads.where((l) => l.stage == LeadStage.closed).length;
     final conversionRate = totalLeads == 0 ? 0.0 : (closedLeadsCount / totalLeads) * 100;
@@ -284,13 +284,13 @@ class DashboardNotifier extends Notifier<DashboardState> {
     // Sort recent activities descending by timestamp
     recentActivities.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    // Limit to 20 activities
-    final limitedActivities = recentActivities.take(20).toList();
+    // Limit to 5 activities
+    final limitedActivities = recentActivities.take(5).toList();
 
 
     // ── 2. Partner Metrics ──
     final partnerLeads = leads.where((l) => l.partnerId == profile.id).toList();
-    final partnerTotalLeads = partnerLeads.length;
+    final partnerTotalLeads = leadsState.totalCount;
     final partnerActiveDeals = partnerLeads.where((l) => l.stage != LeadStage.closed && l.stage != LeadStage.lost).length;
     
     final partnerCommissions = commissions.where((c) => c.partnerId == profile.id).toList();
