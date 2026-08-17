@@ -61,8 +61,9 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     final authState = ref.watch(authProvider);
     final theme = Theme.of(context);
 
-    final isTermiiConfigured = authState.company?.termiiApiKey != null &&
-        (authState.company?.termiiApiKey?.trim().isNotEmpty ?? false);
+    final isSmartSmsConfigured = authState.company?.termiiApiKey != null &&
+        authState.company!.termiiApiKey!.trim().isNotEmpty &&
+        !authState.company!.termiiApiKey!.trim().startsWith('tlv_');
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -85,7 +86,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
       body: Column(
         children: [
           // ── Wallet / Balance Summary Card ──
-          _buildBalanceBanner(smsState, isTermiiConfigured),
+          _buildBalanceBanner(smsState, isSmartSmsConfigured),
 
           // ── Premium Custom TabBar ──
           Container(
@@ -109,7 +110,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildComposeTab(smsState, isTermiiConfigured, theme),
+                _buildComposeTab(smsState, isSmartSmsConfigured, theme),
                 _buildHistoryTab(smsState),
               ],
             ),
@@ -171,17 +172,64 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      isConfigured ? 'Live Sending Enabled' : 'Safe Console Simulation Mode',
-                      style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    Flexible(
+                      child: Text(
+                        isConfigured
+                            ? 'Live SmartSMS Gateway Active'
+                            : 'SmartSMS Token Missing (Go to Settings)',
+                        style: TextStyle(
+                          color: isConfigured ? Colors.white70 : Colors.amberAccent,
+                          fontSize: 11,
+                          fontWeight: isConfigured ? FontWeight.normal : FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
+                if (smsState.errorMessage != null && smsState.errorMessage!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    smsState.errorMessage!,
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
           ElevatedButton.icon(
-            onPressed: () => ref.read(smsCampaignProvider.notifier).refreshWalletBalance(),
+            onPressed: () async {
+              final scaffold = ScaffoldMessenger.of(context);
+              scaffold.showSnackBar(
+                const SnackBar(
+                  content: Text('Syncing wallet balance from SmartSMS Solutions...'),
+                  duration: Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              await ref.read(smsCampaignProvider.notifier).refreshWalletBalance();
+              final updated = ref.read(smsCampaignProvider);
+              if (mounted) {
+                if (updated.errorMessage != null) {
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(updated.errorMessage!),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } else {
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text('Balance synced: ${updated.currency} ${updated.walletBalance.toStringAsFixed(2)}'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
             icon: const Icon(Icons.sync_rounded, size: 14, color: AppColors.accent),
             label: const Text('Sync', style: TextStyle(color: AppColors.accent, fontSize: 12)),
             style: ElevatedButton.styleFrom(
@@ -216,7 +264,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
       recipientCount = _selectedIndividualIds.isEmpty ? partnersWithPhone.length : _selectedIndividualIds.length;
     } else if (_selectedGroup == 'custom') {
       recipientCount = _customNumbersController.text
-          .split(',')
+          .split(RegExp(r'[\s,\n;\r]+'))
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
           .toList()

@@ -41,7 +41,7 @@ class LeadNotifier extends Notifier<LeadState> {
   String? _loadedProfileId;
 
   int _page = 0;
-  static const int _pageSize = 50;
+  static const int _pageSize = 2000;
   bool _hasMore = true;
 
   bool get hasMore => _hasMore;
