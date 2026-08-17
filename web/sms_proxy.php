@@ -93,21 +93,27 @@ if (empty($apiKey)) {
     exit();
 }
 
-$smartBalUrl = 'https://smartsmssolutions.com/api/json.php?token=' . urlencode($apiKey) . '&checkbalance=1';
+$smartBalUrl = 'https://app.smartsmssolutions.com/io/api/client/v1/balance/?token=' . urlencode($apiKey);
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $smartBalUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 $response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-if ($response !== false) {
-    $data = json_decode($response, true);
-    if (isset($data['balance'])) {
-        $bal = (float)$data['balance'];
+if ($response !== false && $httpCode === 200) {
+    $trimmed = trim($response);
+    if (is_numeric($trimmed)) {
         http_response_code(200);
-        echo json_encode(['balance' => $bal, 'currency' => 'NGN']);
+        echo json_encode(['balance' => (float)$trimmed, 'currency' => 'NGN']);
+        exit();
+    }
+    $data = json_decode($response, true);
+    if (isset($data['balance']) && is_numeric($data['balance'])) {
+        http_response_code(200);
+        echo json_encode(['balance' => (float)$data['balance'], 'currency' => 'NGN']);
         exit();
     }
 }

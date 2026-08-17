@@ -90,11 +90,8 @@ void main() {
     test('SmartSMS balance check returns live wallet balance', () async {
       final mockClient = MockClient((request) async {
         expect(request.url.queryParameters['token'], 'my_token');
-        expect(request.url.queryParameters['checkbalance'], '1');
         return http.Response(
-          jsonEncode({
-            'balance': '4500.75',
-          }),
+          '4500.75',
           200,
         );
       });

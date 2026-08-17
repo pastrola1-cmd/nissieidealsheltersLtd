@@ -188,9 +188,14 @@ class SmsService {
 
     // ── 1. Direct SmartSMS Solutions Balance Check ──
     try {
-      final smartSmsUri = Uri.parse('https://smartsmssolutions.com/api/json.php?token=$apiKey&checkbalance=1');
+      final smartSmsUri = Uri.parse('https://app.smartsmssolutions.com/io/api/client/v1/balance/?token=$apiKey');
       final response = await _client.get(smartSmsUri).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
+        final trimmed = response.body.trim();
+        final parsed = double.tryParse(trimmed);
+        if (parsed != null) {
+          return (balance: parsed, currency: 'NGN', error: null);
+        }
         final data = jsonDecode(response.body);
         if (data['balance'] != null) {
           final balanceRaw = data['balance'];
