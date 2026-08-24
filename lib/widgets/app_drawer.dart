@@ -239,12 +239,6 @@ class AppDrawer extends ConsumerWidget {
                     label: 'Daily Reports',
                     targetRoute: '/admin/reports',
                   ),
-                  _buildMenuItem(
-                    context: context,
-                    icon: Icons.campaign_outlined,
-                    label: 'AI Campaigns',
-                    targetRoute: '/admin/campaigns',
-                  ),
 
                   const SizedBox(height: 20),
 
