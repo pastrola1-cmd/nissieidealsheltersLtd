@@ -1062,25 +1062,28 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
       statusText = 'Shift Ended';
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isCurrentlyActive ? Colors.green.withValues(alpha: 0.5) : AppColors.border,
-          width: isCurrentlyActive ? 1.5 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return InkWell(
+      onTap: () => context.push('/admin/staff/${staff.id}'),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isCurrentlyActive ? Colors.green.withValues(alpha: 0.5) : AppColors.border,
+            width: isCurrentlyActive ? 1.5 : 1.0,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1143,6 +1146,8 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
                     style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                 ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textTertiary),
               ],
             ),
 
@@ -1228,6 +1233,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
           ],
         ),
       ),
+    ),
     );
   }
 }
