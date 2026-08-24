@@ -74,7 +74,11 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
     setState(() => _isLocating = false);
 
     // 2. Strict Geofence Check for In-Office duty
-    if (_selectedMode == 'office' && company?.officeLat != null && company?.officeLng != null) {
+    final officeLat = company?.officeLat ?? 9.0345;
+    final officeLng = company?.officeLng ?? 7.5450;
+    final allowedRadius = company?.officeRadiusMeters ?? 300.0;
+
+    if (_selectedMode == 'office') {
       if (!loc.isSuccess) {
         if (mounted) {
           showDialog(
@@ -88,9 +92,32 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
                   Text('Location Required'),
                 ],
               ),
-              content: Text(
-                loc.errorMessage ??
-                    'Please enable GPS / Location access in your browser to verify your physical presence at the office building.',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'GPS location is required to verify that you are physically at the office premises.',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    loc.errorMessage ?? 'Please allow location permission in your browser.',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      '👉 How to allow:\n1. Tap the lock icon 🔒 or site settings in your browser address bar.\n2. Toggle Location / GPS to "Allow".\n3. Click Clock In again.',
+                      style: TextStyle(fontSize: 11, color: AppColors.accent, height: 1.4),
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -108,11 +135,9 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
       final distance = LocationHelper.calculateDistanceMeters(
         loc.latitude,
         loc.longitude,
-        company!.officeLat!,
-        company.officeLng!,
+        officeLat,
+        officeLng,
       );
-
-      final allowedRadius = company.officeRadiusMeters ?? 300.0;
 
       if (distance > allowedRadius) {
         if (mounted) {
@@ -137,7 +162,7 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'You are approximately ${LocationHelper.formatDistance(distance)} away from the official office building (allowed radius is ${allowedRadius.toInt()}m).\n\nIn-office clock-in is strictly blocked from outside the office premises.',
+                    'Your live GPS location indicates you are approximately ${LocationHelper.formatDistance(distance)} away from the office building (Suite 2, Shema complex, Asokoro extension).\n\nIn-office clock-in is strictly blocked from outside the office premises (allowed perimeter is ${allowedRadius.toInt()}m).',
                     style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],

@@ -1,2 +1,2 @@
 export 'browser_location_stub.dart'
-    if (dart.library.js_interop) 'browser_location_web.dart';
+    if (dart.library.html) 'browser_location_web.dart';
