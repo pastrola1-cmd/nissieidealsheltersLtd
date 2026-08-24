@@ -7,6 +7,7 @@ import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
 import 'package:nissie_ideal_shelters/widgets/goals_dashboard_list.dart';
+import 'package:nissie_ideal_shelters/widgets/staff_clock_in_card.dart';
 
 class MarketerDashboardScreen extends ConsumerWidget {
   const MarketerDashboardScreen({super.key});
@@ -115,7 +116,11 @@ class MarketerDashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
+
+                // ── Live Staff Clock-In / Out Card ──
+                const StaffClockInCard(),
+                const SizedBox(height: 10),
                 
                 // ── Stats Cards Row ──
                 _buildStatsRow(isMobile, assignedCount, followUpsCount, conversionsCount),

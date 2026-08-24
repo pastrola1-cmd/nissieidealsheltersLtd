@@ -1,5 +1,7 @@
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:nissie_ideal_shelters/config/supabase_config.dart';
@@ -766,7 +768,119 @@ class SupabaseService {
     );
     return response as int;
   }
+
+  // ─── Staff Attendance & Clock-In / Out ───
+
+  /// Fetches today's active or completed attendance record for a user.
+  Future<AttendanceRecord?> getTodayAttendance(String userId) async {
+    try {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final response = await _client
+          .from('staff_attendance')
+          .select('*, profiles:user_id(full_name, email, role)')
+          .eq('user_id', userId)
+          .eq('work_date', todayStr)
+          .order('clock_in_at', ascending: false)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return AttendanceRecord.fromJson(response);
+    } catch (e) {
+      debugPrint('getTodayAttendance note: $e');
+      return null;
+    }
+  }
+
+  /// Clocks in a staff member for today.
+  Future<AttendanceRecord> clockInStaff({
+    required String companyId,
+    required String userId,
+    required String workMode,
+    double? locationLat,
+    double? locationLng,
+    String? locationName,
+    String? propertyId,
+    String? propertyName,
+  }) async {
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final response = await _client.from('staff_attendance').insert({
+      'company_id': companyId,
+      'user_id': userId,
+      'work_date': todayStr,
+      'clock_in_at': DateTime.now().toIso8601String(),
+      'work_mode': workMode,
+      'status': 'clocked_in',
+      'location_lat': locationLat,
+      'location_lng': locationLng,
+      'location_name': locationName,
+      'property_id': propertyId,
+      'property_name': propertyName,
+    }).select('*, profiles:user_id(full_name, email, role)').single();
+
+    return AttendanceRecord.fromJson(response);
+  }
+
+  /// Clocks out a staff member, setting clock_out_at, notes, and closing session.
+  Future<AttendanceRecord> clockOutStaff({
+    required String sessionId,
+    required String notes,
+    double? clockOutLat,
+    double? clockOutLng,
+    String? clockOutLocationName,
+  }) async {
+    final response = await _client.from('staff_attendance').update({
+      'clock_out_at': DateTime.now().toIso8601String(),
+      'notes': notes,
+      'clock_out_lat': clockOutLat,
+      'clock_out_lng': clockOutLng,
+      'clock_out_location_name': clockOutLocationName,
+      'status': 'clocked_out',
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', sessionId).select('*, profiles:user_id(full_name, email, role)').single();
+
+    return AttendanceRecord.fromJson(response);
+  }
+
+  /// Fetches all staff attendance records for a specific date across a company.
+  Future<List<AttendanceRecord>> getCompanyAttendanceForDate(String companyId, DateTime date) async {
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      final response = await _client
+          .from('staff_attendance')
+          .select('*, profiles:user_id(full_name, email, role)')
+          .eq('company_id', companyId)
+          .eq('work_date', dateStr)
+          .order('clock_in_at', ascending: true);
+
+      return (response as List)
+          .map((json) => AttendanceRecord.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('getCompanyAttendanceForDate note: $e');
+      return [];
+    }
+  }
+
+  /// Fetches historical attendance records for a specific staff member.
+  Future<List<AttendanceRecord>> getStaffAttendanceHistory(String userId, {int limit = 30}) async {
+    try {
+      final response = await _client
+          .from('staff_attendance')
+          .select('*, profiles:user_id(full_name, email, role)')
+          .eq('user_id', userId)
+          .order('work_date', ascending: false)
+          .limit(limit);
+
+      return (response as List)
+          .map((json) => AttendanceRecord.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('getStaffAttendanceHistory note: $e');
+      return [];
+    }
+  }
 }
+
 
 
 

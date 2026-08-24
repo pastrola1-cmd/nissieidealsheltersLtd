@@ -6,6 +6,7 @@ import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/attendance_provider.dart';
 import 'package:nissie_ideal_shelters/providers/report_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
@@ -128,11 +129,12 @@ class StaffManagementScreen extends ConsumerStatefulWidget {
 class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  DateTime _attendanceSelectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -146,27 +148,18 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.error),
-            SizedBox(width: 8),
-            Text('Delete Staff Member'),
-          ],
-        ),
+        title: Text('Remove ${staff.fullName ?? "Staff"}?'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Are you sure you want to remove "${staff.fullName ?? staff.email}" from your team?',
-              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
+            Text('Are you sure you want to remove this staff member from your team?'),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
                 children: [
@@ -234,6 +227,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
   Widget build(BuildContext context) {
     final staffAsync = ref.watch(allStaffProvider);
     final performanceAsync = ref.watch(staffWeeklyPerformanceProvider);
+    final attendanceAsync = ref.watch(companyAttendanceForDateProvider(_attendanceSelectedDate));
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -260,6 +254,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
           indicatorWeight: 2.5,
           tabs: const [
             Tab(icon: Icon(Icons.people_rounded), text: 'All Staff'),
+            Tab(icon: Icon(Icons.access_time_filled_rounded), text: 'Attendance'),
             Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Performance'),
           ],
         ),
@@ -351,7 +346,10 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
             },
           ),
 
-          // ── Tab 2: Performance (Last 7 Days) ──
+          // ── Tab 2: Live Attendance & Monitoring ──
+          _buildAttendanceTab(staffAsync, attendanceAsync, theme),
+
+          // ── Tab 3: Performance (Last 7 Days) ──
           performanceAsync.when(
             loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
             error: (e, _) => Center(
@@ -735,6 +733,190 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
     );
   }
 
+  Widget _buildAttendanceTab(
+    AsyncValue<List<Profile>> staffAsync,
+    AsyncValue<List<AttendanceRecord>> attendanceAsync,
+    ThemeData theme,
+  ) {
+    return CustomScrollView(
+      slivers: [
+        // Date Selector Bar
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded),
+                  onPressed: () {
+                    setState(() {
+                      _attendanceSelectedDate = _attendanceSelectedDate.subtract(const Duration(days: 1));
+                    });
+                  },
+                ),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _attendanceSelectedDate,
+                      firstDate: DateTime(2025, 1),
+                      lastDate: DateTime.now().add(const Duration(days: 30)),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _attendanceSelectedDate = picked;
+                      });
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.accent),
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat('EEEE, MMM d, yyyy').format(_attendanceSelectedDate),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right_rounded),
+                  onPressed: () {
+                    setState(() {
+                      _attendanceSelectedDate = _attendanceSelectedDate.add(const Duration(days: 1));
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Attendance KPI Cards
+        attendanceAsync.when(
+          loading: () => const SliverToBoxAdapter(
+            child: Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: AppColors.accent))),
+          ),
+          error: (e, _) => SliverToBoxAdapter(
+            child: Center(child: Text('Error loading attendance: $e')),
+          ),
+          data: (records) {
+            return staffAsync.when(
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              data: (staffList) {
+                final totalStaff = staffList.length;
+                final clockedIn = records.where((r) => r.isClockedIn).length;
+                final onField = records.where((r) => r.isClockedIn && r.isFieldWork).length;
+                final lateCount = records.where((r) => r.isLate).length;
+                final absentCount = totalStaff > records.length ? totalStaff - records.length : 0;
+
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: _kpiMiniCard('Clocked In', '$clockedIn', Icons.check_circle_outline, Colors.green)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpiMiniCard('On Field', '$onField', Icons.directions_car_outlined, AppColors.accent)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpiMiniCard('Late Arrival', '$lateCount', Icons.access_time_outlined, Colors.amber)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _kpiMiniCard('Absent', '$absentCount', Icons.person_off_outlined, AppColors.error)),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Staff Duty Roster & Timesheet Logs',
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+
+        // Staff List & Attendance Cards
+        attendanceAsync.when(
+          loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+          error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+          data: (records) {
+            return staffAsync.when(
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              data: (staffList) {
+                if (staffList.isEmpty) {
+                  return const SliverFillRemaining(
+                    child: Center(child: Text('No staff members found.')),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final staff = staffList[index];
+                      AttendanceRecord? matchingRecord;
+                      try {
+                        matchingRecord = records.firstWhere((r) => r.userId == staff.id);
+                      } catch (_) {
+                        matchingRecord = null;
+                      }
+
+                      return _buildStaffAttendanceCard(staff, matchingRecord);
+                    },
+                    childCount: staffList.length,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+      ],
+    );
+  }
+
+  Widget _kpiMiniCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _perfStat(String label, String value, IconData icon) {
     return Column(
       children: [
@@ -856,6 +1038,193 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStaffAttendanceCard(Profile staff, AttendanceRecord? record) {
+    final hasClockedIn = record != null;
+    final isCurrentlyActive = record?.isClockedIn == true;
+
+    Color statusColor;
+    String statusText;
+
+    if (!hasClockedIn) {
+      statusColor = Colors.grey;
+      statusText = 'Not Clocked In';
+    } else if (isCurrentlyActive) {
+      statusColor = Colors.green;
+      statusText = '● ACTIVE NOW';
+    } else {
+      statusColor = Colors.blueGrey;
+      statusText = 'Shift Ended';
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCurrentlyActive ? Colors.green.withValues(alpha: 0.5) : AppColors.border,
+          width: isCurrentlyActive ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row: Avatar, Name, Status Pill
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.accent.withValues(alpha: 0.1),
+                  child: Text(
+                    (staff.fullName?.isNotEmpty == true ? staff.fullName![0] : 'S').toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent, fontSize: 16),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              staff.fullName ?? 'Staff Member',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              staff.role.label,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        staff.email ?? '',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+
+            if (record != null) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: 12),
+
+              // Work mode & Timestamps row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          record.workModeLabel,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        ),
+                      ),
+                      if (record.isLate) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.access_time_rounded, size: 12, color: Colors.amber),
+                              SizedBox(width: 4),
+                              Text(
+                                'Late Arrival',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    '${record.formattedClockIn} - ${record.formattedClockOut} (${record.durationFormatted})',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+
+              // Notes / Accomplishments
+              if (record.notes != null && record.notes!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.notes_rounded, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          record.notes!,
+                          style: const TextStyle(fontSize: 11, color: AppColors.textPrimary, fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),

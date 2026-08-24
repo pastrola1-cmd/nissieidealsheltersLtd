@@ -6,6 +6,7 @@ import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/providers/attendance_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 // ─── Providers ───────────────────────────────────────────────────────────────
@@ -190,6 +191,90 @@ class _StaffDetailScreenState extends ConsumerState<StaffDetailScreen> {
                             Expanded(child: _kpiCard('Closed Deals', '$closed', Icons.verified_rounded, AppColors.success)),
                           ],
                         ),
+                      ),
+                    ),
+
+                    // ── Staff Attendance History & Punctuality ──
+                    SliverToBoxAdapter(
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final attHistoryAsync = ref.watch(staffAttendanceHistoryProvider(widget.staffId));
+                          return attHistoryAsync.when(
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                            data: (history) {
+                              if (history.isEmpty) return const SizedBox.shrink();
+                              final totalHours = history.fold<int>(0, (sum, r) => sum + r.totalMinutes) ~/ 60;
+                              final lateDays = history.where((r) => r.isLate).length;
+
+                              return Container(
+                                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Row(
+                                          children: [
+                                            Icon(Icons.access_time_filled_rounded, size: 18, color: AppColors.accent),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Attendance & Timesheet Log',
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          '${history.length} Days Recorded',
+                                          style: const TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accent.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '⏱️ $totalHours hrs logged',
+                                            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 12),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: (lateDays > 0 ? Colors.amber : Colors.green).withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            lateDays > 0 ? '⏰ $lateDays Late Arrivals' : '✅ 100% Punctual',
+                                            style: TextStyle(
+                                              color: lateDays > 0 ? Colors.amber.shade800 : Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
 
