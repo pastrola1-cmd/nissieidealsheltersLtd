@@ -34,13 +34,51 @@ CREATE INDEX IF NOT EXISTS idx_staff_attendance_company_date ON public.staff_att
 CREATE INDEX IF NOT EXISTS idx_staff_attendance_user_date ON public.staff_attendance(user_id, work_date);
 CREATE INDEX IF NOT EXISTS idx_staff_attendance_status ON public.staff_attendance(company_id, status);
 
--- 3. Trigger to auto-calculate total_minutes and is_late upon insert/update
+-- 3. Trigger to enforce GPS Geofence, auto-calculate total_minutes, and flag late arrival
 CREATE OR REPLACE FUNCTION public.handle_staff_attendance_calc()
 RETURNS TRIGGER AS $$
 DECLARE
   clock_in_time_only TIME;
+  v_office_lat NUMERIC;
+  v_office_lng NUMERIC;
+  v_radius NUMERIC;
+  v_distance_meters NUMERIC;
 BEGIN
-  -- Extract local time of clock_in (default office start cutoff is 08:30:00 WAT / UTC+1)
+  -- 1. Anti-Cheat Geofence Server Validation
+  IF NEW.work_mode = 'office' THEN
+    -- Retrieve company office coordinates
+    SELECT office_lat, office_lng, COALESCE(office_radius_meters, 300.0)
+    INTO v_office_lat, v_office_lng, v_radius
+    FROM public.companies
+    WHERE id = NEW.company_id;
+
+    -- Default fallback coordinates (Suite 2, Shema complex, Asokoro extension)
+    IF v_office_lat IS NULL OR v_office_lng IS NULL THEN
+      v_office_lat := 9.0345;
+      v_office_lng := 7.5450;
+      v_radius := 300.0;
+    END IF;
+
+    -- If location coordinates are completely missing
+    IF NEW.location_lat IS NULL OR NEW.location_lng IS NULL THEN
+      RAISE EXCEPTION 'Location Verification Required: In-office duty requires verified GPS coordinates.';
+    END IF;
+
+    -- Calculate distance using Haversine formula in PostgreSQL (in meters)
+    v_distance_meters := 6371000 * 2 * asin(
+      sqrt(
+        power(sin(radians(NEW.location_lat - v_office_lat) / 2), 2) +
+        cos(radians(v_office_lat)) * cos(radians(NEW.location_lat)) *
+        power(sin(radians(NEW.location_lng - v_office_lng) / 2), 2)
+      )
+    );
+
+    IF v_distance_meters > v_radius THEN
+      RAISE EXCEPTION 'Geofence Violation: You are not physically at the office premises (% meters away, allowed is % meters).', ROUND(v_distance_meters), ROUND(v_radius);
+    END IF;
+  END IF;
+
+  -- 2. Extract local time of clock_in (default office start cutoff is 08:30:00 WAT / UTC+1)
   -- If clocking in after 08:30:00 WAT, flag as late
   clock_in_time_only := (NEW.clock_in_at AT TIME ZONE 'Africa/Lagos')::TIME;
   IF clock_in_time_only > '08:30:00'::TIME THEN
@@ -49,7 +87,7 @@ BEGIN
     NEW.is_late := false;
   END IF;
 
-  -- If clock_out_at is provided, compute total_minutes and set status to clocked_out
+  -- 3. If clock_out_at is provided, compute total_minutes and set status to clocked_out
   IF NEW.clock_out_at IS NOT NULL THEN
     NEW.total_minutes := GREATEST(0, ROUND(EXTRACT(EPOCH FROM (NEW.clock_out_at - NEW.clock_in_at)) / 60)::INT);
     NEW.status := 'clocked_out';
