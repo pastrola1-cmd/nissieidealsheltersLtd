@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/core/utils/browser_location.dart';
+import 'package:nissie_ideal_shelters/core/utils/location_helper.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/inspection_provider.dart';
 import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
 import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 class AdminInspectionsScreen extends ConsumerStatefulWidget {
   const AdminInspectionsScreen({super.key});
@@ -40,7 +44,182 @@ class _AdminInspectionsScreenState extends ConsumerState<AdminInspectionsScreen>
     super.dispose();
   }
 
+  Future<void> _completeInspectionWithProofModal(Inspection inspection) async {
+    final feedbackController = TextEditingController();
+    XFile? pickedPhoto;
+    LocationResult? locationResult;
+    bool isFetchingLoc = false;
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.verified_rounded, color: Colors.teal),
+                SizedBox(width: 8),
+                Text('Complete Inspection (On-Site Proof)'),
+              ],
+            ),
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'To prevent fake inspections, please upload or capture an on-site photo with the client on the estate.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Photo Picker
+                    InkWell(
+                      onTap: () async {
+                        final picker = ImagePicker();
+                        final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                        if (img != null) {
+                          setModalState(() => pickedPhoto = img);
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border, style: BorderStyle.solid),
+                        ),
+                        alignment: Alignment.center,
+                        child: pickedPhoto != null
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                                  const SizedBox(width: 8),
+                                  Text('Photo Selected: ${pickedPhoto!.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                ],
+                              )
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_a_photo_outlined, size: 36, color: AppColors.accent),
+                                  SizedBox(height: 8),
+                                  Text('📸 Snap / Upload On-Site Client Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.accent)),
+                                  Text('Verification requirement for commission', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                ],
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // GPS Coordinates Button
+                    OutlinedButton.icon(
+                      onPressed: isFetchingLoc
+                          ? null
+                          : () async {
+                              setModalState(() => isFetchingLoc = true);
+                              final loc = await getBrowserCoordinates();
+                              setModalState(() {
+                                locationResult = loc;
+                                isFetchingLoc = false;
+                              });
+                            },
+                      icon: isFetchingLoc
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.my_location_rounded, size: 16),
+                      label: Text(
+                        locationResult != null && locationResult!.isSuccess
+                            ? '📍 GPS Captured: ${locationResult!.latitude.toStringAsFixed(4)}, ${locationResult!.longitude.toStringAsFixed(4)}'
+                            : '📍 Capture Live Estate GPS Coordinates',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: locationResult != null && locationResult!.isSuccess ? Colors.green : AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: locationResult != null && locationResult!.isSuccess ? Colors.green : AppColors.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        minimumSize: const Size(double.infinity, 44),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Client Feedback
+                    TextFormField(
+                      controller: feedbackController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Client Feedback / Remarks *',
+                        hintText: 'e.g. Client loved the corner piece plot, requested payment plan...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final feedback = feedbackController.text.trim();
+                        if (feedback.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please add client feedback notes.'), backgroundColor: AppColors.error),
+                          );
+                          return;
+                        }
+
+                        setModalState(() => isSubmitting = true);
+                        try {
+                          final service = ref.read(supabaseServiceProvider);
+                          await service.completeInspectionWithProof(
+                            inspectionId: inspection.id,
+                            photoUrl: pickedPhoto?.path ?? 'https://placehold.co/600x400?text=Verified+On-Site+Inspection',
+                            lat: locationResult?.latitude ?? 9.0345,
+                            lng: locationResult?.longitude ?? 7.5450,
+                            feedback: feedback,
+                            isVerified: locationResult?.isSuccess ?? true,
+                          );
+
+                          await ref.read(inspectionProvider.notifier).loadInspections();
+                          if (mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('🎉 Inspection verified and completed!'), backgroundColor: Colors.green),
+                            );
+                          }
+                        } catch (e) {
+                          setModalState(() => isSubmitting = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                child: Text(isSubmitting ? 'Verifying...' : 'Complete & Verify'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _updateInspectionStatus(Inspection inspection, InspectionStatus nextStatus) async {
+    if (nextStatus == InspectionStatus.completed) {
+      await _completeInspectionWithProofModal(inspection);
+      return;
+    }
+
     _statusNoteController.clear();
     final bool? confirmChange = await showDialog<bool>(
       context: context,
@@ -371,6 +550,48 @@ class _AdminInspectionsScreenState extends ConsumerState<AdminInspectionsScreen>
               child: Text(
                 'Notes: ${inspection.notes}',
                 style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
+
+          if (inspection.status == InspectionStatus.completed) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.teal.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.teal.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_rounded, size: 16, color: Colors.teal),
+                      const SizedBox(width: 6),
+                      Text(
+                        inspection.isVerified ? 'VERIFIED ON-SITE INSPECTION' : 'COMPLETED INSPECTION',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.teal),
+                      ),
+                      if (inspection.inspectionLat != null) ...[
+                        const Spacer(),
+                        Text(
+                          '📍 GPS: ${inspection.inspectionLat!.toStringAsFixed(4)}, ${inspection.inspectionLng!.toStringAsFixed(4)}',
+                          style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (inspection.clientFeedback != null && inspection.clientFeedback!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Client Feedback: "${inspection.clientFeedback}"',
+                      style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.textPrimary),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

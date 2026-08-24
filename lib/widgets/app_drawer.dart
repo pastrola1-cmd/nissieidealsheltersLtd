@@ -121,6 +121,12 @@ class AppDrawer extends ConsumerWidget {
                   ),
                   _buildMenuItem(
                     context: context,
+                    icon: Icons.payments_outlined,
+                    label: 'Installments & Recovery',
+                    targetRoute: '/admin/installments',
+                  ),
+                  _buildMenuItem(
+                    context: context,
                     icon: Icons.domain_outlined,
                     label: 'Properties',
                     targetRoute: '/$rolePath/properties',

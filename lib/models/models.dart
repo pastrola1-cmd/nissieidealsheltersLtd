@@ -15,5 +15,6 @@ export 'training.dart';
 export 'sms_campaign.dart';
 export 'email_campaign.dart';
 export 'attendance_record.dart';
+export 'payment_plan.dart';
 
 

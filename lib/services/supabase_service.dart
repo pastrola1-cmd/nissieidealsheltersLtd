@@ -879,6 +879,126 @@ class SupabaseService {
       return [];
     }
   }
+
+  // ─── Payment Plans & Installments ───
+
+  /// Fetches all payment plans for a company with their associated milestones.
+  Future<List<PaymentPlan>> getPaymentPlans(String companyId, {String? status}) async {
+    try {
+      var query = _client.from('payment_plans').select().eq('company_id', companyId);
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+      final plansRes = await query.order('created_at', ascending: false);
+      final plans = <PaymentPlan>[];
+
+      for (final p in plansRes as List) {
+        final planId = p['id'] as String;
+        final milestonesRes = await _client
+            .from('payment_milestones')
+            .select()
+            .eq('payment_plan_id', planId)
+            .order('milestone_number', ascending: true);
+
+        final milestones = (milestonesRes as List)
+            .map((m) => PaymentMilestone.fromJson(m as Map<String, dynamic>))
+            .toList();
+
+        plans.add(PaymentPlan.fromJson(p as Map<String, dynamic>, milestones: milestones));
+      }
+      return plans;
+    } catch (e) {
+      debugPrint('getPaymentPlans error: $e');
+      return [];
+    }
+  }
+
+  /// Creates a new payment plan and inserts its generated milestones.
+  Future<PaymentPlan> createPaymentPlan({
+    required Map<String, dynamic> planData,
+    required List<Map<String, dynamic>> milestonesData,
+  }) async {
+    final planRes = await _client.from('payment_plans').insert(planData).select().single();
+    final planId = planRes['id'] as String;
+    final companyId = planRes['company_id'] as String;
+
+    final formattedMilestones = milestonesData.map((m) {
+      return {
+        ...m,
+        'payment_plan_id': planId,
+        'company_id': companyId,
+      };
+    }).toList();
+
+    final milestonesRes = await _client
+        .from('payment_milestones')
+        .insert(formattedMilestones)
+        .select()
+        .order('milestone_number', ascending: true);
+
+    final milestones = (milestonesRes as List)
+        .map((m) => PaymentMilestone.fromJson(m as Map<String, dynamic>))
+        .toList();
+
+    return PaymentPlan.fromJson(planRes, milestones: milestones);
+  }
+
+  /// Logs a payment against a milestone.
+  Future<PaymentMilestone> logMilestonePayment({
+    required String milestoneId,
+    required double amount,
+    String? receiptNumber,
+    String? paymentMethod,
+    String? notes,
+  }) async {
+    final updateData = {
+      'paid_amount': amount,
+      'paid_at': DateTime.now().toIso8601String(),
+      'status': 'paid',
+      if (receiptNumber != null) 'receipt_number': receiptNumber,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (notes != null) 'notes': notes,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    final res = await _client
+        .from('payment_milestones')
+        .update(updateData)
+        .eq('id', milestoneId)
+        .select()
+        .single();
+
+    return PaymentMilestone.fromJson(res);
+  }
+
+  /// Completes an inspection with on-site photo and GPS coordinates.
+  Future<Inspection> completeInspectionWithProof({
+    required String inspectionId,
+    required String photoUrl,
+    required double lat,
+    required double lng,
+    String? feedback,
+    bool isVerified = false,
+  }) async {
+    final updateData = {
+      'status': 'completed',
+      'photo_url': photoUrl,
+      'inspection_lat': lat,
+      'inspection_lng': lng,
+      'completed_at': DateTime.now().toIso8601String(),
+      'client_feedback': feedback,
+      'is_verified': isVerified,
+    };
+
+    final res = await _client
+        .from('inspections')
+        .update(updateData)
+        .eq('id', inspectionId)
+        .select()
+        .single();
+
+    return Inspection.fromJson(res);
+  }
 }
 
 

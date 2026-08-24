@@ -13,6 +13,12 @@ class Inspection {
   final String scheduledTime;
   final InspectionStatus status;
   final String? notes;
+  final String? photoUrl;
+  final double? inspectionLat;
+  final double? inspectionLng;
+  final DateTime? completedAt;
+  final String? clientFeedback;
+  final bool isVerified;
   final DateTime createdAt;
 
   const Inspection({
@@ -26,6 +32,12 @@ class Inspection {
     required this.scheduledTime,
     required this.status,
     this.notes,
+    this.photoUrl,
+    this.inspectionLat,
+    this.inspectionLng,
+    this.completedAt,
+    this.clientFeedback,
+    this.isVerified = false,
     required this.createdAt,
   });
 
@@ -41,6 +53,12 @@ class Inspection {
       scheduledTime: json['scheduled_time'] as String,
       status: InspectionStatus.fromString(json['status'] as String),
       notes: json['notes'] as String?,
+      photoUrl: json['photo_url'] as String?,
+      inspectionLat: (json['inspection_lat'] as num?)?.toDouble(),
+      inspectionLng: (json['inspection_lng'] as num?)?.toDouble(),
+      completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at'] as String) : null,
+      clientFeedback: json['client_feedback'] as String?,
+      isVerified: (json['is_verified'] as bool?) ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -57,6 +75,12 @@ class Inspection {
       'scheduled_time': scheduledTime,
       'status': status.value,
       'notes': notes,
+      'photo_url': photoUrl,
+      'inspection_lat': inspectionLat,
+      'inspection_lng': inspectionLng,
+      'completed_at': completedAt?.toIso8601String(),
+      'client_feedback': clientFeedback,
+      'is_verified': isVerified,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -72,6 +96,12 @@ class Inspection {
     String? scheduledTime,
     InspectionStatus? status,
     String? notes,
+    String? photoUrl,
+    double? inspectionLat,
+    double? inspectionLng,
+    DateTime? completedAt,
+    String? clientFeedback,
+    bool? isVerified,
     DateTime? createdAt,
   }) {
     return Inspection(
@@ -85,6 +115,12 @@ class Inspection {
       scheduledTime: scheduledTime ?? this.scheduledTime,
       status: status ?? this.status,
       notes: notes ?? this.notes,
+      photoUrl: photoUrl ?? this.photoUrl,
+      inspectionLat: inspectionLat ?? this.inspectionLat,
+      inspectionLng: inspectionLng ?? this.inspectionLng,
+      completedAt: completedAt ?? this.completedAt,
+      clientFeedback: clientFeedback ?? this.clientFeedback,
+      isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,
     );
   }
