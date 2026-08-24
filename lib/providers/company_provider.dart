@@ -96,6 +96,9 @@ class CompanyNotifier extends Notifier<CompanyState> {
     bool? whatsappEnabled,
     String? whatsappTemplateName,
     String? customDomain,
+    double? officeLat,
+    double? officeLng,
+    double? officeRadiusMeters,
   }) async {
     final companyId = state.company?.id;
     if (companyId == null) return false;
@@ -117,6 +120,9 @@ class CompanyNotifier extends Notifier<CompanyState> {
         if (whatsappEnabled != null) 'whatsapp_enabled': whatsappEnabled,
         'whatsapp_template_name': whatsappTemplateName,
         'custom_domain': customDomain,
+        'office_lat': officeLat,
+        'office_lng': officeLng,
+        'office_radius_meters': officeRadiusMeters,
       });
       state = CompanyState(company: Company.fromJson(updatedData), isLoading: false);
       return true;

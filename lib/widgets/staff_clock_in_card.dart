@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/utils/browser_location.dart';
+import 'package:nissie_ideal_shelters/core/utils/location_helper.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/attendance_provider.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 
 /// A hero card widget displaying real-time Clock-In / Clock-Out controls,
@@ -23,6 +26,7 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
   String? _selectedPropertyName;
   Timer? _liveTimer;
   Duration _elapsed = Duration.zero;
+  bool _isLocating = false;
 
   @override
   void initState() {
@@ -60,11 +64,103 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
   Future<void> _handleClockIn() async {
     final notifier = ref.read(attendanceProvider.notifier);
     final scaffold = ScaffoldMessenger.of(context);
+    final company = ref.read(authProvider).company;
+
+    setState(() => _isLocating = true);
+
+    // 1. Fetch live GPS location
+    final loc = await getBrowserCoordinates();
+
+    setState(() => _isLocating = false);
+
+    // 2. Strict Geofence Check for In-Office duty
+    if (_selectedMode == 'office' && company?.officeLat != null && company?.officeLng != null) {
+      if (!loc.isSuccess) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.location_off_rounded, color: AppColors.error),
+                  SizedBox(width: 8),
+                  Text('Location Required'),
+                ],
+              ),
+              content: Text(
+                loc.errorMessage ??
+                    'Please enable GPS / Location access in your browser to verify your physical presence at the office building.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Calculate distance to official office building
+      final distance = LocationHelper.calculateDistanceMeters(
+        loc.latitude,
+        loc.longitude,
+        company!.officeLat!,
+        company.officeLng!,
+      );
+
+      final allowedRadius = company.officeRadiusMeters ?? 300.0;
+
+      if (distance > allowedRadius) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.gpp_bad_rounded, color: AppColors.error, size: 28),
+                  SizedBox(width: 8),
+                  Text('Geofence Alert'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'You are not physically at the office premises!',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'You are approximately ${LocationHelper.formatDistance(distance)} away from the official office building (allowed radius is ${allowedRadius.toInt()}m).\n\nIn-office clock-in is strictly blocked from outside the office premises.',
+                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Understood'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     final success = await notifier.clockIn(
       workMode: _selectedMode,
       propertyId: _selectedMode == 'field' ? _selectedPropertyId : null,
       propertyName: _selectedMode == 'field' ? _selectedPropertyName : null,
+      locationLat: loc.isSuccess ? loc.latitude : null,
+      locationLng: loc.isSuccess ? loc.longitude : null,
     );
 
     if (mounted) {
@@ -72,7 +168,7 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
         _startTimerIfClockedIn();
         scaffold.showSnackBar(
           const SnackBar(
-            content: Text('🎉 Clocked in successfully! Have a productive day.'),
+            content: Text('🎉 Verified & Clocked in successfully! Have a productive day.'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -524,8 +620,8 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: attendanceState.isLoading ? null : _handleClockIn,
-              icon: attendanceState.isLoading
+              onPressed: (_isLocating || attendanceState.isLoading) ? null : _handleClockIn,
+              icon: (_isLocating || attendanceState.isLoading)
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -533,7 +629,9 @@ class _StaffClockInCardState extends ConsumerState<StaffClockInCard> {
                     )
                   : const Icon(Icons.fingerprint_rounded, size: 20),
               label: Text(
-                attendanceState.isLoading ? 'Clocking In...' : 'Clock In to Start Shift',
+                _isLocating
+                    ? 'Verifying GPS Location...'
+                    : (attendanceState.isLoading ? 'Clocking In...' : 'Clock In to Start Shift'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(

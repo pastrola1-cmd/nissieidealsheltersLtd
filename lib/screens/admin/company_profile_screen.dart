@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/utils/browser_location.dart';
+import 'package:nissie_ideal_shelters/core/utils/location_helper.dart';
 import 'package:nissie_ideal_shelters/core/utils/validators.dart';
 import 'package:nissie_ideal_shelters/providers/company_provider.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
@@ -30,6 +32,9 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
   final _waTokenController = TextEditingController();
   final _waTemplateController = TextEditingController();
   final _customDomainController = TextEditingController();
+  final _officeLatController = TextEditingController();
+  final _officeLngController = TextEditingController();
+  final _officeRadiusController = TextEditingController(text: '300');
   
   String? _logoUrl;
   bool _isUploadingLogo = false;
@@ -38,6 +43,7 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
   bool _obscureWaToken = true;
   bool _waEnabled = false;
   bool _isTestingWhatsApp = false;
+  bool _isCapturingLocation = false;
 
   @override
   void initState() {
@@ -58,6 +64,9 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
       _waTemplateController.text = company.whatsappTemplateName.isNotEmpty ? company.whatsappTemplateName : 'property_inquiry_auto';
       _waEnabled = company.whatsappEnabled;
       _customDomainController.text = company.customDomain ?? '';
+      _officeLatController.text = company.officeLat != null ? company.officeLat.toString() : '';
+      _officeLngController.text = company.officeLng != null ? company.officeLng.toString() : '';
+      _officeRadiusController.text = company.officeRadiusMeters != null ? company.officeRadiusMeters!.toInt().toString() : '300';
     }
   }
 
@@ -74,7 +83,38 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
     _waTokenController.dispose();
     _waTemplateController.dispose();
     _customDomainController.dispose();
+    _officeLatController.dispose();
+    _officeLngController.dispose();
+    _officeRadiusController.dispose();
     super.dispose();
+  }
+
+  Future<void> _captureCurrentLocation() async {
+    setState(() => _isCapturingLocation = true);
+    final loc = await getBrowserCoordinates();
+    setState(() => _isCapturingLocation = false);
+
+    if (mounted) {
+      if (loc.isSuccess) {
+        _officeLatController.text = loc.latitude.toString();
+        _officeLngController.text = loc.longitude.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('📍 Captured Office GPS: ${loc.latitude.toStringAsFixed(5)}, ${loc.longitude.toStringAsFixed(5)}! Tap Save below.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loc.errorMessage ?? 'Could not retrieve GPS location.'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _pickAndUploadLogo() async {
@@ -222,6 +262,9 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
           whatsappEnabled: _waEnabled,
           whatsappTemplateName: _waTemplateController.text.trim().isNotEmpty ? _waTemplateController.text.trim() : 'property_inquiry_auto',
           customDomain: _customDomainController.text.trim().isNotEmpty ? _customDomainController.text.trim() : null,
+          officeLat: double.tryParse(_officeLatController.text.trim()),
+          officeLng: double.tryParse(_officeLngController.text.trim()),
+          officeRadiusMeters: double.tryParse(_officeRadiusController.text.trim()) ?? 300.0,
         );
 
     if (success && mounted) {
@@ -496,6 +539,76 @@ class _CompanyProfileScreenState extends ConsumerState<CompanyProfileScreen> {
                       maxLines: 2,
                       decoration: _inputDecoration(label: 'Office Address', icon: Icons.map_outlined),
                       validator: (value) => Validators.validateRequired(value, 'Office address'),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // ── Office Geofence & Anti-Cheat Attendance ──
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Office Geofence & Anti-Cheat Attendance',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _isCapturingLocation ? null : _captureCurrentLocation,
+                          icon: _isCapturingLocation
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                                )
+                              : const Icon(Icons.my_location_rounded, size: 16),
+                          label: Text(_isCapturingLocation ? 'Locating...' : '📍 Capture Current Location'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.accent,
+                            side: const BorderSide(color: AppColors.accent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Staff will only be allowed to clock in for In-Office duty when physically within the allowed radius of this GPS coordinate.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _officeLatController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: _inputDecoration(label: 'Office Latitude', icon: Icons.explore_outlined)
+                                .copyWith(hintText: 'e.g. 6.45892'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _officeLngController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: _inputDecoration(label: 'Office Longitude', icon: Icons.explore_outlined)
+                                .copyWith(hintText: 'e.g. 3.52410'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 140,
+                          child: TextFormField(
+                            controller: _officeRadiusController,
+                            keyboardType: TextInputType.number,
+                            decoration: _inputDecoration(label: 'Radius (Meters)', icon: Icons.radar_outlined)
+                                .copyWith(hintText: '300'),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 32),
 

@@ -36,6 +36,9 @@ class Company {
   final String? brevoApiKey;
   final String? brevoSenderName;
   final String? brevoSenderEmail;
+  final double? officeLat;
+  final double? officeLng;
+  final double? officeRadiusMeters;
 
   const Company({
     required this.id,
@@ -72,6 +75,9 @@ class Company {
     this.brevoApiKey,
     this.brevoSenderName,
     this.brevoSenderEmail,
+    this.officeLat,
+    this.officeLng,
+    this.officeRadiusMeters = 300.0,
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
@@ -112,6 +118,9 @@ class Company {
       brevoApiKey: json['brevo_api_key'] as String?,
       brevoSenderName: json['brevo_sender_name'] as String?,
       brevoSenderEmail: json['brevo_sender_email'] as String?,
+      officeLat: (json['office_lat'] as num?)?.toDouble(),
+      officeLng: (json['office_lng'] as num?)?.toDouble(),
+      officeRadiusMeters: (json['office_radius_meters'] as num?)?.toDouble() ?? 300.0,
     );
   }
 
@@ -151,6 +160,9 @@ class Company {
       'brevo_api_key': brevoApiKey,
       'brevo_sender_name': brevoSenderName,
       'brevo_sender_email': brevoSenderEmail,
+      'office_lat': officeLat,
+      'office_lng': officeLng,
+      'office_radius_meters': officeRadiusMeters,
     };
   }
 
