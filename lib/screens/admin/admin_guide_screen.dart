@@ -17,15 +17,16 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
   final List<String> _categories = [
     'All',
     'Quick Start',
-    'Attendance & GPS',
-    'Installments & Cashflow',
-    'Site Inspections',
-    'Receipts & Letters',
-    'Leads & Sales',
     'Properties',
-    'Reports & KPIs',
+    'Leads & Sales',
+    'Attendance & GPS',
+    'Site Inspections',
+    'Installments & Cashflow',
+    'Receipts & Letters',
     'Staff & Partners',
-    'SMS & Messaging',
+    'Reports & KPIs',
+    'Bulk SMS & Email',
+    'Nissie Academy',
   ];
 
   late final List<GuideSection> _sections;
@@ -72,7 +73,7 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Use your browser print shortcut (Ctrl+P / Cmd+P) to save as PDF.'),
+                  content: Text('Use your browser print shortcut (Ctrl+P / Cmd+P) to save this manual as PDF.'),
                 ),
               );
             },
@@ -235,7 +236,7 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
             child: TextField(
               controller: _searchController,
               decoration: const InputDecoration(
-                hintText: 'Search guide (e.g., geofence, receipt, whatsapp, attendance, commission)...',
+                hintText: 'Search guide (e.g., properties, sms, termii, academy, geofence, receipt, whatsapp)...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
               ),
@@ -449,13 +450,14 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
             const Icon(Icons.search_off_rounded, size: 48, color: AppColors.textTertiary),
             const SizedBox(height: 12),
             Text(
-              'No guide entries found matching "$_searchQuery"',
+              'No guide entries found matching "$_searchQuery" in category "$_selectedCategory"',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 4),
             const Text(
-              'Try searching for another keyword like "attendance", "installments", "receipt", or "inspection".',
+              'Try selecting "All" categories or searching for another keyword like "properties", "sms", "attendance", "installments", or "receipt".',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -465,6 +467,7 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
 
   List<GuideSection> _buildGuideSections() {
     return [
+      // ── 1. QUICK START ──
       GuideSection(
         title: '1. Quick Start & Executive System Overview',
         summary: 'How user roles, access hierarchy, and core navigation operate.',
@@ -499,8 +502,92 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
         ],
       ),
 
+      // ── 2. PROPERTIES & INVENTORY ──
       GuideSection(
-        title: '2. Staff Attendance & GPS Geofence Anti-Cheat',
+        title: '2. Properties & Estate Inventory Management',
+        summary: 'Adding land & building listings, uploading photos, generating PDF brochures, and tracking plots.',
+        category: 'Properties',
+        icon: Icons.domain_rounded,
+        badgeColor: const Color(0xFF3B82F6),
+        items: [
+          GuideItem(
+            title: 'Adding an Estate or Property Listing',
+            tag: 'INVENTORY',
+            content: 'To publish a new estate or property for marketing and sales:',
+            steps: [
+              'Go to Drawer Menu (☰) ➔ Properties (/admin/properties) or tap Properties in bottom navigation.',
+              'Click the "+ Add Property" button at the top right.',
+              'Fill in the Estate Title, Location, State/City, and Detailed Description.',
+              'Select Property Category: Land / Residential / Commercial.',
+              'Enter Price (₦), Available Plots, and Plot Sizes (e.g. 300 SQM, 500 SQM, 1,000 SQM).',
+              'Specify Title Documents (C of O, Right of Occupancy, Governor\'s Consent, Excision, Gazette).',
+              'Upload estate layout plan, flyers, and on-site photos.',
+              'Click "Publish Property" to make it instantly visible to all marketers and affiliate realtors.',
+            ],
+            tip: 'Setting accurate GPS coordinates for the estate allows the system to verify staff site inspections automatically.',
+          ),
+          GuideItem(
+            title: '1-Click Branded PDF Property Brochure Generator',
+            tag: 'SALES TOOL',
+            content:
+                'Every property listing comes with a built-in, automated PDF Brochure Generator:\n\n'
+                '• On any property detail page, click "Generate Brochure PDF".\n'
+                '• The system instantly compiles a high-resolution, multi-page branded brochure featuring your company logo, estate pictures, title details, payment plan terms, and agency contact numbers.\n'
+                '• Marketers can share this PDF directly with high-net-worth prospects and diaspora investors on WhatsApp.',
+            tip: 'Brochures include a scan-to-verify QR code that links directly to the estate\'s online video walkthrough.',
+          ),
+          GuideItem(
+            title: 'Plot Inventory & Sold Status Tracking',
+            tag: 'ALLOCATION',
+            content:
+                '• Each estate allows setting the Total Plots Available.\n'
+                '• When deals are closed and plot numbers are allocated in Installments & Recovery, the available plot counter automatically updates.\n'
+                '• Prevents double allocation of the same plot to two different buyers.',
+          ),
+        ],
+      ),
+
+      // ── 3. LEADS & PIPELINE ──
+      GuideSection(
+        title: '3. Leads Pipeline & Sales Conversion',
+        summary: 'How to manage leads, prevent lead stealing, and track conversions.',
+        category: 'Leads & Sales',
+        icon: Icons.trending_up_rounded,
+        badgeColor: AppColors.accent,
+        items: [
+          GuideItem(
+            title: '6 Stages of the Lead Pipeline',
+            tag: 'SALES PROCESS',
+            content:
+                'Every prospective buyer moves through 6 standardized stages:\n\n'
+                '1. New: Fresh lead from landing page, Facebook, or manual entry.\n'
+                '2. Contacted: Agent has called or messaged the prospect on WhatsApp.\n'
+                '3. Inspection Booked: Date and time scheduled for on-site visit.\n'
+                '4. Negotiation: Client has inspected and is discussing plot price or payment plan.\n'
+                '5. Closed: Down payment made, contract/subscription created.\n'
+                '6. Lost: Prospect declined, bought elsewhere, or budget mismatch.',
+          ),
+          GuideItem(
+            title: 'Importing & Exporting Leads (CSV / Excel)',
+            tag: 'DATA',
+            content:
+                '• Under /admin/leads, click "Import Leads" to bulk-upload leads from Facebook Ads or phone databases.\n'
+                '• Click "Export Leads" to download your full client contact database into CSV/Excel for executive analysis or SMS campaigns.',
+          ),
+          GuideItem(
+            title: 'Preventing Lead Theft (Off-Portal Deals)',
+            tag: 'POLICY',
+            content:
+                '• Every lead assigned to an agent is timestamped.\n'
+                '• If an agent does not log an activity update within 4 hours, management can reassign the lead to another marketer.\n'
+                '• All communication notes are stored centrally on the client\'s timeline.',
+          ),
+        ],
+      ),
+
+      // ── 4. ATTENDANCE & GEOFENCE ──
+      GuideSection(
+        title: '4. Staff Attendance & GPS Geofence Anti-Cheat',
         summary: 'How physical office presence, 8:30 AM cutoff, and anti-cheat work.',
         category: 'Attendance & GPS',
         icon: Icons.location_on_rounded,
@@ -548,8 +635,37 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
         ],
       ),
 
+      // ── 5. SITE INSPECTIONS ──
       GuideSection(
-        title: '3. Installment Payment & Cashflow Recovery Engine',
+        title: '5. Anti-Cheat Geotagged Site Inspections',
+        summary: 'How to verify staff actually took clients to the estate before paying transport claims.',
+        category: 'Site Inspections',
+        icon: Icons.camera_alt_rounded,
+        badgeColor: const Color(0xFF06B6D4),
+        items: [
+          GuideItem(
+            title: 'The Problem with Site Inspections in Nigeria',
+            tag: 'MONEY SAVER',
+            content:
+                'Field marketers frequently request transport or fuel allowance to take prospects on inspections. Without verification, there is no proof the client actually attended or that the agent visited your estate rather than a competitor\'s.',
+          ),
+          GuideItem(
+            title: 'How Geotagged Verification Works',
+            tag: 'VERIFICATION',
+            content:
+                'When an inspection is marked as "Completed" on the portal (/admin/inspections):\n\n'
+                '1. The agent must upload or snap an on-site photo with the client at the estate banner/plot.\n'
+                '2. The agent taps "Capture Live Estate GPS Coordinates".\n'
+                '3. The agent enters client remarks and feedback.\n'
+                '4. Management immediately sees the green "VERIFIED ON-SITE INSPECTION" badge with exact GPS coordinates and client notes.',
+            tip: 'Management should establish a policy: No Geotagged Photo + GPS = No transport reimbursement and no closing commission.',
+          ),
+        ],
+      ),
+
+      // ── 6. INSTALLMENTS & CASHFLOW ──
+      GuideSection(
+        title: '6. Installment Payment & Cashflow Recovery Engine',
         summary: 'Automating buyer payment plans, monthly milestones, and WhatsApp reminders.',
         category: 'Installments & Cashflow',
         icon: Icons.payments_rounded,
@@ -601,35 +717,9 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
         ],
       ),
 
+      // ── 7. RECEIPTS & LETTERS ──
       GuideSection(
-        title: '4. Anti-Cheat Geotagged Site Inspections',
-        summary: 'How to verify staff actually took clients to the estate before paying transport claims.',
-        category: 'Site Inspections',
-        icon: Icons.camera_alt_rounded,
-        badgeColor: const Color(0xFF06B6D4),
-        items: [
-          GuideItem(
-            title: 'The Problem with Site Inspections in Nigeria',
-            tag: 'MONEY SAVER',
-            content:
-                'Field marketers frequently request transport or fuel allowance to take prospects on inspections. Without verification, there is no proof the client actually attended or that the agent visited your estate rather than a competitor\'s.',
-          ),
-          GuideItem(
-            title: 'How Geotagged Verification Works',
-            tag: 'VERIFICATION',
-            content:
-                'When an inspection is marked as "Completed" on the portal (/admin/inspections):\n\n'
-                '1. The agent must upload or snap an on-site photo with the client at the estate banner/plot.\n'
-                '2. The agent taps "Capture Live Estate GPS Coordinates".\n'
-                '3. The agent enters client remarks and feedback.\n'
-                '4. Management immediately sees the green "VERIFIED ON-SITE INSPECTION" badge with exact GPS coordinates and client notes.',
-            tip: 'Management should establish a policy: No Geotagged Photo + GPS = No transport reimbursement and no closing commission.',
-          ),
-        ],
-      ),
-
-      GuideSection(
-        title: '5. Official Branded PDF Receipts & Allocation Letters',
+        title: '7. Official Branded PDF Receipts & Allocation Letters',
         summary: 'Instant generation of professional documents with amount in words and QR codes.',
         category: 'Receipts & Letters',
         icon: Icons.receipt_long_rounded,
@@ -662,38 +752,57 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
         ],
       ),
 
+      // ── 8. STAFF & PARTNERS ──
       GuideSection(
-        title: '6. Leads Pipeline & Sales Conversion',
-        summary: 'How to manage leads, prevent lead stealing, and track conversions.',
-        category: 'Leads & Sales',
-        icon: Icons.trending_up_rounded,
-        badgeColor: AppColors.accent,
+        title: '8. Staff Management & Partner Network',
+        summary: 'Managing internal team marketers, onboarding external affiliate realtors, and paying commissions.',
+        category: 'Staff & Partners',
+        icon: Icons.people_alt_rounded,
+        badgeColor: const Color(0xFF6366F1),
         items: [
           GuideItem(
-            title: '6 Stages of the Lead Pipeline',
-            tag: 'SALES PROCESS',
-            content:
-                'Every prospective buyer moves through 6 standardized stages:\n\n'
-                '1. New: Fresh lead from landing page, Facebook, or manual entry.\n'
-                '2. Contacted: Agent has called or messaged the prospect on WhatsApp.\n'
-                '3. Inspection Booked: Date and time scheduled for on-site visit.\n'
-                '4. Negotiation: Client has inspected and is discussing plot price or payment plan.\n'
-                '5. Closed: Down payment made, contract/subscription created.\n'
-                '6. Lost: Prospect declined, bought elsewhere, or budget mismatch.',
+            title: 'Inviting & Onboarding Staff Members',
+            tag: 'STAFF',
+            content: 'To add new employees to your agency portal:',
+            steps: [
+              'Go to Drawer Menu (☰) ➔ Staff Management (/admin/staff).',
+              'Click "Invite Staff" or go to /admin/invite-staff.',
+              'Enter their Full Name, Email Address, and select their Role (Manager or Marketer).',
+              'Staff receives an invitation link to set their password and log in.',
+              'Once registered, they appear under Staff Management with real-time tracking.',
+            ],
+            tip: 'Marketers only see their assigned leads and their own attendance.',
           ),
           GuideItem(
-            title: 'Preventing Lead Theft (Off-Portal Deals)',
-            tag: 'POLICY',
+            title: 'Reviewing Staff Timesheets & Daily Accomplishments',
+            tag: 'OVERSIGHT',
             content:
-                '• Every lead assigned to an agent is timestamped.\n'
-                '• If an agent does not log an activity update within 4 hours, management can reassign the lead to another marketer.\n'
-                '• All communication notes are stored centrally on the client\'s timeline.',
+                '• Under Staff Management, clicking on any staff card opens their full 30-Day Attendance Timesheet.\n'
+                '• Displays exact clock-in time, punctuality badge (On-Time vs Late), clock-out time, and total working minutes.\n'
+                '• When staff clock out, they must submit their "Daily Accomplishments Report" (e.g. calls made, inspections attended), which management can review anytime.',
+          ),
+          GuideItem(
+            title: 'Partner / Realtor Affiliate Network',
+            tag: 'PARTNERS',
+            content:
+                'External realtors and affiliate marketers register on the Partner portal:\n\n'
+                '• Each partner receives a unique referral code/link for each estate.\n'
+                '• When their clients click the link and register or book an inspection, the lead is automatically linked to that partner.\n'
+                '• When the sale closes, commission is credited to the partner\'s wallet automatically.',
+          ),
+          GuideItem(
+            title: 'Commission Approvals & Payout Withdrawals',
+            tag: 'FINANCE',
+            content:
+                '• Under /admin/commissions: Review all earned commissions and approve or reject pending payouts.\n'
+                '• Under /admin/withdrawals: View partner bank account details (Bank Name, Account Number, Account Name) for requested withdrawals. Once bank transfer is made, mark as "Completed".',
           ),
         ],
       ),
 
+      // ── 9. REPORTS & KPIS ──
       GuideSection(
-        title: '7. Automated Daily, Weekly & Monthly Reports',
+        title: '9. Automated Daily, Weekly & Monthly Reports',
         summary: 'How executive performance reports are compiled and exported to PDF.',
         category: 'Reports & KPIs',
         icon: Icons.summarize_rounded,
@@ -711,8 +820,81 @@ class _AdminGuideScreenState extends State<AdminGuideScreen> {
         ],
       ),
 
+      // ── 10. BULK SMS & EMAIL ──
       GuideSection(
-        title: '8. Company Settings & Office Coordinates Setup',
+        title: '10. Bulk SMS (Termii) & Bulk Email Messaging',
+        summary: 'Direct broadcast campaigns via Termii API and investor email updates.',
+        category: 'Bulk SMS & Email',
+        icon: Icons.sms_rounded,
+        badgeColor: const Color(0xFFEC4899),
+        items: [
+          GuideItem(
+            title: 'Bulk SMS Portal via Termii Integration',
+            tag: 'TERMII SMS',
+            content:
+                'Your portal is integrated with Termii for high-deliverability SMS broadcasting across all Nigerian networks (MTN, Airtel, Glo, 9mobile):\n\n'
+                '• Go to Drawer Menu (☰) ➔ Bulk SMS Portal (/admin/sms-portal).\n'
+                '• View your Live Wallet Balance in real-time Naira.\n'
+                '• Sender ID: Messages are delivered with your official company brand name (e.g. "NISSIE").\n'
+                '• Auto-Phone Formatter: Automatically converts numbers like 0803... to international format +234803... so messages never fail.',
+            steps: [
+              'Select recipient audience: All Leads, Site Inspection Clients, Active Buyers, or Custom Numbers.',
+              'Type your promotional or alert message.',
+              'Click "Send Bulk SMS". Delivery reports log sent, delivered, and failed counts in real-time.',
+            ],
+            tip: 'SMS open rates in Nigeria exceed 90%. Use this to announce estate price increments or inspection batches.',
+          ),
+          GuideItem(
+            title: 'Bulk Email & Investor Newsletters',
+            tag: 'EMAIL',
+            content:
+                'Under Drawer Menu (☰) ➔ Bulk Email Portal (/admin/email-portal):\n\n'
+                '• Send rich email broadcasts to corporate clients, diaspora investors, and registered buyers.\n'
+                '• Ideal for sending formal documentation updates, physical plot allocation dates, and quarterly estate infrastructure progress photos.',
+          ),
+        ],
+      ),
+
+      // ── 11. NISSIE ACADEMY ──
+      GuideSection(
+        title: '11. Nissie Academy & Sales Training',
+        summary: 'Training materials, closing scripts, objection handling simulator, and staff certification.',
+        category: 'Nissie Academy',
+        icon: Icons.school_rounded,
+        badgeColor: const Color(0xFF8B5CF6),
+        items: [
+          GuideItem(
+            title: 'Academy Materials & Real Estate Closing Playbooks',
+            tag: 'TRAINING',
+            content:
+                'Under Drawer Menu (☰) ➔ Nissie Academy (/training):\n\n'
+                '• Houses your agency\'s sales playbooks, video guides, and closing scripts.\n'
+                '• Examples of topics:\n'
+                '  - "How to close ₦30M+ land deals in Abuja and Lagos"\n'
+                '  - "Explaining Land Titles to Buyers (C of O vs R of O vs Gazette)"\n'
+                '  - "How to follow up on cold leads without sounding desperate"',
+          ),
+          GuideItem(
+            title: 'Interactive Sales Simulator',
+            tag: 'SIMULATOR',
+            content:
+                'The built-in Simulator (/training) lets marketers practice handling tough client objections before talking to real prospects:\n\n'
+                '• Marketers choose how to respond to real scenarios (e.g., *"Why is this estate more expensive than the one next to it?", "Can I build immediately?"*).\n'
+                '• Scores their responses and teaches them the psychological triggers to win buyer trust.',
+          ),
+          GuideItem(
+            title: 'Staff Exams & Leaderboard Ranking',
+            tag: 'CERTIFICATION',
+            content:
+                '• Agency exams test staff on property prices, location advantages, and company policies.\n'
+                '• Leaderboard awards points for completed trainings, encouraging positive competition among your marketing team.',
+          ),
+        ],
+      ),
+
+      // ── 12. COMPANY SETTINGS ──
+      GuideSection(
+        title: '12. Company Settings & Office Coordinates Setup',
         summary: 'Configuring office location for the geofence and updating company branding.',
         category: 'Attendance & GPS',
         icon: Icons.settings_suggest_rounded,
