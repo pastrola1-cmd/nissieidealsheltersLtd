@@ -75,6 +75,7 @@ import 'package:nissie_ideal_shelters/screens/shared/landing_page_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_sms_portal_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_email_portal_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/installment_plans_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/admin_guide_screen.dart';
 
 
 
@@ -366,6 +367,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/installments',
         name: 'adminInstallments',
         builder: (context, state) => const InstallmentPlansScreen(),
+      ),
+      GoRoute(
+        path: '/admin/guide',
+        name: 'adminGuide',
+        builder: (context, state) => const AdminGuideScreen(),
       ),
       GoRoute(
         path: '/admin/withdrawals',

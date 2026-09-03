@@ -258,13 +258,20 @@ class AppDrawer extends ConsumerWidget {
                       label: 'Billing & Plans',
                       targetRoute: '/admin/billing',
                     ),
-                    if (isAdmin)
+                    if (isAdmin) ...[
+                      _buildMenuItem(
+                        context: context,
+                        icon: Icons.menu_book_rounded,
+                        label: 'Admin System Guide',
+                        targetRoute: '/admin/guide',
+                      ),
                       _buildMenuItem(
                         context: context,
                         icon: Icons.settings_outlined,
                         label: 'System Settings',
                         targetRoute: '/admin/settings',
                       ),
+                    ],
                   ],
                 ],
               ),

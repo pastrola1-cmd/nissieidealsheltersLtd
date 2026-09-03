@@ -128,6 +128,13 @@ class AdminDashboardScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(width: 4),
+                        // Admin Guide Book Icon
+                        IconButton(
+                          icon: const Icon(Icons.menu_book_rounded, color: AppColors.accent),
+                          tooltip: 'Admin Operating Manual & Guide',
+                          onPressed: () => context.push('/admin/guide'),
+                        ),
+                        const SizedBox(width: 4),
                         // Company Settings Cog
                         IconButton(
                           icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
@@ -209,7 +216,52 @@ class AdminDashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // ── Admin System Guide Quick Banner ──
+                InkWell(
+                  onTap: () => context.push('/admin/guide'),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.menu_book_rounded, color: AppColors.accent, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Admin Operating Manual & System Guide',
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
+                              ),
+                              const Text(
+                                'Complete reference: Geofence attendance, Installments, Receipts, Inspections & Anti-Cheat.',
+                                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 const LeadUsageProgressBar(),
                 const SizedBox(height: 20),
                 const GoalsDashboardList(),
