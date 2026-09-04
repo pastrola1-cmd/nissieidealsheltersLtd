@@ -58,9 +58,9 @@ class MarketplaceState {
   List<Property> get filteredProperties {
     return allProperties.where((prop) {
       // Listing type filter
-      if (filter.listingType == 'rent' && prop.listingType != 'rent') return false;
-      if (filter.listingType == 'sale' && prop.listingType != 'sale') return false;
-      if (filter.listingType == 'nissie_estates' && prop.isMarketplace) return false;
+      if (filter.listingType == 'rent' && !prop.isRent) return false;
+      if (filter.listingType == 'sale' && !prop.isSale) return false;
+      if (filter.listingType == 'nissie_estates' && !prop.isNissieEstate) return false;
 
       // City filter
       if (filter.selectedCity != 'All' && !prop.city.toLowerCase().contains(filter.selectedCity.toLowerCase())) {
@@ -129,19 +129,18 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     try {
       final dbProperties = await _supabaseService.getProperties();
       if (dbProperties.isNotEmpty) {
-        // Merge with curated demo listings so the marketplace is vibrant on localhost
-        final curated = _generateCuratedListings();
+        // Real Nissie properties from database are prioritized!
+        final curatedRentals = _generateCuratedListings().where((c) => c.isMarketplace).toList();
         final existingIds = dbProperties.map((p) => p.id).toSet();
         final merged = [
           ...dbProperties,
-          ...curated.where((c) => !existingIds.contains(c.id)),
+          ...curatedRentals.where((c) => !existingIds.contains(c.id)),
         ];
         state = state.copyWith(allProperties: merged, isLoading: false);
       } else {
         state = state.copyWith(allProperties: _generateCuratedListings(), isLoading: false);
       }
     } catch (_) {
-      // Fallback cleanly to curated listings
       state = state.copyWith(allProperties: _generateCuratedListings(), isLoading: false);
     }
   }

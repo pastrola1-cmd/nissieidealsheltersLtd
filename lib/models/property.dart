@@ -69,8 +69,12 @@ class Property {
 
   bool get isRent => listingType == 'rent';
   bool get isSale => listingType == 'sale';
+  bool get isNissieEstate => !isMarketplace;
 
   String get displayPrice {
+    if (price <= 0) {
+      return 'Contact for Price';
+    }
     if (price >= 1000000) {
       final m = price / 1000000;
       final formattedM = m == m.roundToDouble() ? m.toInt().toString() : m.toStringAsFixed(1);
@@ -100,12 +104,30 @@ class Property {
   }
 
   factory Property.fromJson(Map<String, dynamic> json) {
+    final title = json['title'] as String;
+    final location = json['location'] as String?;
+    final isMarketplaceVal = json['is_marketplace'] as bool? ?? false;
+
+    // Detect city from location if not explicitly provided
+    String city = json['city'] as String? ?? 'Abuja';
+    if (json['city'] == null && location != null) {
+      if (location.toLowerCase().contains('lagos')) {
+        city = 'Lagos';
+      } else {
+        city = 'Abuja';
+      }
+    }
+
+    // Infer category and bedrooms intelligently from title/location
+    final category = _inferCategory(title, json['property_category'] as String?);
+    final beds = _inferBedrooms(title, json['bedrooms'] as int?);
+
     return Property(
       id: json['id'] as String,
       companyId: json['company_id'] as String,
-      title: json['title'] as String,
+      title: title,
       description: json['description'] as String?,
-      location: json['location'] as String?,
+      location: location,
       price: (json['price'] as num).toDouble(),
       status: PropertyStatus.fromString(json['status'] as String),
       images: List<String>.from(json['images'] ?? []),
@@ -118,20 +140,42 @@ class Property {
       documents: json['documents'] != null ? List<String>.from(json['documents']) : null,
       paymentPlans: json['payment_plans'] as Map<String, dynamic>?,
       listingType: json['listing_type'] as String? ?? 'sale',
-      propertyCategory: json['property_category'] as String? ?? 'apartment',
-      bedrooms: json['bedrooms'] as int? ?? 0,
-      bathrooms: json['bathrooms'] as int? ?? 0,
-      city: json['city'] as String? ?? 'Abuja',
-      stateLocation: json['state'] as String? ?? 'FCT',
-      district: json['district'] as String?,
-      rentPeriod: json['rent_period'] as String? ?? 'year',
-      inspectionFee: (json['inspection_fee'] as num? ?? 3000.0).toDouble(),
-      isMarketplace: json['is_marketplace'] as bool? ?? true,
+      propertyCategory: category,
+      bedrooms: beds,
+      bathrooms: json['bathrooms'] as int? ?? (beds > 0 ? beds : 0),
+      city: city,
+      stateLocation: json['state'] as String? ?? (city == 'Lagos' ? 'Lagos' : 'FCT'),
+      district: json['district'] as String? ?? (location != null ? location.split(',').first.trim() : null),
+      rentPeriod: json['rent_period'] as String? ?? (json['listing_type'] == 'rent' ? 'year' : 'total'),
+      inspectionFee: (json['inspection_fee'] as num? ?? (isMarketplaceVal ? 3000.0 : 0.0)).toDouble(),
+      isMarketplace: isMarketplaceVal,
       isVerified: json['is_verified'] as bool? ?? true,
-      shieldedContact: json['shielded_contact'] as bool? ?? true,
+      shieldedContact: json['shielded_contact'] as bool? ?? isMarketplaceVal,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
+  }
+
+  static String _inferCategory(String title, String? category) {
+    if (category != null && category.isNotEmpty && category != 'apartment') return category;
+    final t = title.toLowerCase();
+    if (t.contains('duplex')) return 'duplex';
+    if (t.contains('bungalow')) return 'bungalow';
+    if (t.contains('plaza') || t.contains('shopping') || t.contains('commercial') || t.contains('office')) return 'commercial';
+    if (t.contains('estate') || t.contains('plot') || t.contains('land')) return 'land';
+    if (t.contains('self') || t.contains('mini')) return 'self_contain';
+    return category ?? 'apartment';
+  }
+
+  static int _inferBedrooms(String title, int? beds) {
+    if (beds != null && beds > 0) return beds;
+    final t = title.toLowerCase();
+    if (t.contains('1 bed') || t.contains('1-bed')) return 1;
+    if (t.contains('2 bed') || t.contains('2-bed') || t.contains('semi-detached')) return 2;
+    if (t.contains('3 bed') || t.contains('3-bed')) return 3;
+    if (t.contains('4 bed') || t.contains('4-bed') || t.contains('terrace')) return 4;
+    if (t.contains('5 bed') || t.contains('5-bed') || t.contains('detached')) return 5;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {
