@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 
 class InspectionBookingModal extends ConsumerStatefulWidget {
@@ -30,6 +33,8 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _notesController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -43,24 +48,73 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
     '05:00 PM',
   ];
 
+  bool _createAccount = true;
+  bool _obscurePassword = true;
+  bool _isRegistering = false;
   bool _isSubmitted = false;
   InspectionBooking? _createdBooking;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final profile = ref.read(authProvider).profile;
+      if (profile != null) {
+        setState(() {
+          _nameController.text = profile.fullName ?? '';
+          _phoneController.text = profile.phone ?? '';
+          _emailController.text = profile.email ?? '';
+          _createAccount = false;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  void _handleBooking() {
+  Future<void> _handleBooking() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final authState = ref.read(authProvider);
+    String? renterId = authState.profile?.id;
+
+    if (!authState.isAuthenticated && _createAccount && _passwordController.text.isNotEmpty) {
+      setState(() => _isRegistering = true);
+      try {
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
+        final fullName = _nameController.text.trim();
+        final phone = _phoneController.text.trim();
+
+        final success = await ref.read(authProvider.notifier).signUp(
+          email: email,
+          password: password,
+          fullName: fullName,
+          phone: phone,
+          role: UserRole.buyer,
+          companyId: AppStrings.defaultCompanyId,
+        );
+        if (success) {
+          renterId = ref.read(authProvider).profile?.id;
+        }
+      } catch (_) {}
+      setState(() => _isRegistering = false);
+    }
 
     final booking = ref.read(marketplaceProvider.notifier).bookInspection(
       propertyId: widget.property.id,
+      renterId: renterId,
       renterName: _nameController.text.trim(),
       renterPhone: _phoneController.text.trim(),
+      renterEmail: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
       date: _selectedDate,
       time: _selectedTime,
       notes: _notesController.text.trim(),
@@ -175,7 +229,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                     width: 60,
                     height: 60,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       width: 60,
                       height: 60,
                       color: Colors.grey.shade300,
@@ -286,7 +340,95 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
             ),
             validator: (v) => (v == null || v.trim().length < 10) ? 'Enter a valid Nigerian phone number' : null,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
+          // Email Address
+          const Text('Email Address', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              hintText: 'e.g. ibrahim@gmail.com',
+              prefixIcon: const Icon(Icons.email_outlined, size: 20),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+            validator: (v) {
+              final isAuth = ref.read(authProvider).isAuthenticated;
+              if (_createAccount && !isAuth) {
+                if (v == null || v.trim().isEmpty || !v.contains('@')) {
+                  return 'Please enter a valid email to secure your account';
+                }
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 14),
+
+          // Unauthenticated Account Creation Card
+          if (!ref.watch(authProvider).isAuthenticated) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _createAccount,
+                        activeColor: AppColors.primary,
+                        onChanged: (val) => setState(() => _createAccount = val ?? true),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Save booking & 4-digit PIN in a free Renter account',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: Color(0xFF0F172A)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_createAccount) ...[
+                    const SizedBox(height: 6),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'Set a password so you can log in to view your secret PIN and booking status anytime:',
+                        style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: 'Create account password (min 6 chars)',
+                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 18),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                      ),
+                      validator: (v) {
+                        if (_createAccount && !ref.read(authProvider).isAuthenticated) {
+                          if (v == null || v.length < 6) return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Date & Time Picker
           Row(
@@ -338,7 +480,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                     const Text('Preferred Time', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      value: _selectedTime,
+                      initialValue: _selectedTime,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
@@ -365,15 +507,21 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 2,
               ),
-              onPressed: _handleBooking,
-              child: Text(
-                'Book Inspection (₦${fee.toStringAsFixed(0)} Escrow)',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              onPressed: _isRegistering ? null : _handleBooking,
+              child: _isRegistering
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      'Book Inspection (₦${fee.toStringAsFixed(0)} Escrow)',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 10),
@@ -484,6 +632,28 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
             ],
           ),
         ),
+        if (booking.renterId != null) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.blue.shade700, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Saved to your account. You can log in anytime to view your PIN.',
+                  style: TextStyle(fontSize: 12, color: Colors.blue.shade900, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
 
         SizedBox(

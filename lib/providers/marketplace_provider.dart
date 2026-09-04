@@ -195,6 +195,7 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
   /// Books an inspection with escrow protection and a 4-digit verification PIN
   InspectionBooking bookInspection({
     required String propertyId,
+    String? renterId,
     required String renterName,
     required String renterPhone,
     String? renterEmail,
@@ -208,6 +209,7 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     final booking = InspectionBooking(
       id: 'book_${DateTime.now().millisecondsSinceEpoch}',
       propertyId: propertyId,
+      renterId: renterId,
       renterName: renterName,
       renterPhone: renterPhone,
       renterEmail: renterEmail,
@@ -223,6 +225,20 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     final updatedBookings = [booking, ...state.myBookings];
     state = state.copyWith(myBookings: updatedBookings);
     return booking;
+  }
+
+  /// Retrieves all inspection bookings relevant to a given user
+  List<InspectionBooking> getBookingsForUser({
+    String? userId,
+    String? email,
+    String? phone,
+  }) {
+    return state.myBookings.where((b) {
+      if (userId != null && b.renterId == userId) return true;
+      if (email != null && email.isNotEmpty && b.renterEmail != null && b.renterEmail!.toLowerCase() == email.toLowerCase()) return true;
+      if (phone != null && phone.isNotEmpty && b.renterPhone.replaceAll(' ', '') == phone.replaceAll(' ', '')) return true;
+      return userId == null && email == null && phone == null;
+    }).toList();
   }
 
   void addProperty(Property property) {

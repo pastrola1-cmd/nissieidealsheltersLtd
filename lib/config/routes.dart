@@ -117,7 +117,7 @@ String _getDefaultRouteForRole(UserRole role) {
     case UserRole.partner:
       return '/partner/dashboard';
     case UserRole.buyer:
-      return '/buyer/browse';
+      return '/';
     case UserRole.landlord:
       return '/list-property';
   }

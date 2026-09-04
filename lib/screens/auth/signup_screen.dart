@@ -28,7 +28,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  _UserRole? _selectedRole;
+  _UserRole? _selectedRole = _UserRole.buyer;
 
   @override
   void initState() {
@@ -265,9 +265,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 Column(
                   children: [
                     _RoleCard(
+                      icon: Icons.home_rounded,
+                      title: 'Renter / Home Buyer',
+                      subtitle: 'I want to search, rent, or buy homes & track site inspections',
+                      isSelected: _selectedRole == _UserRole.buyer,
+                      onTap: () {
+                        setState(() {
+                          _selectedRole = _UserRole.buyer;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _RoleCard(
                       icon: Icons.handshake_rounded,
                       title: 'Affiliate Partner',
-                      subtitle: 'I want to sell properties and earn commissions',
+                      subtitle: 'I want to sell properties and earn sales commissions',
                       isSelected: _selectedRole == _UserRole.partner,
                       onTap: () {
                         setState(() {
@@ -276,16 +288,40 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    _RoleCard(
-                      icon: Icons.home_rounded,
-                      title: 'Home Buyer',
-                      subtitle: 'I want to browse and purchase premium properties',
-                      isSelected: _selectedRole == _UserRole.buyer,
-                      onTap: () {
-                        setState(() {
-                          _selectedRole = _UserRole.buyer;
-                        });
-                      },
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.add_home_outlined, size: 20, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'Are you a Landlord or Agent? ',
+                                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                                ),
+                                InkWell(
+                                  onTap: () => context.push('/list-property'),
+                                  child: Text(
+                                    'List your property here →',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

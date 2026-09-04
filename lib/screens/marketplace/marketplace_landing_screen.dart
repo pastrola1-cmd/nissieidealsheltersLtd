@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/marketplace_property_card.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/inspection_booking_modal.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/my_inspections_modal.dart';
 
 class MarketplaceLandingScreen extends ConsumerStatefulWidget {
   const MarketplaceLandingScreen({super.key});
@@ -112,36 +114,239 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                   onPressed: () => context.push('/list-property'),
                 ),
 
-              // Staff / User Portal Button
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: isAuthenticated
-                    ? ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F172A),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              // Auth Actions
+              if (isAuthenticated) ...[
+                // If logged in as Renter/Buyer
+                if (authState.profile?.role == UserRole.buyer) ...[
+                  // My Inspections button
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Builder(builder: (context) {
+                      final count = ref.watch(marketplaceProvider.notifier).getBookingsForUser(
+                        userId: authState.profile?.id,
+                        email: authState.profile?.email,
+                        phone: authState.profile?.phone,
+                      ).length;
+
+                      if (isWide || isTablet) {
+                        return OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0F172A),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
+                          label: Text(
+                            count > 0 ? 'My Inspections ($count)' : 'My Inspections',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: () => MyInspectionsModal.show(context),
+                        );
+                      } else {
+                        return IconButton(
+                          tooltip: 'My Inspections',
+                          icon: Badge(
+                            isLabelVisible: count > 0,
+                            label: Text('$count'),
+                            child: const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
+                          ),
+                          onPressed: () => MyInspectionsModal.show(context),
+                        );
+                      }
+                    }),
+                  ),
+
+                  // User Account Menu
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: PopupMenuButton<String>(
+                      tooltip: 'My Account',
+                      offset: const Offset(0, 44),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        icon: const Icon(Icons.dashboard_outlined, size: 16),
-                        label: const Text('My Dashboard', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        onPressed: () {
-                          final role = authState.profile!.role.value;
-                          context.go('/$role/dashboard');
-                        },
-                      )
-                    : OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary, width: 1.5),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: AppColors.primary,
+                              child: Text(
+                                (authState.profile?.fullName ?? 'U').isNotEmpty
+                                    ? (authState.profile!.fullName![0].toUpperCase())
+                                    : 'U',
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            if (isWide) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                (authState.profile?.fullName ?? 'User').split(' ').first,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
+                            ],
+                          ],
                         ),
-                        icon: const Icon(Icons.lock_outline, size: 16),
-                        label: const Text('Staff & Partner Login', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        onPressed: () => context.push('/login'),
                       ),
-              ),
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'inspections',
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_month_outlined, size: 18, color: AppColors.primary),
+                              SizedBox(width: 10),
+                              Text('My Inspections & PINs'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout, size: 18, color: Colors.redAccent),
+                              SizedBox(width: 10),
+                              Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (val) {
+                        if (val == 'inspections') {
+                          MyInspectionsModal.show(context);
+                        } else if (val == 'logout') {
+                          ref.read(authProvider.notifier).logout();
+                        }
+                      },
+                    ),
+                  ),
+                ] else ...[
+                  // Staff / Partner / Landlord Dashboard Button
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.dashboard_outlined, size: 16),
+                      label: const Text('My Dashboard', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        final role = authState.profile!.role;
+                        if (role == UserRole.landlord) {
+                          context.push('/list-property');
+                        } else {
+                          context.go('/${role.value}/dashboard');
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ] else ...[
+                // Unauthenticated Actions
+                if (isWide || isTablet) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: () => context.push('/login'),
+                      child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => context.push('/signup'),
+                      child: const Text('Sign Up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ),
+                ],
+                // Popup Menu for Staff Portal & Mobile Login
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: PopupMenuButton<String>(
+                    tooltip: 'More Options',
+                    offset: const Offset(0, 44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    icon: const Icon(Icons.more_vert, color: Color(0xFF475569)),
+                    itemBuilder: (context) => [
+                      if (!isWide && !isTablet) ...[
+                        const PopupMenuItem(
+                          value: 'login',
+                          child: Row(
+                            children: [
+                              Icon(Icons.login, size: 18, color: AppColors.primary),
+                              SizedBox(width: 10),
+                              Text('Sign In (Renter / Buyer)'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'signup',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person_add_outlined, size: 18, color: AppColors.primary),
+                              SizedBox(width: 10),
+                              Text('Create Free Account'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                      ],
+                      const PopupMenuItem(
+                        value: 'staff_login',
+                        child: Row(
+                          children: [
+                            Icon(Icons.shield_outlined, size: 18, color: Color(0xFF475569)),
+                            SizedBox(width: 10),
+                            Text('Staff & Partner Portal'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'list_prop',
+                        child: Row(
+                          children: [
+                            Icon(Icons.add_home_outlined, size: 18, color: Color(0xFF475569)),
+                            SizedBox(width: 10),
+                            Text('List Property (Landlord)'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (val) {
+                      if (val == 'login') {
+                        context.push('/login');
+                      } else if (val == 'signup') {
+                        context.push('/signup');
+                      } else if (val == 'staff_login') {
+                        context.push('/login');
+                      } else if (val == 'list_prop') {
+                        context.push('/list-property');
+                      }
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
 
