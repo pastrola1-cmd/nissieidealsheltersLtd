@@ -8,6 +8,7 @@ enum UserRole {
   marketer('marketer', 'Marketer / Agent'),
   partner('partner', 'Partner'),
   buyer('buyer', 'Buyer'),
+  landlord('landlord', 'Landlord / Property Owner'),
   platformAdmin('platform_admin', 'Platform Admin');
 
   const UserRole(this.value, this.label);

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
-import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/marketplace_property_card.dart';
@@ -57,7 +56,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                     width: 38,
                     height: 38,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       width: 38,
                       height: 38,
                       color: AppColors.primary,
@@ -103,8 +102,14 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                     ),
                     icon: const Icon(Icons.add_home_outlined, size: 18),
                     label: const Text('List Property', style: TextStyle(fontWeight: FontWeight.w600)),
-                    onPressed: () => _showListPropertyInfo(context),
+                    onPressed: () => context.push('/list-property'),
                   ),
+                )
+              else
+                IconButton(
+                  tooltip: 'List Property',
+                  icon: const Icon(Icons.add_home_outlined, color: Color(0xFF334155), size: 22),
+                  onPressed: () => context.push('/list-property'),
                 ),
 
               // Staff / User Portal Button
@@ -778,39 +783,6 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showListPropertyInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.real_estate_agent, color: AppColors.primary),
-            SizedBox(width: 8),
-            Text('List Your Property'),
-          ],
-        ),
-        content: const Text(
-          'Are you an agent or landlord with a property for rent or sale?\n\n'
-          'Join Nissie as an authorized partner. We verify your property, dispatch paying clients directly to you, and ensure your commission is 100% protected through our digital escrow system.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.push('/signup');
-            },
-            child: const Text('Register as Partner', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

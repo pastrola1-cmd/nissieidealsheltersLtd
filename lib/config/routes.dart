@@ -77,6 +77,7 @@ import 'package:nissie_ideal_shelters/screens/admin/admin_email_portal_screen.da
 import 'package:nissie_ideal_shelters/screens/admin/installment_plans_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_guide_screen.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/marketplace_landing_screen.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/landlord_registration_screen.dart';
 
 
 
@@ -117,6 +118,8 @@ String _getDefaultRouteForRole(UserRole role) {
       return '/partner/dashboard';
     case UserRole.buyer:
       return '/buyer/browse';
+    case UserRole.landlord:
+      return '/list-property';
   }
 }
 
@@ -141,11 +144,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/onboarding';
       final isAuthLoading = state.matchedLocation == '/auth-loading';
       final isMarketplace = state.matchedLocation == '/' || state.matchedLocation == '/marketplace';
+      final isLandlordRegister = state.matchedLocation == '/list-property' || state.matchedLocation == '/landlord/register';
 
       // ── While auth is loading, show a branded loading screen ──
       if (authState.isLoading) {
         // Don't redirect if already on the loading screen, marketplace, or on auth pages
-        return (isAuthLoading || isMarketplace) ? null : '/auth-loading';
+        return (isAuthLoading || isMarketplace || isLandlordRegister) ? null : '/auth-loading';
       }
 
       // ── If loading just finished, redirect away from auth-loading ──
@@ -160,7 +164,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!authState.isAuthenticated) {
         final isPropertyDetail = state.matchedLocation.startsWith('/properties/');
         final isLandingPage = state.matchedLocation.startsWith('/lp/');
-        return (loggingIn || isPropertyDetail || isLandingPage || isMarketplace) ? null : '/';
+        return (loggingIn || isPropertyDetail || isLandingPage || isMarketplace || isLandlordRegister) ? null : '/';
       }
 
       final profile = authState.profile;
@@ -258,6 +262,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/marketplace',
         name: 'marketplaceExplore',
         builder: (context, state) => const MarketplaceLandingScreen(),
+      ),
+      GoRoute(
+        path: '/list-property',
+        name: 'listProperty',
+        builder: (context, state) => const LandlordRegistrationScreen(),
+      ),
+      GoRoute(
+        path: '/landlord/register',
+        name: 'landlordRegister',
+        builder: (context, state) => const LandlordRegistrationScreen(),
       ),
 
       // ── Auth routes (no shell) ──────────────────────────────────────────

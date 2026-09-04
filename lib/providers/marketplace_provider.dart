@@ -225,6 +225,10 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     return booking;
   }
 
+  void addProperty(Property property) {
+    state = state.copyWith(allProperties: [property, ...state.allProperties]);
+  }
+
   List<Property> _generateCuratedListings() {
     final now = DateTime.now();
     return [
