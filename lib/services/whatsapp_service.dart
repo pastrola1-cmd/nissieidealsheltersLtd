@@ -175,7 +175,7 @@ class WhatsAppService {
               'type': 'body',
               'parameters': [
                 {'type': 'text', 'text': 'Test User'},
-                {'type': 'text', 'text': 'Test Estate (Scale Wealth)'},
+                {'type': 'text', 'text': 'Test Estate (Nissie Ideal Shelters)'},
                 {'type': 'text', 'text': 'https://youtube.com/watch?v=test'},
               ]
             }

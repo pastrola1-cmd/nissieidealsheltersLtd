@@ -1,5 +1,5 @@
 -- =====================================================================
--- PPN CONSOLIDATED DATABASE CATCH-UP & FIX PATCH
+-- NISSIE CONSOLIDATED DATABASE CATCH-UP & FIX PATCH
 -- =====================================================================
 -- This script catches your database up by adding missing columns, 
 -- creating missing tables (notifications, campaign_shares), recreating 

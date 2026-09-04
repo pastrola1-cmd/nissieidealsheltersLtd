@@ -9,7 +9,7 @@ import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
-/// Sign-up screen for PPN.
+/// Sign-up screen for Nissie Ideal Shelters.
 class SignupScreen extends ConsumerStatefulWidget {
   final String? initialEmail;
   const SignupScreen({super.key, this.initialEmail});

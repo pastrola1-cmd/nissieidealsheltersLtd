@@ -200,7 +200,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     // the PUBLIC property landing page without requiring login.
     final origin = kIsWeb ? Uri.base.origin : 'https://nissieidealshelters.com.ng';
     const portalPath = '/portal-new/#/lp';
-    final refCode = userProfile?.referralCode ?? 'PPN-PENDING';
+    final refCode = userProfile?.referralCode ?? 'NISSIE-PENDING';
     final referralLink = '$origin$portalPath/${property.id}?ref=$refCode';
 
     final isUserAdmin = userProfile?.role == UserRole.admin || userProfile?.role == UserRole.platformAdmin;

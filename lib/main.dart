@@ -46,13 +46,13 @@ Future<void> main() async {
           onboardingCompletedProvider.overrideWithValue(AsyncValue.data(onboardingCompleted)),
           themeModeProvider.overrideWith(() => ThemeModeNotifier(isDark ? ThemeMode.dark : ThemeMode.light)),
         ],
-        child: const PPNApp(),
+        child: const NissieApp(),
       ),
     );
   } catch (error, stackTrace) {
     debugPrint('Startup Initialization Error: $error\n$stackTrace');
     runApp(
-      PPNInitializationErrorApp(
+      NissieInitializationErrorApp(
         error: error,
         stackTrace: stackTrace,
       ),
@@ -61,11 +61,11 @@ Future<void> main() async {
 }
 
 /// Fallback error app when initialization fails
-class PPNInitializationErrorApp extends StatelessWidget {
+class NissieInitializationErrorApp extends StatelessWidget {
   final Object error;
   final StackTrace stackTrace;
 
-  const PPNInitializationErrorApp({
+  const NissieInitializationErrorApp({
     super.key,
     required this.error,
     required this.stackTrace,
@@ -74,7 +74,7 @@ class PPNInitializationErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PPN - Startup Failed',
+      title: 'Nissie Ideal Shelters - Startup Failed',
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: const Color(0xFF0F172A),
@@ -156,8 +156,8 @@ class PPNInitializationErrorApp extends StatelessWidget {
 
 
 /// Root application widget
-class PPNApp extends ConsumerWidget {
-  const PPNApp({super.key});
+class NissieApp extends ConsumerWidget {
+  const NissieApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -1,5 +1,5 @@
 -- =====================================================================
--- PROPERTY PARTNER NETWORK (PPN) — DATABASE SCHEMA & MULTI-TENANT CONFIG
+-- NISSIE IDEAL SHELTERS (NISSIE) — DATABASE SCHEMA & MULTI-TENANT CONFIG
 -- =====================================================================
 
 -- Enable extensions
@@ -418,7 +418,7 @@ VALUES (
 ) ON CONFLICT DO NOTHING;
 
 -- =====================================================================
--- PPN LOOP 12: PUSH NOTIFICATIONS & IN-APP ALERTS - DATABASE SCHEMA
+-- NISSIE LOOP 12: PUSH NOTIFICATIONS & IN-APP ALERTS - DATABASE SCHEMA
 -- =====================================================================
 
 -- Add fcm_token column to profiles

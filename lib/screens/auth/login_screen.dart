@@ -8,7 +8,7 @@ import 'package:nissie_ideal_shelters/config/supabase_config.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/config/app_logger.dart';
 
-/// Premium login screen for PPN.
+/// Premium login screen for Nissie Ideal Shelters.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 

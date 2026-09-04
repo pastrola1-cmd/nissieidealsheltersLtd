@@ -1,17 +1,30 @@
-# ppn
+# Nissie Ideal Shelters Ltd
 
-Property Partner Network - Real estate sales and commission system
+Real estate sales, agency operations, and commission management system for Nissie Ideal Shelters.
 
-## Getting Started
+## Overview
+- **Platforms**: Web, Android, iOS
+- **Backend**: Supabase Database & Auth
+- **Core Modules**:
+  - Property Listings & Discovery
+  - Partner & Marketer Networks
+  - Lead Generation & Pipeline Tracking
+  - Commission Tracking & Instant Receipts
+  - Geotagged Inspections
+  - Admin & Staff Operating Portals
 
-This project is a starting point for a Flutter application.
+## Running Locally
 
-A few resources to get you started if this is your first Flutter project:
+### 1. Web Portal
+To serve the web application locally:
+```bash
+python serve_local.py
+```
+Open [http://localhost:8080/portal-new/](http://localhost:8080/portal-new/) in your browser.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 2. Flutter Development
+To run in development mode:
+```bash
+flutter pub get
+flutter run -d chrome
+```

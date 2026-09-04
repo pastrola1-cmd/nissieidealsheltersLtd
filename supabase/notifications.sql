@@ -1,5 +1,5 @@
 -- =====================================================================
--- PPN LOOP 12: PUSH NOTIFICATIONS & IN-APP ALERTS - DATABASE SCHEMA
+-- NISSIE LOOP 12: PUSH NOTIFICATIONS & IN-APP ALERTS - DATABASE SCHEMA
 -- =====================================================================
 
 -- 1. Add fcm_token column to profiles

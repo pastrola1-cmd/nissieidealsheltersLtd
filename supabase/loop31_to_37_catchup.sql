@@ -1,5 +1,5 @@
 -- =============================================================================
--- PPN CONSOLIDATED MIGRATION CATCH-UP (LOOPS 31 - 37)
+-- NISSIE CONSOLIDATED MIGRATION CATCH-UP (LOOPS 31 - 37)
 -- Run this script in your Supabase SQL Editor to sync the remote schema!
 -- =============================================================================
 

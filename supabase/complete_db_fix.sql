@@ -1,5 +1,5 @@
 -- =============================================================================
--- PPN COMPLETE DATABASE FIX & CATCH-UP
+-- NISSIE COMPLETE DATABASE FIX & CATCH-UP
 -- Run this entire script in your Supabase SQL Editor (https://supabase.com)
 -- This fixes the infinite loading spinner (RLS recursion) and adds all missing features.
 -- =============================================================================

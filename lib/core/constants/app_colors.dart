@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// PPN Brand Color System
+/// Nissie Ideal Shelters Brand Color System
 /// Designed for real estate — trust, professionalism, energy
 class AppColors {
   AppColors._();

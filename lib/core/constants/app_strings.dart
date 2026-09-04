@@ -3,7 +3,7 @@ class AppStrings {
   AppStrings._();
 
   // ── App ──
-  static const String appName = 'NissieShelters';
+  static const String appName = 'Nissie Ideal Shelters';
   static const String appFullName = 'Nissie Ideal Shelters Ltd';
   static const String appTagline = 'Your Trusted Real Estate & Property Partner';
   static const String companyName = 'NissieIdealShelters';
