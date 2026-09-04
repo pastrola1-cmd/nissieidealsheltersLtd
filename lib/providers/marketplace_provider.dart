@@ -10,7 +10,9 @@ class MarketplaceFilter {
   final String searchQuery;
   final String selectedCategory; // 'all', 'apartment', 'duplex', 'bungalow', 'self_contain', 'land'
   final int minBedrooms;
+  final double? minPrice;
   final double? maxPrice;
+  final String selectedPriceRange;
 
   const MarketplaceFilter({
     this.listingType = 'all',
@@ -18,7 +20,9 @@ class MarketplaceFilter {
     this.searchQuery = '',
     this.selectedCategory = 'all',
     this.minBedrooms = 0,
+    this.minPrice,
     this.maxPrice,
+    this.selectedPriceRange = 'all',
   });
 
   MarketplaceFilter copyWith({
@@ -27,7 +31,10 @@ class MarketplaceFilter {
     String? searchQuery,
     String? selectedCategory,
     int? minBedrooms,
+    double? minPrice,
     double? maxPrice,
+    String? selectedPriceRange,
+    bool clearPrice = false,
   }) {
     return MarketplaceFilter(
       listingType: listingType ?? this.listingType,
@@ -35,7 +42,9 @@ class MarketplaceFilter {
       searchQuery: searchQuery ?? this.searchQuery,
       selectedCategory: selectedCategory ?? this.selectedCategory,
       minBedrooms: minBedrooms ?? this.minBedrooms,
-      maxPrice: maxPrice ?? this.maxPrice,
+      minPrice: clearPrice ? null : (minPrice ?? this.minPrice),
+      maxPrice: clearPrice ? null : (maxPrice ?? this.maxPrice),
+      selectedPriceRange: selectedPriceRange ?? this.selectedPriceRange,
     );
   }
 }
@@ -77,8 +86,11 @@ class MarketplaceState {
         return false;
       }
 
-      // Max price filter
-      if (filter.maxPrice != null && prop.price > filter.maxPrice!) {
+      // Min & Max price filter
+      if (filter.minPrice != null && prop.price > 0 && prop.price < filter.minPrice!) {
+        return false;
+      }
+      if (filter.maxPrice != null && prop.price > 0 && prop.price > filter.maxPrice!) {
         return false;
       }
 
@@ -163,6 +175,17 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
 
   void setBedrooms(int bedrooms) {
     state = state.copyWith(filter: state.filter.copyWith(minBedrooms: bedrooms));
+  }
+
+  void setPriceRange({double? min, double? max, String rangeKey = 'all'}) {
+    state = state.copyWith(
+      filter: state.filter.copyWith(
+        minPrice: min,
+        maxPrice: max,
+        selectedPriceRange: rangeKey,
+        clearPrice: rangeKey == 'all',
+      ),
+    );
   }
 
   void resetFilters() {

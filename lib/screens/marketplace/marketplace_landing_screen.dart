@@ -332,6 +332,41 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                                 ],
                               ),
                             ),
+                            const SizedBox(height: 12),
+
+                            // 4. Price / Budget Quick Filter Row
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    'Price:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (filter.listingType == 'rent') ...[
+                                    _buildPriceChip('Any Budget', 'all', filter.selectedPriceRange, () => notifier.setPriceRange(rangeKey: 'all')),
+                                    _buildPriceChip('Under ₦2M', 'under_2m', filter.selectedPriceRange, () => notifier.setPriceRange(max: 2000000, rangeKey: 'under_2m')),
+                                    _buildPriceChip('₦2M - ₦5M', '2m_5m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 2000000, max: 5000000, rangeKey: '2m_5m')),
+                                    _buildPriceChip('₦5M - ₦10M', '5m_10m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 5000000, max: 10000000, rangeKey: '5m_10m')),
+                                    _buildPriceChip('Above ₦10M', 'above_10m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 10000000, rangeKey: 'above_10m')),
+                                  ] else ...[
+                                    _buildPriceChip('Any Budget', 'all', filter.selectedPriceRange, () => notifier.setPriceRange(rangeKey: 'all')),
+                                    _buildPriceChip('Under ₦10M', 'under_10m', filter.selectedPriceRange, () => notifier.setPriceRange(max: 10000000, rangeKey: 'under_10m')),
+                                    _buildPriceChip('₦10M - ₦25M', '10m_25m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 10000000, max: 25000000, rangeKey: '10m_25m')),
+                                    _buildPriceChip('₦25M - ₦50M', '25m_50m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 25000000, max: 50000000, rangeKey: '25m_50m')),
+                                    _buildPriceChip('₦50M - ₦100M', '50m_100m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 50000000, max: 100000000, rangeKey: '50m_100m')),
+                                    _buildPriceChip('Above ₦100M', 'above_100m', filter.selectedPriceRange, () => notifier.setPriceRange(min: 100000000, rangeKey: 'above_100m')),
+                                  ],
+                                  const SizedBox(width: 8),
+                                  _buildCustomPriceButton(context, notifier, filter),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -360,7 +395,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       color: Color(0xFF1E293B),
                     ),
                   ),
-                  if (filter.listingType != 'all' || filter.selectedCity != 'All' || filter.minBedrooms > 0 || filter.searchQuery.isNotEmpty)
+                  if (filter.listingType != 'all' || filter.selectedCity != 'All' || filter.minBedrooms > 0 || filter.searchQuery.isNotEmpty || filter.selectedPriceRange != 'all')
                     TextButton.icon(
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('Reset Filters'),
@@ -598,6 +633,104 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
           fontSize: 12,
         ),
         onSelected: (_) => onTap(),
+      ),
+    );
+  }
+
+  Widget _buildPriceChip(String label, String rangeKey, String current, VoidCallback onTap) {
+    final isSelected = current == rangeKey;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: isSelected,
+        selectedColor: const Color(0xFF059669).withValues(alpha: 0.15),
+        labelStyle: TextStyle(
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFF334155),
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+        ),
+        onSelected: (_) => onTap(),
+      ),
+    );
+  }
+
+  Widget _buildCustomPriceButton(BuildContext context, MarketplaceNotifier notifier, MarketplaceFilter filter) {
+    final isCustom = filter.selectedPriceRange == 'custom';
+    return Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: ActionChip(
+        avatar: Icon(Icons.tune, size: 14, color: isCustom ? const Color(0xFF059669) : const Color(0xFF475569)),
+        label: Text(
+          isCustom && filter.maxPrice != null
+              ? 'Max ₦${(filter.maxPrice! / 1000000).toStringAsFixed(1)}M'
+              : 'Custom ₦',
+        ),
+        backgroundColor: isCustom ? const Color(0xFF059669).withValues(alpha: 0.15) : Colors.grey.shade100,
+        labelStyle: TextStyle(
+          color: isCustom ? const Color(0xFF059669) : const Color(0xFF334155),
+          fontWeight: isCustom ? FontWeight.bold : FontWeight.normal,
+          fontSize: 12,
+        ),
+        onPressed: () => _showCustomPriceDialog(context, notifier),
+      ),
+    );
+  }
+
+  void _showCustomPriceDialog(BuildContext context, MarketplaceNotifier notifier) {
+    final minCtrl = TextEditingController();
+    final maxCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.monetization_on_outlined, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Custom Price Range (₦)'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: minCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Minimum Price (₦)',
+                hintText: 'e.g. 5,000,000',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: maxCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Maximum Price (₦)',
+                hintText: 'e.g. 50,000,000',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () {
+              final min = double.tryParse(minCtrl.text.replaceAll(',', '').trim());
+              final max = double.tryParse(maxCtrl.text.replaceAll(',', '').trim());
+              notifier.setPriceRange(min: min, max: max, rangeKey: 'custom');
+              Navigator.pop(context);
+            },
+            child: const Text('Apply Price Filter', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
