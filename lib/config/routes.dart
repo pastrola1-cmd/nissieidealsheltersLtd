@@ -76,6 +76,7 @@ import 'package:nissie_ideal_shelters/screens/admin/admin_sms_portal_screen.dart
 import 'package:nissie_ideal_shelters/screens/admin/admin_email_portal_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/installment_plans_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_guide_screen.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/marketplace_landing_screen.dart';
 
 
 
@@ -131,7 +132,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: onboardingCompleted ? '/login' : '/onboarding',
+    initialLocation: '/',
     refreshListenable: RouterRefreshListenable(ref),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
@@ -139,11 +140,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == '/signup' ||
           state.matchedLocation == '/onboarding';
       final isAuthLoading = state.matchedLocation == '/auth-loading';
+      final isMarketplace = state.matchedLocation == '/' || state.matchedLocation == '/marketplace';
 
       // ── While auth is loading, show a branded loading screen ──
       if (authState.isLoading) {
-        // Don't redirect if already on the loading screen or on auth pages
-        return isAuthLoading ? null : '/auth-loading';
+        // Don't redirect if already on the loading screen, marketplace, or on auth pages
+        return (isAuthLoading || isMarketplace) ? null : '/auth-loading';
       }
 
       // ── If loading just finished, redirect away from auth-loading ──
@@ -151,14 +153,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (authState.isAuthenticated && authState.profile != null) {
           return _getDefaultRouteForRole(authState.profile!.role);
         }
-        return '/login';
+        return '/';
       }
 
-      // ── Redirect to login if not authenticated ──
+      // ── Unauthenticated visitors can view marketplace, property details, and auth ──
       if (!authState.isAuthenticated) {
         final isPropertyDetail = state.matchedLocation.startsWith('/properties/');
         final isLandingPage = state.matchedLocation.startsWith('/lp/');
-        return (loggingIn || isPropertyDetail || isLandingPage) ? null : '/login';
+        return (loggingIn || isPropertyDetail || isLandingPage || isMarketplace) ? null : '/';
       }
 
       final profile = authState.profile;
@@ -246,6 +248,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // ── Public Marketplace Landing (Root) ───────────────────────────
+      GoRoute(
+        path: '/',
+        name: 'marketplace',
+        builder: (context, state) => const MarketplaceLandingScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace',
+        name: 'marketplaceExplore',
+        builder: (context, state) => const MarketplaceLandingScreen(),
+      ),
+
       // ── Auth routes (no shell) ──────────────────────────────────────────
       GoRoute(
         path: '/onboarding',

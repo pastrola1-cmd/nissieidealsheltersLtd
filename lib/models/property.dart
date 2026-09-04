@@ -19,6 +19,18 @@ class Property {
   final String? targetAudience;
   final List<String>? documents;
   final Map<String, dynamic>? paymentPlans;
+  final String listingType; // 'rent', 'sale', 'shortlet'
+  final String propertyCategory; // 'apartment', 'flat', 'duplex', 'bungalow', 'self_contain', 'land', 'commercial'
+  final int bedrooms;
+  final int bathrooms;
+  final String city;
+  final String stateLocation;
+  final String? district;
+  final String rentPeriod; // 'year', 'month', 'total'
+  final double inspectionFee;
+  final bool isMarketplace;
+  final bool isVerified;
+  final bool shieldedContact;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -39,9 +51,40 @@ class Property {
     this.targetAudience,
     this.documents,
     this.paymentPlans,
+    this.listingType = 'sale',
+    this.propertyCategory = 'apartment',
+    this.bedrooms = 0,
+    this.bathrooms = 0,
+    this.city = 'Abuja',
+    this.stateLocation = 'FCT',
+    this.district,
+    this.rentPeriod = 'total',
+    this.inspectionFee = 3000.0,
+    this.isMarketplace = true,
+    this.isVerified = true,
+    this.shieldedContact = true,
     required this.createdAt,
     required this.updatedAt,
   });
+
+  bool get isRent => listingType == 'rent';
+  bool get isSale => listingType == 'sale';
+
+  String get displayPrice {
+    if (price >= 1000000) {
+      final m = price / 1000000;
+      final formattedM = m == m.roundToDouble() ? m.toInt().toString() : m.toStringAsFixed(1);
+      return isRent ? '₦${formattedM}M / $rentPeriod' : '₦${formattedM}M';
+    }
+    return isRent ? '₦${price.toStringAsFixed(0)} / $rentPeriod' : '₦${price.toStringAsFixed(0)}';
+  }
+
+  String get locationDisplay {
+    if (district != null && district!.isNotEmpty && city.isNotEmpty) {
+      return '$district, $city';
+    }
+    return location ?? city;
+  }
 
   /// Dynamically resolved list of title documents for the Nigerian market (falling back to realistic defaults)
   List<String> get verifiedDocuments {
@@ -74,6 +117,18 @@ class Property {
       targetAudience: json['target_audience'] as String?,
       documents: json['documents'] != null ? List<String>.from(json['documents']) : null,
       paymentPlans: json['payment_plans'] as Map<String, dynamic>?,
+      listingType: json['listing_type'] as String? ?? 'sale',
+      propertyCategory: json['property_category'] as String? ?? 'apartment',
+      bedrooms: json['bedrooms'] as int? ?? 0,
+      bathrooms: json['bathrooms'] as int? ?? 0,
+      city: json['city'] as String? ?? 'Abuja',
+      stateLocation: json['state'] as String? ?? 'FCT',
+      district: json['district'] as String?,
+      rentPeriod: json['rent_period'] as String? ?? 'year',
+      inspectionFee: (json['inspection_fee'] as num? ?? 3000.0).toDouble(),
+      isMarketplace: json['is_marketplace'] as bool? ?? true,
+      isVerified: json['is_verified'] as bool? ?? true,
+      shieldedContact: json['shielded_contact'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -97,6 +152,18 @@ class Property {
       'target_audience': targetAudience,
       'documents': documents,
       'payment_plans': paymentPlans,
+      'listing_type': listingType,
+      'property_category': propertyCategory,
+      'bedrooms': bedrooms,
+      'bathrooms': bathrooms,
+      'city': city,
+      'state': stateLocation,
+      'district': district,
+      'rent_period': rentPeriod,
+      'inspection_fee': inspectionFee,
+      'is_marketplace': isMarketplace,
+      'is_verified': isVerified,
+      'shielded_contact': shieldedContact,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -119,6 +186,18 @@ class Property {
     Object? targetAudience = const Object(),
     List<String>? documents,
     Map<String, dynamic>? paymentPlans,
+    String? listingType,
+    String? propertyCategory,
+    int? bedrooms,
+    int? bathrooms,
+    String? city,
+    String? stateLocation,
+    String? district,
+    String? rentPeriod,
+    double? inspectionFee,
+    bool? isMarketplace,
+    bool? isVerified,
+    bool? shieldedContact,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -141,6 +220,18 @@ class Property {
           : (targetAudience as String?),
       documents: documents ?? this.documents,
       paymentPlans: paymentPlans ?? this.paymentPlans,
+      listingType: listingType ?? this.listingType,
+      propertyCategory: propertyCategory ?? this.propertyCategory,
+      bedrooms: bedrooms ?? this.bedrooms,
+      bathrooms: bathrooms ?? this.bathrooms,
+      city: city ?? this.city,
+      stateLocation: stateLocation ?? this.stateLocation,
+      district: district ?? this.district,
+      rentPeriod: rentPeriod ?? this.rentPeriod,
+      inspectionFee: inspectionFee ?? this.inspectionFee,
+      isMarketplace: isMarketplace ?? this.isMarketplace,
+      isVerified: isVerified ?? this.isVerified,
+      shieldedContact: shieldedContact ?? this.shieldedContact,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
