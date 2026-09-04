@@ -411,8 +411,8 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 INSERT INTO public.companies (id, name, email, phone, address)
 VALUES (
   'd3b07384-d113-4ec6-a5d7-ecf9e01103e6',
-  'Scalewealth Estate',
-  'info@scalewealth.com',
+  'Nissie Ideal Shelters',
+  'info@nissieidealshelters.com.ng',
   '+2348000000000',
   'Abuja, Nigeria'
 ) ON CONFLICT DO NOTHING;

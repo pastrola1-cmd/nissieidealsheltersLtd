@@ -7,9 +7,9 @@ void main() {
     test('Company model tests', () {
       final json = {
         'id': 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6',
-        'name': 'Scalewealth Estate',
+        'name': 'Nissie Ideal Shelters',
         'logo_url': 'https://example.com/logo.png',
-        'email': 'info@scalewealth.com',
+        'email': 'info@nissieidealshelters.com.ng',
         'phone': '+2348000000000',
         'address': 'Abuja, Nigeria',
         'created_at': '2026-06-10T10:00:00.000Z',
@@ -17,7 +17,7 @@ void main() {
 
       final company = Company.fromJson(json);
       expect(company.id, 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6');
-      expect(company.name, 'Scalewealth Estate');
+      expect(company.name, 'Nissie Ideal Shelters');
       expect(company.logoUrl, 'https://example.com/logo.png');
       expect(company.isHidden, false);
 

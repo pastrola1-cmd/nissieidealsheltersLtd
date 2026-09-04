@@ -276,7 +276,7 @@ class SubscriptionPlan {
       'Up to 2 listings',
       'Up to 1 registered partner',
       '10 leads per month',
-      'Shared ScaleWealth App branding',
+      'Shared Nissie Ideal Shelters App branding',
       'No Custom Domain or White-labeling',
     ],
   );

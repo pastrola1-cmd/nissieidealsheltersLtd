@@ -1,5 +1,5 @@
 -- =============================================================================
--- LOOP 29: Scalewealth Estate Document Engine (SDE)
+-- LOOP 29: Nissie Ideal Shelters Document Engine (NDE)
 -- =============================================================================
 -- Run this migration in the Supabase SQL Editor.
 -- =============================================================================

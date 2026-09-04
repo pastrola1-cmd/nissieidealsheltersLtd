@@ -135,7 +135,7 @@ void main() {
         features: const ['Gym'],
       );
 
-      final linkUrl = 'https://scalewealth.com/properties/prop_123?ref=AGENT123&camp=CAMP777';
+      final linkUrl = 'https://nissieidealshelters.com.ng/properties/prop_123?ref=AGENT123&camp=CAMP777';
 
       // Check Facebook
       final formattedFb = PlatformFormatter.format(

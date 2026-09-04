@@ -70,7 +70,7 @@ class PartnerNotifier extends Notifier<PartnerState> {
   /// Generates a unique referral code.
   /// Format: {COMPANY_PREFIX}-{PARTNER_INITIALS}-{4_RANDOM_CHARS}
   String _generateReferralCode(String fullName, String companyName) {
-    // 1. Get Company Prefix (e.g. "Scalewealth Estate" -> "SWE" or "SE")
+    // 1. Get Company Prefix (e.g. "Nissie Ideal Shelters" -> "NIS")
     final companyWords = companyName.trim().split(RegExp(r'[\s_]+'));
     String companyPrefix = '';
     for (var word in companyWords) {
@@ -79,7 +79,7 @@ class PartnerNotifier extends Notifier<PartnerState> {
       }
     }
     if (companyPrefix.length < 2) {
-      // Try camel case split e.g., ScaleWealthEstate
+      // Try camel case split e.g., NissieIdealShelters
       final camelCaseWords = companyName.split(RegExp(r'(?=[A-Z])'));
       companyPrefix = camelCaseWords.where((w) => w.trim().isNotEmpty).map((w) => w.trim()[0]).join();
     }
