@@ -6,13 +6,14 @@ import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 class MarketplaceFilter {
   final String listingType; // 'all', 'rent', 'sale', 'nissie_estates'
-  final String selectedCity; // 'All', 'Abuja', 'Lagos'
+  final String selectedCity; // 'All', 'Abuja', 'Lagos', ...
   final String searchQuery;
   final String selectedCategory; // 'all', 'apartment', 'duplex', 'bungalow', 'self_contain', 'land'
   final int minBedrooms;
   final double? minPrice;
   final double? maxPrice;
   final String selectedPriceRange;
+  final String sortOrder; // 'newest', 'price_asc', 'price_desc'
 
   const MarketplaceFilter({
     this.listingType = 'all',
@@ -23,6 +24,7 @@ class MarketplaceFilter {
     this.minPrice,
     this.maxPrice,
     this.selectedPriceRange = 'all',
+    this.sortOrder = 'newest',
   });
 
   MarketplaceFilter copyWith({
@@ -34,6 +36,7 @@ class MarketplaceFilter {
     double? minPrice,
     double? maxPrice,
     String? selectedPriceRange,
+    String? sortOrder,
     bool clearPrice = false,
   }) {
     return MarketplaceFilter(
@@ -45,6 +48,7 @@ class MarketplaceFilter {
       minPrice: clearPrice ? null : (minPrice ?? this.minPrice),
       maxPrice: clearPrice ? null : (maxPrice ?? this.maxPrice),
       selectedPriceRange: selectedPriceRange ?? this.selectedPriceRange,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 }
@@ -65,7 +69,7 @@ class MarketplaceState {
   });
 
   List<Property> get filteredProperties {
-    return allProperties.where((prop) {
+    final list = allProperties.where((prop) {
       // Listing type filter
       if (filter.listingType == 'rent' && !prop.isRent) return false;
       if (filter.listingType == 'sale' && !prop.isSale) return false;
@@ -108,6 +112,19 @@ class MarketplaceState {
 
       return true;
     }).toList();
+    switch (filter.sortOrder) {
+      case 'price_asc':
+        list.sort((a, b) => a.price.compareTo(b.price));
+        break;
+      case 'price_desc':
+        list.sort((a, b) => b.price.compareTo(a.price));
+        break;
+      case 'newest':
+      default:
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+    return list;
   }
 
   MarketplaceState copyWith({
@@ -138,6 +155,7 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
   }
 
   Future<void> loadMarketplace() async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final dbProperties = await _supabaseService.getProperties();
       if (dbProperties.isNotEmpty) {
@@ -152,13 +170,23 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
       } else {
         state = state.copyWith(allProperties: _generateCuratedListings(), isLoading: false);
       }
-    } catch (_) {
-      state = state.copyWith(allProperties: _generateCuratedListings(), isLoading: false);
+    } catch (e) {
+      state = state.copyWith(
+        allProperties: _generateCuratedListings(),
+        isLoading: false,
+        errorMessage: 'Could not reach database. Showing cached listings.',
+      );
     }
   }
 
   void setListingType(String type) {
-    state = state.copyWith(filter: state.filter.copyWith(listingType: type));
+    // Clear stale price range when switching rent/sale — keys are disjoint.
+    final cleared = state.filter.selectedPriceRange != 'all' ? true : false;
+    var next = state.filter.copyWith(listingType: type);
+    if (cleared) {
+      next = next.copyWith(selectedPriceRange: 'all', clearPrice: true);
+    }
+    state = state.copyWith(filter: next);
   }
 
   void setCity(String city) {
@@ -192,7 +220,13 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     state = state.copyWith(filter: const MarketplaceFilter());
   }
 
-  /// Books an inspection with escrow protection and a 4-digit verification PIN
+  void setSortOrder(String order) {
+    state = state.copyWith(filter: state.filter.copyWith(sortOrder: order));
+  }
+
+  /// Books an inspection with escrow protection and a 4-digit verification PIN.
+  /// NOTE: PIN is issued client-side for UX only. Server RPC must re-validate
+  /// PIN + booking + status before any payout (see settle_inspection_pin_payout).
   InspectionBooking bookInspection({
     required String propertyId,
     String? renterId,
@@ -202,12 +236,18 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     required DateTime date,
     required String time,
     String? notes,
+    double feeAmount = 3000.0,
   }) {
-    final random = Random();
-    final pin = (1000 + random.nextInt(9000)).toString(); // e.g. "4829"
+    final random = Random.secure();
+    // Ensure uniqueness within local session (1/9000 collision space).
+    final existingPins = state.myBookings.map((b) => b.completionPin).toSet();
+    String pin;
+    do {
+      pin = (1000 + random.nextInt(9000)).toString();
+    } while (existingPins.contains(pin));
 
     final booking = InspectionBooking(
-      id: 'book_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'book_${DateTime.now().millisecondsSinceEpoch}_${random.nextInt(9999)}',
       propertyId: propertyId,
       renterId: renterId,
       renterName: renterName,
@@ -216,7 +256,12 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
       scheduledDate: date,
       scheduledTime: time,
       completionPin: pin,
-      status: InspectionEscrowStatus.paidEscrow,
+      feeAmount: feeAmount,
+      agentPayoutAmount: feeAmount <= 0 ? 0 : 2000.0,
+      platformFeeAmount: feeAmount <= 0 ? 0 : 1000.0,
+      status: feeAmount <= 0
+          ? InspectionEscrowStatus.agentAssigned
+          : InspectionEscrowStatus.paidEscrow,
       notes: notes,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -242,7 +287,24 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
   }
 
   void addProperty(Property property) {
-    state = state.copyWith(allProperties: [property, ...state.allProperties]);
+    final existing = state.allProperties.where((p) => p.id != property.id).toList();
+    state = state.copyWith(allProperties: [property, ...existing]);
+  }
+
+  void updatePropertyPrice(String id, double price) {
+    final updated = state.allProperties
+        .map((p) => p.id == id ? p.copyWith(price: price, updatedAt: DateTime.now()) : p)
+        .toList();
+    state = state.copyWith(allProperties: updated);
+  }
+
+  /// Swaps a local booking id for its server UUID after DB insert,
+  /// so escrow verify / payout RPCs reference a real row.
+  void replaceBookingId(String oldId, String newId) {
+    final updated = state.myBookings
+        .map((b) => b.id == oldId ? b.copyWith(id: newId) : b)
+        .toList();
+    state = state.copyWith(myBookings: updated);
   }
 
   List<Property> _generateCuratedListings() {

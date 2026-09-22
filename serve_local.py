@@ -16,6 +16,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         # Extract pure path without query strings
         url_path = urllib.parse.urlparse(path).path
+        
         if url_path.startswith('/portal-new'):
             url_path = url_path[len('/portal-new'):]
         
@@ -29,12 +30,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         return local_path
 
     def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == '' or parsed.path == '/':
-            self.send_response(302)
-            self.send_header('Location', '/portal-new/')
-            self.end_headers()
-            return
         return super().do_GET()
 
     def end_headers(self):
@@ -44,5 +39,5 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     with ThreadedHTTPServer(("", PORT), CustomHandler) as httpd:
-        print(f"Serving Nissie Ideal Shelters Portal at: http://localhost:{PORT}/portal-new/")
+        print(f"Serving Nissie Ideal Shelters Portal at: http://localhost:{PORT}/")
         httpd.serve_forever()

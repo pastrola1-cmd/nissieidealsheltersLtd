@@ -1,6 +1,10 @@
 # Environment variables (contains Supabase keys)
 .env
 env
+env.txt
+.env.local
+.supabase_dbpw
+.supabase_pat
 
 # Miscellaneous
 *.class
@@ -48,4 +52,8 @@ app.*.map.json
 build_output.txt
 nissie_web_portal/
 scratch/
+# Android release signing — never commit
+android/key.properties
+android/*.keystore
+android/*.jks
 

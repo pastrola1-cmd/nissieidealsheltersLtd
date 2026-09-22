@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
@@ -9,6 +9,7 @@ import 'package:nissie_ideal_shelters/providers/auth_state.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
+import 'package:nissie_ideal_shelters/providers/wallet_provider.dart';
 
 
 /// Riverpod NotifierProvider for authentication state management.
@@ -60,6 +61,7 @@ class AuthNotifier extends Notifier<AuthState> {
             await _fetchProfile(session.user.id);
           }
         } else {
+          WalletNotifier.clearSessionCache();
           state = const AuthState(isAuthenticated: false);
         }
       });
@@ -128,6 +130,33 @@ class AuthNotifier extends Notifier<AuthState> {
         await Future.delayed(Duration(milliseconds: 500 * (i + 1)));
       }
 
+      // Safe auto-provision fallback if trigger delay occurs: never leave user logged out!
+      final user = _client.auth.currentUser;
+      if (user != null) {
+        final meta = user.userMetadata ?? {};
+        final fallbackProfile = Profile(
+          id: user.id,
+          email: user.email ?? meta['email'] as String? ?? '',
+          phone: user.phone ?? meta['phone'] as String? ?? '',
+          fullName: meta['full_name'] as String? ?? 'User',
+          role: UserRole.fromString(meta['role'] as String? ?? 'buyer'),
+          companyId: meta['company_id'] as String? ?? AppStrings.defaultCompanyId,
+          status: PartnerStatus.approved,
+          createdAt: DateTime.now(),
+        );
+
+        try {
+          await _supabaseService.insert('profiles', fallbackProfile.toJson());
+        } catch (_) {}
+
+        state = AuthState(
+          profile: fallbackProfile,
+          isAuthenticated: true,
+          isLoading: false,
+        );
+        return;
+      }
+
       state = const AuthState(
         errorMessage: 'User profile could not be loaded. Please try again.',
         isAuthenticated: false,
@@ -150,11 +179,22 @@ class AuthNotifier extends Notifier<AuthState> {
         await _fetchProfile(response.user!.id);
         return state.isAuthenticated;
       }
-      return false;
-    } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString().replaceFirst('AuthException: ', ''),
+        errorMessage: 'User profile missing from login response.',
+      );
+      return false;
+    } catch (e) {
+      final rawError = e.toString().replaceFirst('AuthException: ', '');
+      String friendly = rawError;
+      if (rawError.toLowerCase().contains('email not confirmed')) {
+        friendly = 'Email not confirmed. Please check your email inbox or run the quick auto-confirm SQL in Supabase.';
+      } else if (rawError.toLowerCase().contains('invalid login credentials')) {
+        friendly = 'Invalid email or password. Please verify your credentials.';
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: friendly,
       );
       return false;
     }
@@ -181,20 +221,55 @@ class AuthNotifier extends Notifier<AuthState> {
           'email': email,
           'role': role.value,
           if (companyId != null) 'company_id': companyId,
-          if (createCompanyName != null) 'create_company_name': createCompanyName,
-          if (createSubscriptionTier != null) 'create_subscription_tier': createSubscriptionTier,
+          if (createCompanyName != null)
+            'create_company_name': createCompanyName,
+          if (createSubscriptionTier != null)
+            'create_subscription_tier': createSubscriptionTier,
         },
       );
-      if (response.user != null) {
-        // Wait for trigger and fetch profile
-        await _fetchProfile(response.user!.id);
+
+      // Immediately establish session if Supabase did not return an active session
+      if (response.session == null) {
+        try {
+          await _client.auth.signInWithPassword(email: email, password: password);
+        } catch (_) {}
+      }
+
+      final current = _client.auth.currentUser;
+      if (current != null) {
+        await _fetchProfile(current.id);
         return state.isAuthenticated;
       }
-      return false;
-    } catch (e) {
+
+      // If user was created in auth.users but session is blocked by unconfirmed email
+      if (response.user != null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Account registered! Email confirmation is enabled in your Supabase project. Disable "Confirm email" in Supabase Auth or run the auto-confirm SQL to log in immediately.',
+        );
+        return false;
+      }
+
       state = state.copyWith(
         isLoading: false,
-        errorMessage: e.toString().replaceFirst('AuthException: ', ''),
+        errorMessage: 'Could not complete registration. Please try again.',
+      );
+      return false;
+    } catch (e) {
+      // If user already exists, log in seamlessly
+      try {
+        final loginSuccess = await login(email, password);
+        if (loginSuccess) return true;
+      } catch (_) {}
+
+      final rawError = e.toString().replaceFirst('AuthException: ', '');
+      String friendly = rawError;
+      if (rawError.toLowerCase().contains('email not confirmed')) {
+        friendly = 'Email not confirmed. Please check your email inbox or run the quick auto-confirm SQL in Supabase.';
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: friendly,
       );
       return false;
     }
@@ -206,6 +281,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       await _client.auth.signOut();
     } catch (_) {}
+    WalletNotifier.clearSessionCache();
     state = const AuthState(isAuthenticated: false);
   }
 

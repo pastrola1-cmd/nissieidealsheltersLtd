@@ -78,6 +78,7 @@ import 'package:nissie_ideal_shelters/screens/admin/installment_plans_screen.dar
 import 'package:nissie_ideal_shelters/screens/admin/admin_guide_screen.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/marketplace_landing_screen.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/landlord_registration_screen.dart';
+import 'package:nissie_ideal_shelters/screens/landlord/landlord_dashboard_screen.dart';
 
 
 
@@ -119,7 +120,7 @@ String _getDefaultRouteForRole(UserRole role) {
     case UserRole.buyer:
       return '/';
     case UserRole.landlord:
-      return '/list-property';
+      return '/landlord/dashboard';
   }
 }
 
@@ -131,8 +132,6 @@ final onboardingCompletedProvider = FutureProvider<bool>((ref) async {
 
 /// Provides the application's [GoRouter] instance via Riverpod.
 final routerProvider = Provider<GoRouter>((ref) {
-  final onboardingCompleted = ref.watch(onboardingCompletedProvider).value ?? false;
-
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
@@ -149,7 +148,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── While auth is loading, show a branded loading screen ──
       if (authState.isLoading) {
         // Don't redirect if already on the loading screen, marketplace, or on auth pages
-        return (isAuthLoading || isMarketplace || isLandlordRegister) ? null : '/auth-loading';
+        return (isAuthLoading || isMarketplace || isLandlordRegister || loggingIn) ? null : '/auth-loading';
       }
 
       // ── If loading just finished, redirect away from auth-loading ──
@@ -248,6 +247,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (location == '/training/manage' && profile.role != UserRole.admin && profile.role != UserRole.manager) {
         return _getDefaultRouteForRole(profile.role);
       }
+      if (location.startsWith('/landlord') && profile.role != UserRole.landlord && profile.role != UserRole.admin && profile.role != UserRole.platformAdmin) {
+        return _getDefaultRouteForRole(profile.role);
+      }
+      if (location == '/settings' && profile.role != UserRole.admin && profile.role != UserRole.platformAdmin && profile.role != UserRole.manager) {
+        return _getDefaultRouteForRole(profile.role);
+      }
 
       return null;
     },
@@ -261,7 +266,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/marketplace',
         name: 'marketplaceExplore',
-        builder: (context, state) => const MarketplaceLandingScreen(),
+        redirect: (context, state) => '/',
       ),
       GoRoute(
         path: '/list-property',
@@ -271,7 +276,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/landlord/register',
         name: 'landlordRegister',
-        builder: (context, state) => const LandlordRegistrationScreen(),
+        redirect: (context, state) => '/list-property',
+      ),
+      GoRoute(
+        path: '/landlord/dashboard',
+        name: 'landlordDashboard',
+        builder: (context, state) => const LandlordDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/buyer/dashboard',
+        redirect: (context, state) => '/buyer/browse',
       ),
 
       // ── Auth routes (no shell) ──────────────────────────────────────────
@@ -807,7 +821,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/marketer/properties',
-                name: ' marketerProperties',
+                name: 'marketerProperties',
                 builder: (context, state) => const PartnerPropertiesScreen(),
               ),
             ],

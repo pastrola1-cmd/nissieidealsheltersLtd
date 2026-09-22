@@ -3,33 +3,11 @@
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
-  <script>
-    // Force clear all legacy service workers and cache storage to prevent blank screen from stale caches
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (let registration of registrations) {
-          registration.unregister();
-        }
-      });
-    }
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        for (let name of names) {
-          caches.delete(name);
-        }
-      });
-    }
-  </script>
-
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Nissie Ideal Shelters - Premium Real Estate Operating System">
-  
-  <!-- Aggressive Cache Busting to ensure all staff always load latest security updates -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
+  <meta name="theme-color" content="#0F172A">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -44,6 +22,6 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script src="flutter_bootstrap.js?v=20260824_03" async></script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

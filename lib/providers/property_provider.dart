@@ -5,6 +5,7 @@ import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/company_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
+import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 
 class PropertyState {
   final List<Property> properties;
@@ -78,6 +79,18 @@ class PropertyNotifier extends Notifier<PropertyState> {
     required CommissionType commissionType,
     required double commissionValue,
     String? targetAudience,
+    String listingType = 'sale',
+    String propertyCategory = 'apartment',
+    int bedrooms = 0,
+    int bathrooms = 0,
+    String city = 'Abuja',
+    String stateLocation = 'FCT',
+    String? district,
+    String rentPeriod = 'year',
+    double inspectionFee = 3000.0,
+    bool isMarketplace = true,
+    bool isVerified = true,
+    bool shieldedContact = true,
   }) async {
     final profile = ref.read(authProvider).profile;
     final companyId = profile?.companyId;
@@ -115,6 +128,18 @@ class PropertyNotifier extends Notifier<PropertyState> {
         'commission_type': commissionType.value,
         'commission_value': commissionValue,
         'target_audience': targetAudience,
+        'listing_type': listingType,
+        'property_category': propertyCategory,
+        'bedrooms': bedrooms,
+        'bathrooms': bathrooms,
+        'city': city,
+        'state': stateLocation,
+        'district': district,
+        'rent_period': rentPeriod,
+        'inspection_fee': inspectionFee,
+        'is_marketplace': isMarketplace,
+        'is_verified': isVerified,
+        'shielded_contact': shieldedContact,
       };
 
       final insertedRaw = await _supabaseService.insert('properties', insertData);
@@ -151,6 +176,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
       final currentList = List<Property>.from(state.properties);
       currentList.insert(0, finalProperty);
       state = PropertyState(properties: currentList, isLoading: false);
+      try { ref.read(marketplaceProvider.notifier).loadMarketplace(); } catch (_) {}
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -173,6 +199,18 @@ class PropertyNotifier extends Notifier<PropertyState> {
     required CommissionType commissionType,
     required double commissionValue,
     String? targetAudience,
+    String? listingType,
+    String? propertyCategory,
+    int? bedrooms,
+    int? bathrooms,
+    String? city,
+    String? stateLocation,
+    String? district,
+    String? rentPeriod,
+    double? inspectionFee,
+    bool? isMarketplace,
+    bool? isVerified,
+    bool? shieldedContact,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -206,6 +244,18 @@ class PropertyNotifier extends Notifier<PropertyState> {
         'commission_type': commissionType.value,
         'commission_value': commissionValue,
         'target_audience': targetAudience,
+        if (listingType != null) 'listing_type': listingType,
+        if (propertyCategory != null) 'property_category': propertyCategory,
+        if (bedrooms != null) 'bedrooms': bedrooms,
+        if (bathrooms != null) 'bathrooms': bathrooms,
+        if (city != null) 'city': city,
+        if (stateLocation != null) 'state': stateLocation,
+        if (district != null) 'district': district,
+        if (rentPeriod != null) 'rent_period': rentPeriod,
+        if (inspectionFee != null) 'inspection_fee': inspectionFee,
+        if (isMarketplace != null) 'is_marketplace': isMarketplace,
+        if (isVerified != null) 'is_verified': isVerified,
+        if (shieldedContact != null) 'shielded_contact': shieldedContact,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -215,6 +265,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
       // 3. Update state
       final currentList = state.properties.map((p) => p.id == id ? updatedProperty : p).toList();
       state = PropertyState(properties: currentList, isLoading: false);
+      try { ref.read(marketplaceProvider.notifier).loadMarketplace(); } catch (_) {}
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -228,6 +279,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
       await _supabaseService.delete('properties', id);
       final currentList = state.properties.where((p) => p.id != id).toList();
       state = PropertyState(properties: currentList, isLoading: false);
+      try { ref.read(marketplaceProvider.notifier).loadMarketplace(); } catch (_) {}
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

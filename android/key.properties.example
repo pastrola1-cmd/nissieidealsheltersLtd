@@ -1,0 +1,4 @@
+storeFile=../nissie-release.keystore
+storePassword=REPLACE_ME
+keyAlias=nissie
+keyPassword=REPLACE_ME

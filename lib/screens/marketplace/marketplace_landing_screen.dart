@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
+import 'package:nissie_ideal_shelters/providers/wallet_provider.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/marketplace_property_card.dart';
-import 'package:nissie_ideal_shelters/screens/marketplace/widgets/inspection_booking_modal.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/my_inspections_modal.dart';
+import 'package:nissie_ideal_shelters/screens/wallet/renter_wallet_modal.dart';
+import 'package:nissie_ideal_shelters/screens/wallet/agent_withdrawal_modal.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/agent_pin_verification_modal.dart';
 
 class MarketplaceLandingScreen extends ConsumerStatefulWidget {
   const MarketplaceLandingScreen({super.key});
@@ -157,6 +161,36 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                     }),
                   ),
 
+                  // Wallet button
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Builder(builder: (context) {
+                      final balance = ref.watch(walletProvider).wallet.balance;
+                      if (isWide || isTablet) {
+                        return OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0F172A),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.account_balance_wallet_outlined, size: 16, color: Colors.green),
+                          label: Text(
+                            'Wallet: ₦${NumberFormat('#,##0').format(balance)}',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: () => RenterWalletModal.show(context),
+                        );
+                      } else {
+                        return IconButton(
+                          tooltip: 'Digital Wallet',
+                          icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.green, size: 22),
+                          onPressed: () => RenterWalletModal.show(context),
+                        );
+                      }
+                    }),
+                  ),
+
                   // User Account Menu
                   Padding(
                     padding: const EdgeInsets.only(right: 16.0),
@@ -206,6 +240,36 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                             ],
                           ),
                         ),
+                        const PopupMenuItem(
+                          value: 'wallet',
+                          child: Row(
+                            children: [
+                              Icon(Icons.account_balance_wallet_outlined, size: 18, color: Colors.green),
+                              SizedBox(width: 10),
+                              Text('Digital Wallet & Deposits'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'verify_pin',
+                          child: Row(
+                            children: [
+                              Icon(Icons.pin_outlined, size: 18, color: Color(0xFF0F172A)),
+                              SizedBox(width: 10),
+                              Text('Verify PIN (Agent Payout)'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'withdraw',
+                          child: Row(
+                            children: [
+                              Icon(Icons.account_balance, size: 18, color: Colors.blue),
+                              SizedBox(width: 10),
+                              Text('Withdraw Earnings to Bank'),
+                            ],
+                          ),
+                        ),
                         const PopupMenuDivider(),
                         const PopupMenuItem(
                           value: 'logout',
@@ -221,6 +285,12 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       onSelected: (val) {
                         if (val == 'inspections') {
                           MyInspectionsModal.show(context);
+                        } else if (val == 'wallet') {
+                          RenterWalletModal.show(context);
+                        } else if (val == 'verify_pin') {
+                          AgentPinVerificationModal.show(context);
+                        } else if (val == 'withdraw') {
+                          AgentWithdrawalModal.show(context);
                         } else if (val == 'logout') {
                           ref.read(authProvider.notifier).logout();
                         }
@@ -242,10 +312,18 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       label: const Text('My Dashboard', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                       onPressed: () {
                         final role = authState.profile!.role;
-                        if (role == UserRole.landlord) {
-                          context.push('/list-property');
-                        } else {
-                          context.go('/${role.value}/dashboard');
+                        switch (role) {
+                          case UserRole.landlord:
+                            context.push('/landlord/dashboard');
+                            break;
+                          case UserRole.buyer:
+                            context.go('/buyer/browse');
+                            break;
+                          case UserRole.platformAdmin:
+                            context.go('/platform/dashboard');
+                            break;
+                          default:
+                            context.go('/${role.value}/dashboard');
                         }
                       },
                     ),
@@ -332,6 +410,27 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           ],
                         ),
                       ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 'verify_pin',
+                        child: Row(
+                          children: [
+                            Icon(Icons.pin_outlined, size: 18, color: AppColors.primary),
+                            SizedBox(width: 10),
+                            Text('Field Agent: Verify 4-Digit PIN'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'wallet',
+                        child: Row(
+                          children: [
+                            Icon(Icons.account_balance_wallet_outlined, size: 18, color: Colors.green),
+                            SizedBox(width: 10),
+                            Text('Digital Wallet & Deposits'),
+                          ],
+                        ),
+                      ),
                     ],
                     onSelected: (val) {
                       if (val == 'login') {
@@ -342,6 +441,10 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         context.push('/login');
                       } else if (val == 'list_prop') {
                         context.push('/list-property');
+                      } else if (val == 'verify_pin') {
+                        AgentPinVerificationModal.show(context);
+                      } else if (val == 'wallet') {
+                        RenterWalletModal.show(context);
                       }
                     },
                   ),
@@ -384,7 +487,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                             Icon(Icons.shield_rounded, color: Color(0xFF38BDF8), size: 14),
                             SizedBox(width: 6),
                             Text(
-                              'Nigeria\'s Escrow-Protected Property Portal',
+                              'Nigeria\'s Verified & Protected Property Portal',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 11.5,
@@ -412,7 +515,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
 
                       // Subtitle
                       Text(
-                        'Say goodbye to fake agents and wasted inspection fees. Book verified physical inspections for only ₦3,000 protected in escrow.',
+                        'Say goodbye to fake agents and wasted inspection fees. Book verified physical inspections for only ₦3,000 protected until you inspect.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: const Color(0xFF94A3B8),
@@ -438,9 +541,11 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         ),
                         child: Column(
                           children: [
-                            // 1. Listing Type Selector Tabs
-                            Row(
-                              children: [
+                            // 1. Listing Type Selector Tabs (scrollable on phones)
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
                                 _buildListingTypeTab(
                                   label: 'All Listings',
                                   type: 'all',
@@ -462,14 +567,14 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                                   onTap: () => notifier.setListingType('sale'),
                                 ),
                                 const SizedBox(width: 8),
-                                if (isWide || isTablet)
-                                  _buildListingTypeTab(
-                                    label: 'Nissie Estates 👑',
-                                    type: 'nissie_estates',
-                                    current: filter.listingType,
-                                    onTap: () => notifier.setListingType('nissie_estates'),
-                                  ),
-                              ],
+                                _buildListingTypeTab(
+                                  label: 'Nissie Estates 👑',
+                                  type: 'nissie_estates',
+                                  current: filter.listingType,
+                                  onTap: () => notifier.setListingType('nissie_estates'),
+                                ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 14),
 
@@ -480,7 +585,10 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                                 Expanded(
                                   child: TextField(
                                     controller: _searchController,
-                                    onChanged: (val) => notifier.setSearchQuery(val),
+                                    onChanged: (val) {
+                                      notifier.setSearchQuery(val);
+                                      setState(() {});
+                                    },
                                     decoration: InputDecoration(
                                       hintText: 'Search district (e.g. Maitama, Lekki, Guzape, Gwarinpa)...',
                                       prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
@@ -490,6 +598,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                                               onPressed: () {
                                                 _searchController.clear();
                                                 notifier.setSearchQuery('');
+                                                setState(() {});
                                               },
                                             )
                                           : null,
@@ -524,6 +633,8 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                                   _buildCityChip('All', filter.selectedCity, () => notifier.setCity('All')),
                                   _buildCityChip('Abuja', filter.selectedCity, () => notifier.setCity('Abuja')),
                                   _buildCityChip('Lagos', filter.selectedCity, () => notifier.setCity('Lagos')),
+                                  _buildCityChip('PH', filter.selectedCity, () => notifier.setCity('Port Harcourt')),
+                                  _buildCityChip('Ibadan', filter.selectedCity, () => notifier.setCity('Ibadan')),
                                   const SizedBox(width: 16),
                                   const Text(
                                     'Beds:',
@@ -594,33 +705,102 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                 horizontal: isWide ? 48.0 : 20.0,
                 vertical: 20.0,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${properties.length} Verified Properties Available',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                  if (marketplaceState.errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.cloud_off_outlined, size: 16, color: Color(0xFFB45309)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              marketplaceState.errorMessage!,
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => notifier.loadMarketplace(),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          marketplaceState.isLoading && properties.isEmpty
+                              ? 'Loading verified properties…'
+                              : '${properties.length} Verified Propert${properties.length == 1 ? 'y' : 'ies'} Available',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                      DropdownButton<String>(
+                        value: filter.sortOrder,
+                        underline: const SizedBox(),
+                        icon: const Icon(Icons.sort, size: 16),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                        items: const [
+                          DropdownMenuItem(value: 'newest', child: Text('Newest')),
+                          DropdownMenuItem(value: 'price_asc', child: Text('Price ↑')),
+                          DropdownMenuItem(value: 'price_desc', child: Text('Price ↓')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) notifier.setSortOrder(v);
+                        },
+                      ),
+                      if (filter.listingType != 'all' || filter.selectedCity != 'All' || filter.minBedrooms > 0 || filter.searchQuery.isNotEmpty || filter.selectedPriceRange != 'all')
+                        TextButton.icon(
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Reset'),
+                          onPressed: () {
+                            _searchController.clear();
+                            notifier.resetFilters();
+                            setState(() {});
+                          },
+                        ),
+                    ],
                   ),
-                  if (filter.listingType != 'all' || filter.selectedCity != 'All' || filter.minBedrooms > 0 || filter.searchQuery.isNotEmpty || filter.selectedPriceRange != 'all')
-                    TextButton.icon(
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Reset Filters'),
-                      onPressed: () {
-                        _searchController.clear();
-                        notifier.resetFilters();
-                      },
-                    ),
                 ],
               ),
             ),
           ),
 
           // ── Property Grid / Feed ──
-          if (properties.isEmpty)
+          if (marketplaceState.isLoading && properties.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: isWide ? 48.0 : 20.0),
+                child: Column(
+                  children: List.generate(
+                    3,
+                    (_) => Container(
+                      height: 220,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else if (properties.isEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(40.0),
@@ -662,13 +842,13 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 20,
-                        mainAxisSpacing: 10,
+                        mainAxisSpacing: 12,
                         childAspectRatio: 0.85,
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => MarketplacePropertyCard(
                           property: properties[index],
-                          onTap: () => InspectionBookingModal.show(context, properties[index]),
+                          onTap: () => context.go('/properties/${properties[index].id}'),
                         ),
                         childCount: properties.length,
                       ),
@@ -678,13 +858,13 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 16,
-                            mainAxisSpacing: 10,
+                            mainAxisSpacing: 12,
                             childAspectRatio: 0.88,
                           ),
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => MarketplacePropertyCard(
                               property: properties[index],
-                              onTap: () => InspectionBookingModal.show(context, properties[index]),
+                              onTap: () => context.go('/properties/${properties[index].id}'),
                             ),
                             childCount: properties.length,
                           ),
@@ -693,7 +873,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => MarketplacePropertyCard(
                               property: properties[index],
-                              onTap: () => InspectionBookingModal.show(context, properties[index]),
+                              onTap: () => context.go('/properties/${properties[index].id}'),
                             ),
                             childCount: properties.length,
                           ),
@@ -717,7 +897,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '🛡️ HOW OUR ESCROW-PROTECTED INSPECTION WORKS',
+                    '🛡️ HOW VERIFIED PHYSICAL INSPECTIONS WORK',
                     style: TextStyle(
                       color: AppColors.primary,
                       fontSize: 12,
@@ -746,8 +926,8 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       ),
                       _buildStepCard(
                         step: '2',
-                        title: 'Pay ₦3,000 Escrow',
-                        description: 'Book your inspection. Your fee is held securely by Nissie. You receive a secret 4-Digit PIN.',
+                        title: 'Pay ₦3,000 Deposit',
+                        description: 'Pay your tour deposit securely via Card, Transfer, or Wallet. You receive a secret 4-Digit PIN.',
                       ),
                       _buildStepCard(
                         step: '3',
@@ -872,8 +1052,12 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
       child: ActionChip(
         avatar: Icon(Icons.tune, size: 14, color: isCustom ? const Color(0xFF059669) : const Color(0xFF475569)),
         label: Text(
-          isCustom && filter.maxPrice != null
-              ? 'Max ₦${(filter.maxPrice! / 1000000).toStringAsFixed(1)}M'
+          isCustom
+              ? (filter.minPrice != null && filter.maxPrice != null
+                  ? '₦${(filter.minPrice! / 1000000).toStringAsFixed(1)}M–${(filter.maxPrice! / 1000000).toStringAsFixed(1)}M'
+                  : filter.maxPrice != null
+                      ? 'Max ₦${(filter.maxPrice! / 1000000).toStringAsFixed(1)}M'
+                      : 'Min ₦${(filter.minPrice! / 1000000).toStringAsFixed(1)}M')
               : 'Custom ₦',
         ),
         backgroundColor: isCustom ? const Color(0xFF059669).withValues(alpha: 0.15) : Colors.grey.shade100,
@@ -890,9 +1074,11 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
   void _showCustomPriceDialog(BuildContext context, MarketplaceNotifier notifier) {
     final minCtrl = TextEditingController();
     final maxCtrl = TextEditingController();
+    String? error;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
@@ -921,6 +1107,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                 labelText: 'Maximum Price (₦)',
                 hintText: 'e.g. 50,000,000',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                errorText: error,
               ),
             ),
           ],
@@ -933,14 +1120,27 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
-              final min = double.tryParse(minCtrl.text.replaceAll(',', '').trim());
-              final max = double.tryParse(maxCtrl.text.replaceAll(',', '').trim());
+              final min = minCtrl.text.trim().isEmpty ? null : double.tryParse(minCtrl.text.replaceAll(',', '').trim());
+              final max = maxCtrl.text.trim().isEmpty ? null : double.tryParse(maxCtrl.text.replaceAll(',', '').trim());
+              String? err;
+              if (min == null && max == null) {
+                err = 'Enter a min or max price';
+              } else if ((min != null && min < 0) || (max != null && max < 0)) {
+                err = 'Prices cannot be negative';
+              } else if (min != null && max != null && min > max) {
+                err = 'Min cannot exceed max';
+              }
+              if (err != null) {
+                setDialogState(() => error = err);
+                return;
+              }
               notifier.setPriceRange(min: min, max: max, rangeKey: 'custom');
               Navigator.pop(context);
             },
             child: const Text('Apply Price Filter', style: TextStyle(color: Colors.white)),
           ),
         ],
+        ),
       ),
     );
   }

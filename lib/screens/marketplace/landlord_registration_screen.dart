@@ -1,12 +1,15 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 class LandlordRegistrationScreen extends ConsumerStatefulWidget {
   const LandlordRegistrationScreen({super.key});
@@ -33,12 +36,62 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
   final _districtController = TextEditingController();
   final _priceController = TextEditingController();
   int _bedrooms = 3;
-  final int _bathrooms = 3;
+  int _bathrooms = 3;
   final _descController = TextEditingController();
+
+  // Photos
+  final List<XFile> _selectedImages = [];
+  final List<Uint8List> _imageBytesList = [];
 
   bool _isLoading = false;
   bool _isSuccess = false;
   String? _submittedTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = ref.read(authProvider);
+      if (auth.isAuthenticated && auth.profile != null) {
+        setState(() {
+          if (_nameController.text.isEmpty) {
+            _nameController.text = auth.profile!.fullName ?? '';
+          }
+          if (_emailController.text.isEmpty) {
+            _emailController.text = auth.profile!.email ?? '';
+          }
+          if (_phoneController.text.isEmpty) {
+            _phoneController.text = auth.profile!.phone ?? '';
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage(
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 80,
+    );
+    if (picked.isEmpty) return;
+    for (final img in picked) {
+      if (_selectedImages.length >= 6) break;
+      final bytes = await img.readAsBytes();
+      setState(() {
+        _selectedImages.add(img);
+        _imageBytesList.add(bytes);
+      });
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+      _imageBytesList.removeAt(index);
+    });
+  }
 
   @override
   void dispose() {
@@ -59,44 +112,110 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
     setState(() => _isLoading = true);
 
     try {
+      final authState = ref.read(authProvider);
+      final isLoggedIn = authState.isAuthenticated && authState.profile != null;
+
       final email = _emailController.text.trim();
       final password = _passwordController.text;
       final fullName = _nameController.text.trim();
       final phone = _phoneController.text.trim();
 
-      // 1. Create account under Landlord role
-      final authNotifier = ref.read(authProvider.notifier);
-      await authNotifier.signUp(
-        email: email,
-        password: password,
-        fullName: fullName,
-        phone: phone,
-        role: UserRole.landlord,
-        companyId: AppStrings.defaultCompanyId,
-      );
+      // 1. Create account under Landlord role if not already logged in
+      if (!isLoggedIn) {
+        final authNotifier = ref.read(authProvider.notifier);
+        final signedUp = await authNotifier.signUp(
+          email: email,
+          password: password,
+          fullName: fullName,
+          phone: phone,
+          role: UserRole.landlord,
+          companyId: AppStrings.defaultCompanyId,
+        );
+        if (!signedUp || !ref.read(authProvider).isAuthenticated) {
+          try {
+            await authNotifier.login(email, password);
+          } catch (_) {}
+        }
+        // STOP on auth failure — never show success for a signed-out user.
+        if (!ref.read(authProvider).isAuthenticated) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  ref.read(authProvider).errorMessage ??
+                      'Could not sign you in. If you already have an account, log in first, then submit.',
+                ),
+                backgroundColor: Colors.redAccent,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
+      }
 
-      // 2. Add submitted property to local marketplace provider as pending/verified
+      // 2. Add submitted property as UNVERIFIED pending review (never auto-verify).
       final price = double.tryParse(_priceController.text.replaceAll(',', '').trim()) ?? 0.0;
+      if (price <= 0) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Enter a valid price above ₦0. Use 0 only if you mean “Contact for price” — currently disabled.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+
+      // 3. Upload images if selected
+      List<String> imageUrls = [];
+      if (_imageBytesList.isNotEmpty) {
+        for (int i = 0; i < _imageBytesList.length; i++) {
+          try {
+            final ext = _selectedImages[i].name.split('.').last.toLowerCase();
+            final safeExt = (ext == 'png' || ext == 'webp' || ext == 'jpg' || ext == 'jpeg') ? ext : 'jpg';
+            final path = 'properties/landlord_${DateTime.now().millisecondsSinceEpoch}_$i.$safeExt';
+            final url = await ref.read(supabaseServiceProvider).uploadFile(
+              'company-assets',
+              path,
+              _imageBytesList[i],
+              mimeType: 'image/$safeExt',
+            );
+            imageUrls.add(url);
+          } catch (_) {
+            // Keep going if one fails
+          }
+        }
+      }
+
+      if (imageUrls.isEmpty) {
+        imageUrls = [
+          _listingType == 'rent'
+              ? 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80'
+              : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
+        ];
+      }
+
+      final creatorId = ref.read(authProvider).profile?.id;
       final newProp = Property(
         id: 'prop_landlord_${DateTime.now().millisecondsSinceEpoch}',
         companyId: AppStrings.defaultCompanyId,
         title: _propTitleController.text.trim(),
         description: _descController.text.trim().isNotEmpty
             ? _descController.text.trim()
-            : 'Verified listing submitted by $fullName ($_hostType). Features modern amenities and secure location.',
+            : 'Listing submitted by $fullName ($_hostType). Pending Nissie verification.',
         location: '${_districtController.text.trim()}, $_operatingCity',
         price: price,
         status: PropertyStatus.available,
-        images: [
-          _listingType == 'rent'
-              ? 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80'
-              : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-        ],
+        images: imageUrls,
         commissionType: CommissionType.percentage,
         commissionValue: 5.0,
         listingType: _listingType,
         propertyCategory: _propertyCategory,
-        bedrooms: _bedrooms,
+        bedrooms: _propertyCategory == 'land' ? 0 : _bedrooms,
         bathrooms: _bathrooms,
         city: _operatingCity,
         stateLocation: _operatingCity == 'Lagos' ? 'Lagos' : 'FCT',
@@ -104,14 +223,42 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         rentPeriod: _listingType == 'rent' ? 'year' : 'total',
         inspectionFee: 3000.0,
         isMarketplace: true,
-        isVerified: true,
+        isVerified: false,
         shieldedContact: true,
+        createdBy: creatorId,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      // Prepend to marketplace
-      ref.read(marketplaceProvider.notifier).addProperty(newProp);
+      // 3. Persist to Supabase so it survives restart + shows on all devices.
+      // Strip client-only fields (UUID default + timestamps handled by DB).
+      String? serverId;
+      try {
+        final row = newProp.toJson()
+          ..remove('id')
+          ..remove('created_at')
+          ..remove('updated_at');
+        final saved = await ref.read(supabaseServiceProvider).insert('properties', row);
+        serverId = saved['id'] as String?;
+      } catch (e) {
+        // Keep local copy so UX never blocks; tell user to run landlord SQL
+        // if this is an RLS / missing-column error.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Saved locally. Cloud sync failed (${e.toString().split(':').first}). Run supabase/migrations/20260922_landlord_properties.sql in Supabase.',
+              ),
+              backgroundColor: Colors.orangeAccent,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+
+      // Prepend to marketplace (with server id when available)
+      final displayProp = serverId != null ? newProp.copyWith(id: serverId) : newProp;
+      ref.read(marketplaceProvider.notifier).addProperty(displayProp);
 
       setState(() {
         _isLoading = false;
@@ -204,7 +351,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'List your apartment, duplex, or commercial property with Nissie. We dispatch pre-screened clients directly to you and protect your rent payments via escrow.',
+                    'List your apartment, duplex, or commercial property with Nissie. We dispatch pre-screened clients directly to you and guarantee your rent payments with direct digital payouts.',
                     style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.45),
                   ),
                 ],
@@ -228,6 +375,30 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (ref.watch(authProvider).isAuthenticated && ref.watch(authProvider).profile != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Logged in as ${ref.watch(authProvider).profile?.fullName ?? 'Host'} (${ref.watch(authProvider).profile?.email ?? ''})',
+                                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF15803D), fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     // Host Type Toggle
                     const Text('Who is listing this property?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     const SizedBox(height: 8),
@@ -303,20 +474,22 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                     ),
                     const SizedBox(height: 16),
 
-                    // Password
-                    const Text('Create Account Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        hintText: 'At least 6 characters',
-                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    if (!ref.watch(authProvider).isAuthenticated || ref.watch(authProvider).profile == null) ...[
+                      // Password
+                      const Text('Create Account Password', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          hintText: 'At least 8 characters',
+                          prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        validator: (v) => (v == null || v.length < 8) ? 'Password must be at least 8 characters' : null,
                       ),
-                      validator: (v) => (v == null || v.length < 6) ? 'Password must be at least 6 characters' : null,
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Operating City
                     const Text('Operating City', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -477,7 +650,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                     ),
                     const SizedBox(height: 16),
 
-                    // Price & Rent Period
+                    // Price & Rent Period + Bathrooms
                     Row(
                       children: [
                         Expanded(
@@ -498,7 +671,12 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                                   prefixText: '₦ ',
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter price' : null,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Enter price';
+                                  final p = double.tryParse(v.replaceAll(',', '').trim());
+                                  if (p == null || p <= 0) return 'Price must be above ₦0';
+                                  return null;
+                                },
                               ),
                             ],
                           ),
@@ -516,12 +694,44 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                                 ),
-                                items: [0, 1, 2, 3, 4, 5, 6].map((b) => DropdownMenuItem(value: b, child: Text('$b Beds', style: const TextStyle(fontSize: 13)))).toList(),
+                                items: [1, 2, 3, 4, 5, 6].map((b) => DropdownMenuItem(value: b, child: Text('$b Beds', style: const TextStyle(fontSize: 13)))).toList(),
                                 onChanged: (val) {
                                   if (val != null) setState(() => _bedrooms = val);
                                 },
                               ),
                             ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Bathrooms', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              const SizedBox(height: 6),
+                              DropdownButtonFormField<int>(
+                                initialValue: _bathrooms,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                ),
+                                items: [1, 2, 3, 4, 5, 6].map((b) => DropdownMenuItem(value: b, child: Text('$b Baths', style: const TextStyle(fontSize: 13)))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _bathrooms = val);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Expanded(
+                          flex: 2,
+                          child: Text(
+                            '5% sale / 10% rent commission applies on closed deals. Photos reviewed in 2–4h.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                           ),
                         ),
                       ],
@@ -539,6 +749,103 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
+                    const SizedBox(height: 18),
+
+                    // Property Photos Picker
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Property Photos (Optional, up to 6)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        if (_imageBytesList.isNotEmpty)
+                          Text('${_imageBytesList.length}/6 added', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    if (_imageBytesList.isNotEmpty)
+                      SizedBox(
+                        height: 95,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _imageBytesList.length + (_imageBytesList.length < 6 ? 1 : 0),
+                          separatorBuilder: (context, index) => const SizedBox(width: 10),
+                          itemBuilder: (context, idx) {
+                            if (idx == _imageBytesList.length) {
+                              return InkWell(
+                                onTap: _pickImages,
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: 95,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: Colors.grey.shade50,
+                                  ),
+                                  child: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_photo_alternate_outlined, color: Color(0xFF64748B), size: 24),
+                                      SizedBox(height: 4),
+                                      Text('Add more', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.memory(
+                                    _imageBytesList[idx],
+                                    width: 95,
+                                    height: 95,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: InkWell(
+                                    onTap: () => _removeImage(idx),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black87,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      )
+                    else
+                      InkWell(
+                        onTap: _pickImages,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.grey.shade50,
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.add_photo_alternate_outlined, size: 36, color: AppColors.primary),
+                              const SizedBox(height: 8),
+                              const Text('Upload Property Photos', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              const Text('Tap to select interior, exterior, kitchen & compound photos', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -558,9 +865,11 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                 onPressed: _isLoading ? null : _handleSubmit,
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Submit Listing & Create Account',
-                        style: TextStyle(
+                    : Text(
+                        (ref.watch(authProvider).isAuthenticated && ref.watch(authProvider).profile != null)
+                            ? 'Submit Listing for Verification'
+                            : 'Submit Listing & Create Account',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -743,8 +1052,8 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () => context.go('/login'),
-                      child: const Text('Go to Landlord Portal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      onPressed: () => context.go('/landlord/dashboard'),
+                      child: const Text('Go to Landlord Dashboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],

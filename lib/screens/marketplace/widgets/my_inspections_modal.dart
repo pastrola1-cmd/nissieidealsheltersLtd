@@ -144,7 +144,7 @@ class MyInspectionsModal extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Browse verified rental or sale properties and click "Book Inspection" to secure a site visit protected by our ₦3,000 escrow system.',
+              'Browse verified rental or sale properties and click "Book Inspection" to secure a site visit protected by our ₦3,000 PIN verification system.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
             ),
@@ -168,6 +168,14 @@ class MyInspectionsModal extends ConsumerWidget {
     final title = property?.title ?? 'Verified Property Inspection';
     final location = property?.location ?? 'Abuja / Lagos';
     final dateStr = DateFormat('EEE, dd MMM yyyy').format(booking.scheduledDate);
+    final isFree = booking.feeAmount <= 0;
+    final isSettled = booking.status == InspectionEscrowStatus.completed ||
+        booking.status == InspectionEscrowStatus.cancelled;
+    final chipLabel = isFree
+        ? 'Free Inspection'
+        : isSettled
+            ? booking.status.value.toUpperCase()
+            : '₦${booking.feeAmount.toStringAsFixed(0)} Deposit Active';
 
     return Container(
       decoration: BoxDecoration(
@@ -203,7 +211,7 @@ class MyInspectionsModal extends ConsumerWidget {
                     Icon(Icons.lock, size: 12, color: Colors.green.shade700),
                     const SizedBox(width: 4),
                     Text(
-                      '₦3,000 Escrow Active',
+                      chipLabel,
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade800),
                     ),
                   ],

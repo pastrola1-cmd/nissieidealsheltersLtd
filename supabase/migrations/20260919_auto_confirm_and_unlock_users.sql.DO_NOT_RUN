@@ -1,0 +1,51 @@
+-- =============================================================================
+-- INSTANT AUTH UNLOCK: AUTO-CONFIRM EMAILS & SYNC USER PROFILES
+-- Run this in the Supabase SQL Editor (https://supabase.com/dashboard)
+-- Project: mrwgijaypgtkoyaizjpg
+-- =============================================================================
+
+-- 1. Instantly unlock and verify all currently registered users so they can log in right now:
+UPDATE auth.users
+SET email_confirmed_at = COALESCE(email_confirmed_at, now())
+WHERE email_confirmed_at IS NULL;
+
+-- 2. Trigger function to auto-confirm all new user signups immediately (bypasses email link requirement):
+CREATE OR REPLACE FUNCTION public.auto_confirm_new_users()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.email_confirmed_at IS NULL THEN
+    NEW.email_confirmed_at := now();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop trigger if it already exists and recreate
+DROP TRIGGER IF EXISTS trg_auto_confirm_new_users ON auth.users;
+CREATE TRIGGER trg_auto_confirm_new_users
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.auto_confirm_new_users();
+
+-- 3. Ensure any existing auth user has an approved profile in public.profiles:
+INSERT INTO public.profiles (id, company_id, full_name, email, phone, role, status)
+SELECT 
+  u.id,
+  COALESCE(
+    CASE 
+      WHEN (u.raw_user_meta_data->>'company_id') IS NOT NULL AND (u.raw_user_meta_data->>'company_id') ~ '^[0-9a-fA-F-]{36}$'
+      THEN (u.raw_user_meta_data->>'company_id')::UUID
+      ELSE NULL
+    END,
+    (SELECT id FROM public.companies ORDER BY created_at ASC LIMIT 1)
+  ),
+  COALESCE(u.raw_user_meta_data->>'full_name', 'User'),
+  u.email,
+  COALESCE(u.phone, u.raw_user_meta_data->>'phone', ''),
+  COALESCE(u.raw_user_meta_data->>'role', 'buyer'),
+  'approved'
+FROM auth.users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.profiles p WHERE p.id = u.id
+)
+ON CONFLICT (id) DO NOTHING;

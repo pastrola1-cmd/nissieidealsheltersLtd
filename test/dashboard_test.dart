@@ -54,7 +54,7 @@ class FakeLeadNotifier extends LeadNotifier {
 
   @override
   LeadState build() {
-    return LeadState(leads: mockLeads, isLoading: false);
+    return LeadState(leads: mockLeads, totalCount: mockLeads.length, isLoading: false);
   }
 }
 

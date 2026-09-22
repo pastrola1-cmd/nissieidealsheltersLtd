@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 
 @immutable
@@ -80,7 +81,8 @@ class Property {
       final formattedM = m == m.roundToDouble() ? m.toInt().toString() : m.toStringAsFixed(1);
       return isRent ? '₦${formattedM}M / $rentPeriod' : '₦${formattedM}M';
     }
-    return isRent ? '₦${price.toStringAsFixed(0)} / $rentPeriod' : '₦${price.toStringAsFixed(0)}';
+    final grouped = NumberFormat('#,###').format(price.round());
+    return isRent ? '₦$grouped / $rentPeriod' : '₦$grouped';
   }
 
   String get locationDisplay {

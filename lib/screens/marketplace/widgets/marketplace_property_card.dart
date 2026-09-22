@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
@@ -25,7 +26,7 @@ class MarketplacePropertyCard extends StatelessWidget {
         side: BorderSide(color: Colors.grey.shade200),
       ),
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
         child: Column(
@@ -36,12 +37,12 @@ class MarketplacePropertyCard extends StatelessWidget {
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 10,
-                  child: Image.network(
-                    property.images.isNotEmpty
+                  child: CachedNetworkImage(
+                    imageUrl: property.images.isNotEmpty
                         ? property.images.first
                         : 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorWidget: (_, __, ___) => Container(
                       color: Colors.grey.shade200,
                       child: const Center(
                         child: Icon(Icons.apartment_rounded, size: 48, color: Colors.grey),

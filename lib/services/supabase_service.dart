@@ -131,16 +131,38 @@ class SupabaseService {
     return data != null ? Profile.fromJson(data) : null;
   }
 
-  /// Fetches a single company by ID.
+  /// Fetches a single company by ID via the safe view, then merges secrets
+  /// from the base table when RLS permits (staff of own company).
+  /// Non-staff callers transparently get secret-free data — never leaks keys.
   Future<Company?> getCompany(String id) async {
-    final data = await getById('companies', id);
-    return data != null ? Company.fromJson(data) : null;
+    final data = await getById('companies_safe', id);
+    if (data == null) return null;
+    var company = Company.fromJson(data);
+    try {
+      final full = await getById('companies', id);
+      if (full != null) {
+        company = company.copyWith(
+          whatsappAccessToken: full['whatsapp_access_token'] as String?,
+          termiiApiKey: full['termii_api_key'] as String?,
+          geminiApiKey: full['gemini_api_key'] as String?,
+          smtpHost: full['smtp_host'] as String?,
+          smtpPort: full['smtp_port'] as int?,
+          smtpUsername: full['smtp_username'] as String?,
+          smtpPassword: full['smtp_password'] as String?,
+          brevoApiKey: full['brevo_api_key'] as String?,
+          fbCapiToken: full['fb_capi_token'] as String?,
+        );
+      }
+    } catch (_) {
+      // RLS denied base read — safe view data stands.
+    }
+    return company;
   }
 
-  /// Fetches all registered companies sorted by name.
+  /// Fetches all registered companies sorted by name (safe view, no secrets).
   /// If [excludeHidden] is true, only returns companies where is_hidden is false.
   Future<List<Company>> getCompanies({bool excludeHidden = false}) async {
-    var query = _client.from('companies').select();
+    var query = _client.from('companies_safe').select();
     if (excludeHidden) {
       query = query.eq('is_hidden', false);
     }
@@ -624,10 +646,10 @@ class SupabaseService {
     return response;
   }
 
-  /// Fetches a company by its custom domain.
+  /// Fetches a company by its custom domain (safe view, public white-label).
   Future<Company?> getCompanyByDomain(String domain) async {
     final response = await _client
-        .from('companies')
+        .from('companies_safe')
         .select()
         .eq('custom_domain', domain)
         .maybeSingle();

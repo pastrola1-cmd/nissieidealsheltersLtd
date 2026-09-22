@@ -94,8 +94,8 @@ class PlatformNotifier extends Notifier<PlatformState> {
   Future<void> loadPlatformData() async {
     state = state.copyWith(isLoading: true);
     try {
-      // 1. Fetch all companies
-      final companiesResponse = await _client.from('companies').select();
+      // 1. Fetch all companies (safe view — platform needs no secrets here)
+      final companiesResponse = await _client.from('companies_safe').select();
       final List<Company> companiesList = List<Map<String, dynamic>>.from(companiesResponse)
           .map((json) => Company.fromJson(json))
           .toList();

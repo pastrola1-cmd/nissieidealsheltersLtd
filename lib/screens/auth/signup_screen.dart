@@ -101,6 +101,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 buyerEmail: _emailController.text.trim(),
               );
         }
+        if (mounted) context.go('/');
+      } else {
+        if (mounted) context.go('/partner/dashboard');
       }
     } else if (!success && mounted) {
       final errorMessage = ref.read(authProvider).errorMessage ?? 'Sign-up failed';
@@ -212,6 +215,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your phone number';
+                    }
+                    final digits = value.replaceAll(RegExp(r'[\s\-()]'), '');
+                    final ngRegex = RegExp(r'^(\+234[789][01]\d{8}|0[789][01]\d{8})$');
+                    if (!ngRegex.hasMatch(digits)) {
+                      return 'Enter valid Nigerian number e.g. 08012345678';
                     }
                     return null;
                   },

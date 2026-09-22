@@ -14,11 +14,29 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseConfig {
   SupabaseConfig._();
 
-  /// The Supabase project URL from the .env file.
-  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
+  /// The Supabase project URL.
+  /// Priority: --dart-define=SUPABASE_URL, then dotenv (local dev only).
+  static String get supabaseUrl {
+    const defined = String.fromEnvironment('SUPABASE_URL');
+    if (defined.isNotEmpty) return defined;
+    try {
+      return dotenv.env['SUPABASE_URL'] ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
 
-  /// The Supabase anonymous/public key from the .env file.
-  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  /// The Supabase anonymous/public key.
+  /// Priority: --dart-define=SUPABASE_ANON_KEY, then dotenv (local dev only).
+  static String get supabaseAnonKey {
+    const defined = String.fromEnvironment('SUPABASE_ANON_KEY');
+    if (defined.isNotEmpty) return defined;
+    try {
+      return dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
 
   /// Initializes the Supabase client with URL and anon key from environment.
   ///

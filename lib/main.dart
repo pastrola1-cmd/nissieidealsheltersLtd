@@ -28,8 +28,14 @@ Future<void> main() async {
   ]);
 
   try {
-    // ── Load environment variables ──
-    await dotenv.load(fileName: 'env.txt');
+    // ── Load environment variables (local dev only, optional) ──
+    // Release builds must use --dart-define=SUPABASE_URL / SUPABASE_ANON_KEY
+    // so no secret is bundled as an asset.
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (_) {
+      // No local .env — rely on --dart-define. SupabaseConfig handles both.
+    }
 
     // ── Initialize Supabase ──
     await SupabaseConfig.initialize();

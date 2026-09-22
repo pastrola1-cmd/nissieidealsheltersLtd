@@ -30,6 +30,15 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
   final _priceController = TextEditingController();
   final _videoUrlController = TextEditingController();
   final _commissionValueController = TextEditingController();
+  final _districtController = TextEditingController();
+
+  String _listingType = 'rent'; // 'rent', 'sale', 'shortlet'
+  String _rentPeriod = 'year'; // 'year', 'month', 'total'
+  String _propertyCategory = 'apartment';
+  int _bedrooms = 2;
+  int _bathrooms = 2;
+  String _city = 'Abuja';
+  bool _isMarketplace = true;
 
   PropertyStatus _status = PropertyStatus.available;
   CommissionType _commissionType = CommissionType.percentage;
@@ -61,6 +70,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
     _priceController.dispose();
     _videoUrlController.dispose();
     _commissionValueController.dispose();
+    _districtController.dispose();
     super.dispose();
   }
 
@@ -115,6 +125,14 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
     _assignedPartnerId = p.assignedPartnerId;
     _targetAudience = p.targetAudience;
     _existingImages = List<String>.from(p.images);
+    _listingType = p.listingType;
+    _propertyCategory = p.propertyCategory;
+    _bedrooms = p.bedrooms;
+    _bathrooms = p.bathrooms;
+    _city = p.city;
+    _districtController.text = p.district ?? '';
+    _rentPeriod = p.rentPeriod;
+    _isMarketplace = p.isMarketplace;
   }
 
   Future<void> _fetchPartners(String companyId) async {
@@ -208,6 +226,18 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
             commissionType: _commissionType,
             commissionValue: commissionValue,
             targetAudience: _targetAudience,
+            listingType: _listingType,
+            propertyCategory: _propertyCategory,
+            bedrooms: _propertyCategory == 'land' ? 0 : _bedrooms,
+            bathrooms: _bathrooms,
+            city: _city,
+            stateLocation: _city == 'Lagos' ? 'Lagos' : 'FCT',
+            district: _districtController.text.trim().isEmpty ? null : _districtController.text.trim(),
+            rentPeriod: _listingType == 'rent' ? _rentPeriod : 'total',
+            inspectionFee: 3000.0,
+            isMarketplace: _isMarketplace,
+            isVerified: true,
+            shieldedContact: true,
           );
     } else {
       success = await ref.read(propertyProvider.notifier).createProperty(
@@ -223,6 +253,18 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
             commissionType: _commissionType,
             commissionValue: commissionValue,
             targetAudience: _targetAudience,
+            listingType: _listingType,
+            propertyCategory: _propertyCategory,
+            bedrooms: _propertyCategory == 'land' ? 0 : _bedrooms,
+            bathrooms: _bathrooms,
+            city: _city,
+            stateLocation: _city == 'Lagos' ? 'Lagos' : 'FCT',
+            district: _districtController.text.trim().isEmpty ? null : _districtController.text.trim(),
+            rentPeriod: _listingType == 'rent' ? _rentPeriod : 'total',
+            inspectionFee: 3000.0,
+            isMarketplace: _isMarketplace,
+            isVerified: true,
+            shieldedContact: true,
           );
     }
 
@@ -298,6 +340,131 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                       ),
                       const SizedBox(height: 20),
 
+                      // ── Listing Type Selector (Rent vs Sale vs Shortlet) ──
+                      Text(
+                        'Listing Type',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildTypeChip('rent', 'For Rent', Icons.key_rounded),
+                          const SizedBox(width: 8),
+                          _buildTypeChip('sale', 'For Sale', Icons.sell_rounded),
+                          const SizedBox(width: 8),
+                          _buildTypeChip('shortlet', 'Shortlet', Icons.hotel_rounded),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Rent Period (if Rent) ──
+                      if (_listingType == 'rent') ...[
+                        Text(
+                          'Rent Billing Period',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _rentPeriod,
+                          decoration: _inputDecoration(label: 'Rent Period', icon: Icons.schedule_rounded),
+                          items: const [
+                            DropdownMenuItem(value: 'year', child: Text('Per Year (Annual Rent)')),
+                            DropdownMenuItem(value: 'month', child: Text('Per Month')),
+                            DropdownMenuItem(value: 'total', child: Text('Total Term')),
+                          ],
+                          onChanged: (v) => setState(() => _rentPeriod = v ?? 'year'),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // ── Property Category ──
+                      DropdownButtonFormField<String>(
+                        value: _propertyCategory,
+                        decoration: _inputDecoration(label: 'Property Category *', icon: Icons.home_work_outlined),
+                        items: const [
+                          DropdownMenuItem(value: 'apartment', child: Text('Apartment / Flat')),
+                          DropdownMenuItem(value: 'duplex', child: Text('Duplex / Terrace')),
+                          DropdownMenuItem(value: 'bungalow', child: Text('Bungalow')),
+                          DropdownMenuItem(value: 'self_contain', child: Text('Self-Contain / Studio')),
+                          DropdownMenuItem(value: 'commercial', child: Text('Commercial / Office')),
+                          DropdownMenuItem(value: 'land', child: Text('Land / Plot')),
+                        ],
+                        onChanged: (v) => setState(() => _propertyCategory = v ?? 'apartment'),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Bedrooms & Bathrooms (If not land) ──
+                      if (_propertyCategory != 'land') ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                value: _bedrooms,
+                                decoration: _inputDecoration(label: 'Bedrooms', icon: Icons.bed_outlined),
+                                items: List.generate(7, (i) => DropdownMenuItem(
+                                  value: i,
+                                  child: Text(i == 0 ? 'Studio / 0' : '$i Bed${i > 1 ? 's' : ''}'),
+                                )),
+                                onChanged: (v) => setState(() => _bedrooms = v ?? 1),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                value: _bathrooms,
+                                decoration: _inputDecoration(label: 'Bathrooms', icon: Icons.bathtub_outlined),
+                                items: List.generate(7, (i) => DropdownMenuItem(
+                                  value: i,
+                                  child: Text(i == 0 ? 'None' : '$i Bath${i > 1 ? 's' : ''}'),
+                                )),
+                                onChanged: (v) => setState(() => _bathrooms = v ?? 1),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // ── City & District ──
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: DropdownButtonFormField<String>(
+                              value: _city,
+                              decoration: _inputDecoration(label: 'City *', icon: Icons.location_city_rounded),
+                              items: const [
+                                DropdownMenuItem(value: 'Abuja', child: Text('Abuja (FCT)')),
+                                DropdownMenuItem(value: 'Lagos', child: Text('Lagos')),
+                                DropdownMenuItem(value: 'Port Harcourt', child: Text('Port Harcourt')),
+                                DropdownMenuItem(value: 'Ibadan', child: Text('Ibadan')),
+                                DropdownMenuItem(value: 'Enugu', child: Text('Enugu')),
+                              ],
+                              onChanged: (v) => setState(() => _city = v ?? 'Abuja'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: _districtController,
+                              keyboardType: TextInputType.text,
+                              decoration: _inputDecoration(
+                                label: 'District (e.g. Maitama, Lekki)',
+                                icon: Icons.map_outlined,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
                       // Title
                       TextFormField(
                         controller: _titleController,
@@ -312,11 +479,11 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Location
+                      // Location / Street Address
                       TextFormField(
                         controller: _locationController,
                         keyboardType: TextInputType.streetAddress,
-                        decoration: _inputDecoration(label: 'Location / Address *', icon: Icons.location_on_outlined),
+                        decoration: _inputDecoration(label: 'Street Address / Location *', icon: Icons.location_on_outlined),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Location is required';
@@ -331,7 +498,9 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                         controller: _priceController,
                         keyboardType: TextInputType.number,
                         decoration: _inputDecoration(
-                          label: 'Price (₦) *',
+                          label: _listingType == 'rent'
+                              ? 'Rent Price (₦/$_rentPeriod) *'
+                              : 'Sale Price (₦) *',
                           icon: Icons.monetization_on_outlined,
                         ),
                         validator: (value) {
@@ -344,6 +513,17 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Marketplace Visibility Toggle
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Show on Public Marketplace', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: const Text('Allow verified public buyers & renters to browse and book inspections', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        value: _isMarketplace,
+                        activeThumbColor: AppColors.accent,
+                        onChanged: (v) => setState(() => _isMarketplace = v),
                       ),
                       const SizedBox(height: 16),
 
@@ -361,6 +541,135 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                         controller: _videoUrlController,
                         keyboardType: TextInputType.url,
                         decoration: _inputDecoration(label: 'Video Link (YouTube/Vimeo) (Optional)', icon: Icons.play_circle_outline),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Rental & Marketplace Card ──
+              Card(
+                color: AppColors.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: AppColors.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Listing Type & Rental',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _listingType,
+                              decoration: _inputDecoration(label: 'Listing Type', icon: Icons.home_work_outlined),
+                              items: const [
+                                DropdownMenuItem(value: 'rent', child: Text('For Rent')),
+                                DropdownMenuItem(value: 'sale', child: Text('For Sale')),
+                                DropdownMenuItem(value: 'shortlet', child: Text('Shortlet')),
+                              ],
+                              onChanged: (v) => setState(() => _listingType = v ?? 'rent'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _propertyCategory,
+                              decoration: _inputDecoration(label: 'Category', icon: Icons.category_outlined),
+                              items: const [
+                                DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
+                                DropdownMenuItem(value: 'flat', child: Text('Flat')),
+                                DropdownMenuItem(value: 'duplex', child: Text('Duplex')),
+                                DropdownMenuItem(value: 'bungalow', child: Text('Bungalow')),
+                                DropdownMenuItem(value: 'self_contain', child: Text('Self-Contain')),
+                                DropdownMenuItem(value: 'land', child: Text('Land')),
+                                DropdownMenuItem(value: 'commercial', child: Text('Commercial')),
+                              ],
+                              onChanged: (v) => setState(() => _propertyCategory = v ?? 'apartment'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              initialValue: _bedrooms,
+                              decoration: _inputDecoration(label: 'Bedrooms', icon: Icons.bed_outlined),
+                              items: [0, 1, 2, 3, 4, 5, 6]
+                                  .map((b) => DropdownMenuItem(value: b, child: Text('$b')))
+                                  .toList(),
+                              onChanged: (v) => setState(() => _bedrooms = v ?? 2),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              initialValue: _bathrooms,
+                              decoration: _inputDecoration(label: 'Bathrooms', icon: Icons.bathtub_outlined),
+                              items: [0, 1, 2, 3, 4, 5, 6]
+                                  .map((b) => DropdownMenuItem(value: b, child: Text('$b')))
+                                  .toList(),
+                              onChanged: (v) => setState(() => _bathrooms = v ?? 2),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _city,
+                              decoration: _inputDecoration(label: 'City', icon: Icons.location_city_outlined),
+                              items: const [
+                                DropdownMenuItem(value: 'Abuja', child: Text('Abuja')),
+                                DropdownMenuItem(value: 'Lagos', child: Text('Lagos')),
+                                DropdownMenuItem(value: 'Port Harcourt', child: Text('Port Harcourt')),
+                                DropdownMenuItem(value: 'Ibadan', child: Text('Ibadan')),
+                              ],
+                              onChanged: (v) => setState(() => _city = v ?? 'Abuja'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _districtController,
+                              decoration: _inputDecoration(label: 'District (e.g. Lekki)', icon: Icons.map_outlined),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (_listingType == 'rent')
+                        DropdownButtonFormField<String>(
+                          initialValue: _rentPeriod,
+                          decoration: _inputDecoration(label: 'Rent Period', icon: Icons.calendar_month_outlined),
+                          items: const [
+                            DropdownMenuItem(value: 'year', child: Text('Per Year')),
+                            DropdownMenuItem(value: 'month', child: Text('Per Month')),
+                            DropdownMenuItem(value: 'total', child: Text('Total / One-off')),
+                          ],
+                          onChanged: (v) => setState(() => _rentPeriod = v ?? 'year'),
+                        ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Show in public marketplace'),
+                        value: _isMarketplace,
+                        onChanged: (v) => setState(() => _isMarketplace = v),
                       ),
                     ],
                   ),
@@ -699,6 +1008,45 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                       ),
               ),
               const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeChip(String type, String label, IconData icon) {
+    final isSelected = _listingType == type;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _listingType = type),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accent.withValues(alpha: 0.1) : AppColors.background,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.border,
+              width: isSelected ? 1.8 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: isSelected ? AppColors.accent : AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? AppColors.accent : AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),

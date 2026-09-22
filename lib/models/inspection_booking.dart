@@ -98,8 +98,49 @@ class InspectionBooking {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
+  InspectionBooking copyWith({
+    String? id,
+    String? propertyId,
+    String? renterId,
+    String? renterName,
+    String? renterPhone,
+    String? renterEmail,
+    String? agentId,
+    DateTime? scheduledDate,
+    String? scheduledTime,
+    double? feeAmount,
+    double? agentPayoutAmount,
+    double? platformFeeAmount,
+    String? completionPin,
+    InspectionEscrowStatus? status,
+    DateTime? escrowReleasedAt,
+    String? notes,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return InspectionBooking(
+      id: id ?? this.id,
+      propertyId: propertyId ?? this.propertyId,
+      renterId: renterId ?? this.renterId,
+      renterName: renterName ?? this.renterName,
+      renterPhone: renterPhone ?? this.renterPhone,
+      renterEmail: renterEmail ?? this.renterEmail,
+      agentId: agentId ?? this.agentId,
+      scheduledDate: scheduledDate ?? this.scheduledDate,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
+      feeAmount: feeAmount ?? this.feeAmount,
+      agentPayoutAmount: agentPayoutAmount ?? this.agentPayoutAmount,
+      platformFeeAmount: platformFeeAmount ?? this.platformFeeAmount,
+      completionPin: completionPin ?? this.completionPin,
+      status: status ?? this.status,
+      escrowReleasedAt: escrowReleasedAt ?? this.escrowReleasedAt,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {    return {
       'id': id,
       'property_id': propertyId,
       'renter_id': renterId,

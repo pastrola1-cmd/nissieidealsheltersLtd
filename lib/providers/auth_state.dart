@@ -23,12 +23,13 @@ class AuthState {
     bool? isLoading,
     String? errorMessage,
     bool? isAuthenticated,
+    bool clearError = false,
   }) {
     return AuthState(
       profile: profile ?? this.profile,
       company: company ?? this.company,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage, // We can clear error messages
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
     );
   }

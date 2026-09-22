@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
@@ -7,6 +8,10 @@ import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
+import 'package:nissie_ideal_shelters/providers/wallet_provider.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/my_inspections_modal.dart';
+import 'package:nissie_ideal_shelters/services/paystack_service.dart';
+import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 class InspectionBookingModal extends ConsumerStatefulWidget {
   final Property property;
@@ -51,6 +56,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
   bool _createAccount = true;
   bool _obscurePassword = true;
   bool _isRegistering = false;
+  bool _isProcessingPayment = false;
   bool _isSubmitted = false;
   InspectionBooking? _createdBooking;
 
@@ -104,11 +110,343 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
         );
         if (success) {
           renterId = ref.read(authProvider).profile?.id;
+        } else {
+          // Try login (existing account with same password)
+          final loggedIn = await ref.read(authProvider.notifier).login(email, password);
+          if (loggedIn) {
+            renterId = ref.read(authProvider).profile?.id;
+          } else {
+            // STOP — don't silently continue as guest. User explicitly asked for account.
+            final msg = ref.read(authProvider).errorMessage ??
+                'Could not create account. If you already have an account, use login with your old password.';
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(msg),
+                  backgroundColor: Colors.redAccent,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
+            return;
+          }
         }
-      } catch (_) {}
-      setState(() => _isRegistering = false);
+      } catch (e) {
+        debugPrint('Auto-signup/login error: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Sign-up failed: $e'), backgroundColor: Colors.redAccent),
+          );
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _isRegistering = false);
+      }
     }
 
+    final fee = widget.property.inspectionFee;
+    // Paid inspections require an account: guests would pay with no wallet to credit.
+    if (fee > 0 && !ref.read(authProvider).isAuthenticated) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please create a free account or log in before paying, so your deposit and PIN are saved to you.'),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return;
+    }
+    if (fee > 0) {
+      _promptPaymentAndFinalize(renterId: renterId, fee: fee);
+    } else {
+      _finalizeBooking(renterId: renterId);
+    }
+  }
+
+  void _promptPaymentAndFinalize({required String? renterId, required double fee}) {
+    final walletState = ref.read(walletProvider);
+    final walletBalance = walletState.wallet.balance;
+    final hasEnoughBalance = walletBalance >= fee;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.payment, color: Color(0xFF2563EB), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pay Inspection Deposit',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        ),
+                        Text(
+                          'Deposit of ₦${fee.toStringAsFixed(0)} required to receive 4-digit tour PIN',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.property.title,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF1E293B)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Inspection Deposit (Protected)',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '₦${NumberFormat('#,##0').format(fee)}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Option 1: Paystack (Card / USSD / Bank Transfer)
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _payViaPaystack(renterId: renterId, fee: fee);
+                  },
+                  icon: const Icon(Icons.credit_card, color: Colors.white, size: 20),
+                  label: const Text(
+                    'Pay with Card / Bank Transfer (Paystack)',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0BA4DB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Option 2: Wallet Balance (Only if user has funded and has sufficient real balance)
+              if (hasEnoughBalance) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _payViaWallet(renterId: renterId, fee: fee);
+                    },
+                    icon: const Icon(Icons.account_balance_wallet, color: AppColors.primary, size: 20),
+                    label: Text(
+                      'Pay from Wallet Balance (₦${NumberFormat('#,##0').format(walletBalance)} available)',
+                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ] else if (walletBalance > 0) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Wallet Balance: ₦${NumberFormat('#,##0.00').format(walletBalance)} (Insufficient for this tour)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  '🔒 100% Refundable if the agent fails to show up.',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _payViaPaystack({required String? renterId, required double fee}) async {
+    // Free inspections skip payment entirely.
+    if (fee <= 0) {
+      _finalizeBooking(renterId: renterId);
+      return;
+    }
+    setState(() => _isProcessingPayment = true);
+    try {
+      final paystack = ref.read(paystackServiceProvider);
+      final email = _emailController.text.trim().isNotEmpty
+          ? _emailController.text.trim()
+          : (ref.read(authProvider).profile?.email ?? '');
+      if (email.isEmpty || !email.contains('@')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter a valid email for payment receipt.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+      final refCode = paystack.generateReference(prefix: 'INSP_DEP');
+
+      await paystack.launchPaystackCheckout(
+        email: email,
+        amountInNaira: fee,
+        reference: refCode,
+        userId: renterId ?? ref.read(authProvider).profile?.id,
+        onSuccess: (verifiedRef) async {
+          // Only reached after server verification (see PaystackService).
+          final funded = await ref.read(walletProvider.notifier).fundWallet(
+            amount: fee,
+            method: 'Paystack Card / Transfer',
+            reference: verifiedRef,
+          );
+          if (!funded) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(ref.read(walletProvider).errorMessage ?? 'Deposit not verified. No charge made.'),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+            }
+            return;
+          }
+          final held = await ref.read(walletProvider.notifier).payInspectionDeposit(
+            propertyTitle: widget.property.title,
+            amount: fee,
+          );
+          if (!held && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment verified but deposit hold failed. Contact support with your reference.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+            return;
+          }
+          if (mounted) _finalizeBooking(renterId: renterId);
+        },
+        onCancel: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment cancelled. Your booking is not confirmed yet — retry when ready.'),
+              ),
+            );
+          }
+        },
+        onError: (msg) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
+            );
+          }
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessingPayment = false);
+    }
+  }
+
+  Future<void> _payViaWallet({required String? renterId, required double fee}) async {
+    final success = await ref.read(walletProvider.notifier).payInspectionDeposit(
+      propertyTitle: widget.property.title,
+      amount: fee,
+    );
+    if (success) {
+      _finalizeBooking(renterId: renterId);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Insufficient wallet balance. Please pay with Paystack.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _finalizeBooking({required String? renterId}) async {
     final booking = ref.read(marketplaceProvider.notifier).bookInspection(
       propertyId: widget.property.id,
       renterId: renterId,
@@ -117,13 +455,46 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
       renterEmail: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
       date: _selectedDate,
       time: _selectedTime,
-      notes: _notesController.text.trim(),
+      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      feeAmount: widget.property.inspectionFee,
     );
 
-    setState(() {
-      _isSubmitted = true;
-      _createdBooking = booking;
-    });
+    if (mounted) {
+      setState(() {
+        _isSubmitted = true;
+        _createdBooking = booking;
+      });
+    }
+
+    // Persist server-side so escrow verify / payout / cross-device work.
+    // Local-only fallback keeps the PIN visible if DB/RLS isn't ready.
+    try {
+      final uuidRe = RegExp(r'^[0-9a-fA-F-]{36}$');
+      final row = <String, dynamic>{
+        'marketplace_property_id': widget.property.id,
+        if (uuidRe.hasMatch(widget.property.id)) 'property_id': widget.property.id,
+        if (renterId != null && uuidRe.hasMatch(renterId)) 'renter_id': renterId,
+        'renter_name': booking.renterName,
+        'renter_phone': booking.renterPhone,
+        if (booking.renterEmail != null) 'renter_email': booking.renterEmail,
+        'scheduled_date': booking.scheduledDate.toIso8601String().split('T').first,
+        'scheduled_time': booking.scheduledTime,
+        'fee_amount': booking.feeAmount,
+        'agent_payout_amount': booking.agentPayoutAmount,
+        'platform_fee_amount': booking.platformFeeAmount,
+        'completion_pin': booking.completionPin,
+        'status': booking.status.value,
+        if (booking.notes != null) 'notes': booking.notes,
+      };
+      final saved = await ref.read(supabaseServiceProvider).insert('inspection_bookings', row);
+      final serverId = saved['id'] as String?;
+      if (serverId != null && mounted) {
+        ref.read(marketplaceProvider.notifier).replaceBookingId(booking.id, serverId);
+        setState(() => _createdBooking = booking.copyWith(id: serverId));
+      }
+    } catch (e) {
+      debugPrint('Booking DB persist failed (local-only): $e');
+    }
   }
 
   @override
@@ -270,7 +641,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
           ),
           const SizedBox(height: 18),
 
-          // Escrow protection banner
+          // Deposit protection banner
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -288,7 +659,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Escrow Protected Fee: ₦${fee.toStringAsFixed(0)}',
+                        'Protected Inspection Deposit: ₦${fee.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1E3A8A),
@@ -297,7 +668,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                       ),
                       const SizedBox(height: 3),
                       const Text(
-                        'Your inspection fee is held safely by Nissie. You will receive a 4-Digit PIN. The agent only gets paid after you meet on-site and give them this PIN.',
+                        'Your inspection deposit is protected. Pay to receive your secret 4-Digit PIN. The agent only receives payout after you meet on-site and provide this PIN.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF1E40AF),
@@ -338,7 +709,13 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
-            validator: (v) => (v == null || v.trim().length < 10) ? 'Enter a valid Nigerian phone number' : null,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Enter phone number';
+              final digits = v.replaceAll(RegExp(r'[\s\-()]'), '');
+              final ngRegex = RegExp(r'^(\+234[789][01]\d{8}|0[789][01]\d{8})$');
+              if (!ngRegex.hasMatch(digits)) return 'e.g. 08012345678';
+              return null;
+            },
           ),
           const SizedBox(height: 14),
 
@@ -407,7 +784,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        hintText: 'Create account password (min 6 chars)',
+                        hintText: 'Create account password (min 8 chars)',
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 18),
@@ -418,7 +795,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                       ),
                       validator: (v) {
                         if (_createAccount && !ref.read(authProvider).isAuthenticated) {
-                          if (v == null || v.length < 6) return 'Password must be at least 6 characters';
+                          if (v == null || v.length < 8) return 'Password must be at least 8 characters';
                         }
                         return null;
                       },
@@ -441,10 +818,11 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                     const SizedBox(height: 6),
                     InkWell(
                       onTap: () async {
+                        final tomorrow = DateTime.now().add(const Duration(days: 1));
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime.now(),
+                          initialDate: _selectedDate.isBefore(tomorrow) ? tomorrow : _selectedDate,
+                          firstDate: tomorrow,
                           lastDate: DateTime.now().add(const Duration(days: 30)),
                         );
                         if (picked != null) {
@@ -495,6 +873,20 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
               ),
             ],
           ),
+          const SizedBox(height: 14),
+
+          // Optional notes for agent
+          const Text('Notes for Agent (optional)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _notesController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: 'e.g. Gate code, coming with family, need parking...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+          ),
           const SizedBox(height: 24),
 
           // Submit Button
@@ -507,15 +899,15 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 2,
               ),
-              onPressed: _isRegistering ? null : _handleBooking,
-              child: _isRegistering
+              onPressed: (_isRegistering || _isProcessingPayment) ? null : _handleBooking,
+              child: (_isRegistering || _isProcessingPayment)
                   ? const SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     )
                   : Text(
-                      'Book Inspection (₦${fee.toStringAsFixed(0)} Escrow)',
+                      'Proceed to Payment (₦${fee.toStringAsFixed(0)})',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -612,9 +1004,9 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                 child: Text(
                   booking.completionPin,
                   style: const TextStyle(
-                    fontSize: 34,
+                    fontSize: 30,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 10,
+                    letterSpacing: 8,
                     color: Colors.amberAccent,
                   ),
                 ),
@@ -656,6 +1048,39 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
         ],
         const SizedBox(height: 24),
 
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('Copy PIN', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  // ignore: avoid_print
+                  Clipboard.setData(ClipboardData(text: booking.completionPin));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('PIN copied. Keep it private until on-site.')),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  MyInspectionsModal.show(context);
+                },
+                child: const Text('My Inspections', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           height: 48,

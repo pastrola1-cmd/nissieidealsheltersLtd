@@ -7,7 +7,9 @@ enum WalletTxType {
   escrowRelease,
   withdrawal,
   inspectionFee,
-  commission;
+  commission,
+  payout,
+  platformFee;
 
   String get value {
     switch (this) {
@@ -25,6 +27,10 @@ enum WalletTxType {
         return 'inspection_fee';
       case WalletTxType.commission:
         return 'commission';
+      case WalletTxType.payout:
+        return 'payout';
+      case WalletTxType.platformFee:
+        return 'platform_fee';
     }
   }
 
@@ -62,15 +68,19 @@ class Wallet {
 
   factory Wallet.fromJson(Map<String, dynamic> json) {
     return Wallet(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      companyId: json['company_id'] as String?,
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
+      companyId: json['company_id']?.toString(),
       balance: (json['balance'] as num? ?? 0.0).toDouble(),
       ledgerBalance: (json['ledger_balance'] as num? ?? 0.0).toDouble(),
       currency: json['currency'] as String? ?? 'NGN',
       status: json['status'] as String? ?? 'active',
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
@@ -86,6 +96,30 @@ class Wallet {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  Wallet copyWith({
+    String? id,
+    String? userId,
+    String? companyId,
+    double? balance,
+    double? ledgerBalance,
+    String? currency,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Wallet(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      companyId: companyId ?? this.companyId,
+      balance: balance ?? this.balance,
+      ledgerBalance: ledgerBalance ?? this.ledgerBalance,
+      currency: currency ?? this.currency,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }
 
@@ -120,18 +154,55 @@ class WalletTransaction {
   bool get isInflow => direction == 'inflow';
 
   factory WalletTransaction.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic>? meta;
+    if (json['metadata'] != null) {
+      if (json['metadata'] is Map) {
+        meta = Map<String, dynamic>.from(json['metadata'] as Map);
+      }
+    }
+
     return WalletTransaction(
-      id: json['id'] as String,
-      walletId: json['wallet_id'] as String,
-      userId: json['user_id'] as String?,
-      amount: (json['amount'] as num).toDouble(),
+      id: json['id']?.toString() ?? '',
+      walletId: json['wallet_id']?.toString() ?? '',
+      userId: json['user_id']?.toString(),
+      amount: (json['amount'] as num? ?? 0.0).toDouble(),
       type: WalletTxType.fromString(json['type'] as String? ?? 'credit'),
       direction: json['direction'] as String? ?? 'inflow',
-      reference: json['reference'] as String,
+      reference: json['reference']?.toString() ?? '',
       description: json['description'] as String?,
       status: json['status'] as String? ?? 'completed',
-      metadata: json['metadata'] as Map<String, dynamic>?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      metadata: meta,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
+
+  WalletTransaction copyWith({
+    String? id,
+    String? walletId,
+    String? userId,
+    double? amount,
+    WalletTxType? type,
+    String? direction,
+    String? reference,
+    String? description,
+    String? status,
+    Map<String, dynamic>? metadata,
+    DateTime? createdAt,
+  }) {
+    return WalletTransaction(
+      id: id ?? this.id,
+      walletId: walletId ?? this.walletId,
+      userId: userId ?? this.userId,
+      amount: amount ?? this.amount,
+      type: type ?? this.type,
+      direction: direction ?? this.direction,
+      reference: reference ?? this.reference,
+      description: description ?? this.description,
+      status: status ?? this.status,
+      metadata: metadata ?? this.metadata,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 

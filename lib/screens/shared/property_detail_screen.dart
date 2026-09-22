@@ -14,6 +14,7 @@ import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/inspection_provider.dart';
 import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
 import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
+import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
@@ -90,17 +91,23 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
   Future<void> _loadProperty() async {
     setState(() => _isLoading = true);
     try {
-      // Try finding from cached list first
-      final properties = ref.read(propertyProvider).properties;
-      final match = properties.where((p) => p.id == widget.propertyId).firstOrNull;
+      // Try cached lists first (agency + marketplace incl. landlord/curated)
+      final cached = ref.read(propertyProvider).properties;
+      final match = cached.where((p) => p.id == widget.propertyId).firstOrNull;
       if (match != null) {
         _property = match;
       } else {
-        // Fallback to direct DB call (e.g. deep-linked guest)
-        final service = ref.read(supabaseServiceProvider);
-        final fetched = await service.getProperty(widget.propertyId);
-        if (fetched != null) {
-          _property = fetched;
+        final mkt = ref.read(marketplaceProvider).allProperties;
+        final mktMatch = mkt.where((p) => p.id == widget.propertyId).firstOrNull;
+        if (mktMatch != null) {
+          _property = mktMatch;
+        } else {
+          // Fallback to direct DB call (e.g. deep-linked guest)
+          final service = ref.read(supabaseServiceProvider);
+          final fetched = await service.getProperty(widget.propertyId);
+          if (fetched != null) {
+            _property = fetched;
+          }
         }
       }
     } catch (e) {
