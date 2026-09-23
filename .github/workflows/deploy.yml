@@ -120,6 +120,15 @@ jobs:
       - name: Disable Swift Package Manager (Use CocoaPods)
         run: flutter config --no-enable-swift-package-manager
 
+      - name: Select Xcode 16+ (Firebase iOS SDK 12 requires Swift 6)
+        run: |
+          ls /Applications | grep -i Xcode
+          XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1); fi
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
       - name: Install dependencies
         run: flutter pub get
 
