@@ -46,6 +46,8 @@ android {
                     keyAlias = keystoreProperties["keyAlias"] as String
                     keyPassword = keystoreProperties["keyPassword"] as String
                 }
+            } else if (System.getenv("CI") == "true") {
+                signingConfig = signingConfigs.getByName("debug")
             } else {
                 throw GradleException(
                     "Missing android/key.properties. Copy key.properties.example, " +

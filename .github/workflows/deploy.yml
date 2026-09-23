@@ -117,8 +117,8 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Pre-create build directories
-        run: mkdir -p build/ios/SourcePackages
+      - name: Disable Swift Package Manager (Use CocoaPods)
+        run: flutter config --no-enable-swift-package-manager
 
       - name: Install dependencies
         run: flutter pub get
