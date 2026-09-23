@@ -231,6 +231,17 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       ),
                       itemBuilder: (context) => [
                         const PopupMenuItem(
+                          value: 'dashboard',
+                          child: Row(
+                            children: [
+                              Icon(Icons.dashboard_outlined, size: 18, color: Color(0xFF0F172A)),
+                              SizedBox(width: 10),
+                              Text('My Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
                           value: 'inspections',
                           child: Row(
                             children: [
@@ -250,26 +261,6 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                             ],
                           ),
                         ),
-                        const PopupMenuItem(
-                          value: 'verify_pin',
-                          child: Row(
-                            children: [
-                              Icon(Icons.pin_outlined, size: 18, color: Color(0xFF0F172A)),
-                              SizedBox(width: 10),
-                              Text('Verify PIN (Agent Payout)'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'withdraw',
-                          child: Row(
-                            children: [
-                              Icon(Icons.account_balance, size: 18, color: Colors.blue),
-                              SizedBox(width: 10),
-                              Text('Withdraw Earnings to Bank'),
-                            ],
-                          ),
-                        ),
                         const PopupMenuDivider(),
                         const PopupMenuItem(
                           value: 'logout',
@@ -283,7 +274,9 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         ),
                       ],
                       onSelected: (val) {
-                        if (val == 'inspections') {
+                        if (val == 'dashboard') {
+                          context.push('/buyer/browse');
+                        } else if (val == 'inspections') {
                           MyInspectionsModal.show(context);
                         } else if (val == 'wallet') {
                           RenterWalletModal.show(context);

@@ -70,6 +70,8 @@ class MarketplaceState {
 
   List<Property> get filteredProperties {
     final list = allProperties.where((prop) {
+      // Approval gate: agent/landlord listings go live only after Nissie verifies.
+      if (!prop.isVerified) return false;
       // Listing type filter
       if (filter.listingType == 'rent' && !prop.isRent) return false;
       if (filter.listingType == 'sale' && !prop.isSale) return false;

@@ -31,6 +31,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
   final _videoUrlController = TextEditingController();
   final _commissionValueController = TextEditingController();
   final _districtController = TextEditingController();
+  final _inspectionFeeController = TextEditingController(text: '3000');
 
   String _listingType = 'rent'; // 'rent', 'sale', 'shortlet'
   String _rentPeriod = 'year'; // 'year', 'month', 'total'
@@ -71,6 +72,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
     _videoUrlController.dispose();
     _commissionValueController.dispose();
     _districtController.dispose();
+    _inspectionFeeController.dispose();
     super.dispose();
   }
 
@@ -133,6 +135,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
     _districtController.text = p.district ?? '';
     _rentPeriod = p.rentPeriod;
     _isMarketplace = p.isMarketplace;
+    _inspectionFeeController.text = p.inspectionFee.toStringAsFixed(0);
   }
 
   Future<void> _fetchPartners(String companyId) async {
@@ -206,6 +209,10 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
 
     final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
     final commissionValue = double.tryParse(_commissionValueController.text.trim()) ?? 0.0;
+    // Nissie-owned estates (not in marketplace) are always free to inspect.
+    final inspectionFee = _isMarketplace
+        ? (double.tryParse(_inspectionFeeController.text.replaceAll(',', '').trim()) ?? 3000.0)
+        : 0.0;
 
     setState(() => _isSaving = true);
 
@@ -234,7 +241,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
             stateLocation: _city == 'Lagos' ? 'Lagos' : 'FCT',
             district: _districtController.text.trim().isEmpty ? null : _districtController.text.trim(),
             rentPeriod: _listingType == 'rent' ? _rentPeriod : 'total',
-            inspectionFee: 3000.0,
+            inspectionFee: inspectionFee,
             isMarketplace: _isMarketplace,
             isVerified: true,
             shieldedContact: true,
@@ -261,7 +268,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
             stateLocation: _city == 'Lagos' ? 'Lagos' : 'FCT',
             district: _districtController.text.trim().isEmpty ? null : _districtController.text.trim(),
             rentPeriod: _listingType == 'rent' ? _rentPeriod : 'total',
-            inspectionFee: 3000.0,
+            inspectionFee: inspectionFee,
             isMarketplace: _isMarketplace,
             isVerified: true,
             shieldedContact: true,
@@ -671,6 +678,31 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
                         value: _isMarketplace,
                         onChanged: (v) => setState(() => _isMarketplace = v),
                       ),
+                      if (_isMarketplace) ...[
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _inspectionFeeController,
+                          keyboardType: TextInputType.number,
+                          decoration: _inputDecoration(
+                            label: 'Inspection Fee (₦) — set per listing',
+                            icon: Icons.receipt_long_outlined,
+                          ),
+                          validator: (value) {
+                            final parsed = double.tryParse((value ?? '').replaceAll(',', '').trim());
+                            if (parsed == null || parsed < 0) {
+                              return 'Enter a valid fee (₦0 or more)';
+                            }
+                            return null;
+                          },
+                        ),
+                      ] else
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            'Nissie Ideal estate: inspection is always free (₦0).',
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                        ),
                     ],
                   ),
                 ),

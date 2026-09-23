@@ -35,6 +35,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
   String _propertyCategory = 'apartment';
   final _districtController = TextEditingController();
   final _priceController = TextEditingController();
+  final _inspectionFeeController = TextEditingController(text: '3000');
   int _bedrooms = 3;
   int _bathrooms = 3;
   final _descController = TextEditingController();
@@ -102,6 +103,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
     _propTitleController.dispose();
     _districtController.dispose();
     _priceController.dispose();
+    _inspectionFeeController.dispose();
     _descController.dispose();
     super.dispose();
   }
@@ -200,6 +202,10 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
       }
 
       final creatorId = ref.read(authProvider).profile?.id;
+      final inspectionFee = double.tryParse(
+            _inspectionFeeController.text.replaceAll(',', '').trim(),
+          ) ??
+          3000.0;
       final newProp = Property(
         id: 'prop_landlord_${DateTime.now().millisecondsSinceEpoch}',
         companyId: AppStrings.defaultCompanyId,
@@ -221,7 +227,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         stateLocation: _operatingCity == 'Lagos' ? 'Lagos' : 'FCT',
         district: _districtController.text.trim(),
         rentPeriod: _listingType == 'rent' ? 'year' : 'total',
-        inspectionFee: 3000.0,
+        inspectionFee: inspectionFee,
         isMarketplace: true,
         isVerified: false,
         shieldedContact: true,
@@ -733,6 +739,34 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                             '5% sale / 10% rent commission applies on closed deals. Photos reviewed in 2–4h.',
                             style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Inspection fee set by owner/agent (rent & sale; Nissie estates stay free)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Inspection Fee (₦)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _inspectionFeeController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: 'e.g. 3,000',
+                            prefixText: '₦ ',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return 'Enter inspection fee (0 allowed only if free)';
+                            final f = double.tryParse(v.replaceAll(',', '').trim());
+                            if (f == null || f < 0) return 'Fee must be ₦0 or more';
+                            return null;
+                          },
+                        ),
+                        const Text(
+                          'Charged per site visit. Nissie Ideal properties are always free.',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                         ),
                       ],
                     ),

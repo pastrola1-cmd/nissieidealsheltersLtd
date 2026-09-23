@@ -599,6 +599,27 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                     ),
                   ),
                 ),
+                // Approval Badge (agent/landlord listings need review before going live)
+                if (!property.isVerified)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade700,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'PENDING REVIEW',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
 
@@ -696,6 +717,16 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        if (!property.isVerified) ...[
+                          IconButton(
+                            icon: const Icon(Icons.verified_outlined, size: 20, color: Colors.green),
+                            onPressed: () => _showApproveConfirmation(context, property),
+                            tooltip: 'Approve Listing (goes live)',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
                         if (ref.read(companyProvider).company?.subscriptionTier != 'basic' && ref.read(companyProvider).company?.lpModuleEnabled == true) ...[
                           IconButton(
                             icon: const Icon(Icons.call_split_rounded, size: 18, color: AppColors.primary),
@@ -775,8 +806,50 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, Property property) {
+  void _showApproveConfirmation(BuildContext context, Property property) {
     showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Approve Listing?'),
+          content: Text(
+            '"${property.title}" will go live on the public marketplace with a ${property.displayPrice} inspection fee.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                final success = await ref.read(propertyProvider.notifier).setVerified(property.id, true);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? 'Listing approved and live.' : (ref.read(propertyProvider).errorMessage ?? 'Approval failed')),
+                      backgroundColor: success ? Colors.green : AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Approve'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Property property) {    showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(

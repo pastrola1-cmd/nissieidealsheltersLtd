@@ -273,8 +273,25 @@ class PropertyNotifier extends Notifier<PropertyState> {
     }
   }
 
-  Future<bool> deleteProperty(String id) async {
+  Future<bool> setVerified(String id, bool value) async {
     state = state.copyWith(isLoading: true);
+    try {
+      final updatedRaw = await _supabaseService.update('properties', id, {
+        'is_verified': value,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      final updatedProperty = Property.fromJson(updatedRaw);
+      final currentList = state.properties.map((p) => p.id == id ? updatedProperty : p).toList();
+      state = PropertyState(properties: currentList, isLoading: false);
+      try { ref.read(marketplaceProvider.notifier).loadMarketplace(); } catch (_) {}
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteProperty(String id) async {    state = state.copyWith(isLoading: true);
     try {
       await _supabaseService.delete('properties', id);
       final currentList = state.properties.where((p) => p.id != id).toList();
