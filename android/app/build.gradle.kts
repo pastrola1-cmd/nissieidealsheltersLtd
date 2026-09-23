@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -31,10 +34,10 @@ android {
             // android/key.properties (see key.properties.example).
             // If key.properties is missing, build will fail loudly instead
             // of silently shipping a debug-signed release.
-            val keystoreProperties = java.util.Properties()
+            val keystoreProperties = Properties()
             val keystoreFile = rootProject.file("key.properties")
             if (keystoreFile.exists()) {
-                java.io.FileInputStream(keystoreFile).use { keystoreProperties.load(it) }
+                FileInputStream(keystoreFile).use { keystoreProperties.load(it) }
             }
             if (keystoreProperties.containsKey("storeFile")) {
                 signingConfig = signingConfigs.create("release") {
