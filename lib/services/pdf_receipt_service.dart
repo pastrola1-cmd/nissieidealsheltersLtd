@@ -78,7 +78,7 @@ class PdfReceiptService {
                         style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B')),
                       ),
                       pw.Text(
-                        'Tel: ${company.phone ?? '+234 800 000 0000'} | Email: ${company.email ?? 'info@nissieidealshelters.com'}',
+                        'Tel: ${company.phone ?? '+234 913 559 8800'} | Email: ${company.email ?? 'nissieidealshelterslimited@gmail.com'}',
                         style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B')),
                       ),
                     ],
@@ -309,7 +309,7 @@ class PdfReceiptService {
                     pw.Text(company.name.toUpperCase(), style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#1E6BE6'))),
                     pw.SizedBox(height: 2),
                     pw.Text(company.address ?? 'Suite 2, Shema complex, Asokoro extension, Abuja', style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B'))),
-                    pw.Text('Phone: ${company.phone ?? '+234 800 000 0000'} | Email: ${company.email ?? 'info@nissieidealshelters.com'}', style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B'))),
+                    pw.Text('Phone: ${company.phone ?? '+234 913 559 8800'} | Email: ${company.email ?? 'nissieidealshelterslimited@gmail.com'}', style: pw.TextStyle(fontSize: 9, color: PdfColor.fromHex('#64748B'))),
                     pw.SizedBox(height: 8),
                     pw.Divider(thickness: 1.5, color: PdfColor.fromHex('#1E6BE6')),
                   ],

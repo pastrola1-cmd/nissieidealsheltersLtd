@@ -791,7 +791,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                       final message = Uri.encodeComponent(
                         'Hello Support, we want to upgrade our Nissie Ideal Shelters subscription to the ${targetPlan.name}.\n\nTenant ID: ${company.id}\nCompany: ${company.name}',
                       );
-                      final whatsappUrl = Uri.parse('https://wa.me/2348000000000?text=$message');
+                      final whatsappUrl = Uri.parse('https://wa.me/2349135598800?text=$message');
                       if (await canLaunchUrl(whatsappUrl)) {
                         await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
                       } else {
@@ -1023,7 +1023,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                       final message = Uri.encodeComponent(
                         'Hello Support, I am interested in requesting a dedicated custom-branded mobile app for my agency: ${company.name}.\n\nTenant ID: ${company.id}',
                       );
-                      final whatsappUrl = Uri.parse('https://wa.me/2348000000000?text=$message');
+                      final whatsappUrl = Uri.parse('https://wa.me/2349135598800?text=$message');
                       if (await canLaunchUrl(whatsappUrl)) {
                         await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
                       } else {

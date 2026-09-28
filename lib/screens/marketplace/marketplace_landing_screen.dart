@@ -359,7 +359,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                             children: [
                               Icon(Icons.info_outline, size: 18, color: Color(0xFF475569)),
                               SizedBox(width: 10),
-                              Text('About Nissie (RC: 1894231)'),
+                              Text('About Nissie (RC: 7867098)'),
                             ],
                           ),
                         ),
@@ -525,7 +525,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           children: [
                             Icon(Icons.info_outline, size: 18, color: Color(0xFF475569)),
                             SizedBox(width: 10),
-                            Text('About Nissie (RC: 1894231)'),
+                            Text('About Nissie (RC: 7867098)'),
                           ],
                         ),
                       ),
@@ -1437,7 +1437,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
               Icon(Icons.verified, color: Color(0xFF38BDF8), size: 14),
               SizedBox(width: 6),
               Text(
-                'CAC Reg: RC 1894231',
+                'CAC Reg: RC 7867098',
                 style: TextStyle(
                   color: Color(0xFFE2E8F0),
                   fontSize: 11.5,

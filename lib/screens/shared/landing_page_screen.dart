@@ -636,7 +636,7 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _company?.email ?? 'info@nissie-ideal-shelters.com',
+                    _company?.email ?? 'nissieidealshelterslimited@gmail.com',
                     style: const TextStyle(color: Colors.white60, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
@@ -1456,7 +1456,7 @@ class _LandingPageScreenState extends ConsumerState<LandingPageScreen> {
   }
 
   void _triggerWhatsAppInspection() {
-    final companyPhone = _company?.phone ?? '+2348000000000';
+    final companyPhone = _company?.phone ?? '+2349135598800';
     final cleanPhone = companyPhone.replaceAll(RegExp(r'[^\d+]'), '');
     final dateStr = DateFormat('EEEE, MMMM d, y').format(_selectedSaturday ?? DateTime.now());
     
