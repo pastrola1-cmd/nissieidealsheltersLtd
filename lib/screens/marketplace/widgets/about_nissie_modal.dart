@@ -47,12 +47,6 @@ class AboutNissieModal extends StatelessWidget {
               ? BorderRadius.circular(24)
               : const BorderRadius.vertical(top: Radius.circular(24)),
           clipBehavior: Clip.antiAlias,
-        child: Material(
-          color: Colors.white,
-          borderRadius: isDialog
-              ? BorderRadius.circular(24)
-              : const BorderRadius.vertical(top: Radius.circular(24)),
-          clipBehavior: Clip.antiAlias,
           elevation: isDialog ? 12 : 4,
           child: SafeArea(
             top: false,
@@ -236,9 +230,12 @@ class AboutNissieModal extends StatelessWidget {
           ),
         ),
       ),
-    ),
-    ),
-    );
+    ],
+  ),
+),
+),
+),
+);
   }
 
   Widget _buildPillarTile({
