@@ -91,7 +91,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
   Future<void> _loadProperty() async {
     setState(() => _isLoading = true);
     try {
-      // Try cached lists first (agency + marketplace incl. landlord/curated)
+      // Try cached lists first (agency + marketplace incl. landlord listings)
       final cached = ref.read(propertyProvider).properties;
       final match = cached.where((p) => p.id == widget.propertyId).firstOrNull;
       if (match != null) {
