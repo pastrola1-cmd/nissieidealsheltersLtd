@@ -31,7 +31,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
   final _videoUrlController = TextEditingController();
   final _commissionValueController = TextEditingController();
   final _districtController = TextEditingController();
-  final _inspectionFeeController = TextEditingController(text: '3000');
+  final _inspectionFeeController = TextEditingController(text: '10000');
 
   String _listingType = 'rent'; // 'rent', 'sale', 'shortlet'
   String _rentPeriod = 'year'; // 'year', 'month', 'total'
@@ -211,7 +211,7 @@ class _PropertyFormScreenState extends ConsumerState<PropertyFormScreen> {
     final commissionValue = double.tryParse(_commissionValueController.text.trim()) ?? 0.0;
     // Nissie-owned estates (not in marketplace) are always free to inspect.
     final inspectionFee = _isMarketplace
-        ? (double.tryParse(_inspectionFeeController.text.replaceAll(',', '').trim()) ?? 3000.0)
+        ? (double.tryParse(_inspectionFeeController.text.replaceAll(',', '').trim()) ?? 10000.0)
         : 0.0;
 
     setState(() => _isSaving = true);

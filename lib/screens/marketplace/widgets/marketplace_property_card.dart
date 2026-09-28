@@ -37,18 +37,23 @@ class MarketplacePropertyCard extends StatelessWidget {
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 10,
-                  child: CachedNetworkImage(
-                    imageUrl: property.images.isNotEmpty
-                        ? property.images.first
-                        : 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80',
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(Icons.apartment_rounded, size: 48, color: Colors.grey),
-                      ),
-                    ),
-                  ),
+                  child: property.images.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: property.images.first,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.apartment_rounded, size: 48, color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(Icons.apartment_rounded, size: 48, color: Colors.grey),
+                          ),
+                        ),
                 ),
 
                 // Top Pills

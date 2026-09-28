@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
@@ -12,6 +13,8 @@ import 'package:nissie_ideal_shelters/screens/marketplace/widgets/my_inspections
 import 'package:nissie_ideal_shelters/screens/wallet/renter_wallet_modal.dart';
 import 'package:nissie_ideal_shelters/screens/wallet/agent_withdrawal_modal.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/agent_pin_verification_modal.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/contact_modal.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MarketplaceLandingScreen extends ConsumerStatefulWidget {
   const MarketplaceLandingScreen({super.key});
@@ -22,11 +25,58 @@ class MarketplaceLandingScreen extends ConsumerStatefulWidget {
 
 class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  Future<void> _launchExternalUrl(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// APK download URL: local server serves the fresh build when testing on
+  /// localhost, otherwise points at the production file on the main site.
+  String _apkDownloadUrl() {
+    final base = Uri.base;
+    if (base.host == 'localhost' || base.host == '127.0.0.1') {
+      return '${base.origin}/app/nissie-app.apk';
+    }
+    return AppStrings.androidApkUrl;
+  }
+
+  void _showPolicyDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SingleChildScrollView(
+          child: Text(content, style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF334155))),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -44,7 +94,19 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF25D366),
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.chat_bubble_rounded),
+        label: const Text(
+          'Chat / Inquire',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
+        onPressed: () => ContactModal.show(context),
+      ),
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           // ── App Header / Navigation Bar ──
           SliverAppBar(
@@ -97,6 +159,36 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
               ],
             ),
             actions: [
+              // About Us Button
+              if (isWide || isTablet)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4.0),
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF334155),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    icon: const Icon(Icons.info_outline, size: 17),
+                    label: const Text('About Us', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    onPressed: () => context.push('/about'),
+                  ),
+                ),
+
+              // Contact Us Button
+              if (isWide || isTablet)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4.0),
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF334155),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    icon: const Icon(Icons.support_agent_outlined, size: 17),
+                    label: const Text('Contact', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    onPressed: () => context.push('/contact'),
+                  ),
+                ),
+
               // List Property Button
               if (isWide || isTablet)
                 Padding(
@@ -261,6 +353,26 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                             ],
                           ),
                         ),
+                        const PopupMenuItem(
+                          value: 'about',
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 18, color: Color(0xFF475569)),
+                              SizedBox(width: 10),
+                              Text('About Nissie (RC: 1894231)'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'contact',
+                          child: Row(
+                            children: [
+                              Icon(Icons.support_agent_outlined, size: 18, color: Color(0xFF475569)),
+                              SizedBox(width: 10),
+                              Text('Contact & Inquiries'),
+                            ],
+                          ),
+                        ),
                         const PopupMenuDivider(),
                         const PopupMenuItem(
                           value: 'logout',
@@ -284,6 +396,10 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           AgentPinVerificationModal.show(context);
                         } else if (val == 'withdraw') {
                           AgentWithdrawalModal.show(context);
+                        } else if (val == 'about') {
+                          context.push('/about');
+                        } else if (val == 'contact') {
+                          context.push('/contact');
                         } else if (val == 'logout') {
                           ref.read(authProvider.notifier).logout();
                         }
@@ -403,6 +519,26 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           ],
                         ),
                       ),
+                      const PopupMenuItem(
+                        value: 'about',
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 18, color: Color(0xFF475569)),
+                            SizedBox(width: 10),
+                            Text('About Nissie (RC: 1894231)'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'contact',
+                        child: Row(
+                          children: [
+                            Icon(Icons.support_agent_outlined, size: 18, color: Color(0xFF475569)),
+                            SizedBox(width: 10),
+                            Text('Contact Us & Inquiries'),
+                          ],
+                        ),
+                      ),
                       const PopupMenuDivider(),
                       const PopupMenuItem(
                         value: 'verify_pin',
@@ -432,6 +568,10 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         context.push('/signup');
                       } else if (val == 'staff_login') {
                         context.push('/login');
+                      } else if (val == 'about') {
+                        context.push('/about');
+                      } else if (val == 'contact') {
+                        context.push('/contact');
                       } else if (val == 'list_prop') {
                         context.push('/list-property');
                       } else if (val == 'verify_pin') {
@@ -508,7 +648,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
 
                       // Subtitle
                       Text(
-                        'Say goodbye to fake agents and wasted inspection fees. Book verified physical inspections for only ₦3,000 protected until you inspect.',
+                        'Say goodbye to fake agents and wasted inspection fees. Book verified physical inspections for only ₦10,000 protected until you inspect.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: const Color(0xFF94A3B8),
@@ -919,7 +1059,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       ),
                       _buildStepCard(
                         step: '2',
-                        title: 'Pay ₦3,000 Deposit',
+                        title: 'Pay ₦10,000 Deposit',
                         description: 'Pay your tour deposit securely via Card, Transfer, or Wallet. You receive a secret 4-Digit PIN.',
                       ),
                       _buildStepCard(
@@ -934,19 +1074,9 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
             ),
           ),
 
-          // ── Footer ──
+          // ── Rich 4-Column Corporate Footer ──
           SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              color: const Color(0xFF0F172A),
-              child: const Center(
-                child: Text(
-                  '© 2026 Nissie Ideal Shelters Limited • RC: 1894231 • Abuja & Lagos, Nigeria\nAll rights reserved.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
-                ),
-              ),
-            ),
+            child: _buildCorporateFooter(context, isWide, isTablet, notifier),
           ),
         ],
       ),
@@ -1185,5 +1315,468 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         ],
       ),
     );
+  }
+
+  Widget _buildCorporateFooter(
+    BuildContext context,
+    bool isWide,
+    bool isTablet,
+    MarketplaceNotifier notifier,
+  ) {
+    return Container(
+      color: const Color(0xFF0B132B),
+      padding: EdgeInsets.symmetric(
+        horizontal: isWide ? 48 : (isTablet ? 32 : 20),
+        vertical: 48,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 4-Column Layout
+          if (isWide)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: _buildCompanyInfoColumn(context)),
+                const SizedBox(width: 32),
+                Expanded(flex: 2, child: _buildPropertiesColumn(context, notifier)),
+                const SizedBox(width: 32),
+                Expanded(flex: 2, child: _buildPortalsColumn(context)),
+                const SizedBox(width: 32),
+                Expanded(flex: 3, child: _buildContactColumn(context)),
+              ],
+            )
+          else ...[
+            _buildCompanyInfoColumn(context),
+            const SizedBox(height: 32),
+            if (isTablet)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildPropertiesColumn(context, notifier)),
+                  const SizedBox(width: 24),
+                  Expanded(child: _buildPortalsColumn(context)),
+                ],
+              )
+            else ...[
+              _buildPropertiesColumn(context, notifier),
+              const SizedBox(height: 28),
+              _buildPortalsColumn(context),
+            ],
+            const SizedBox(height: 32),
+            _buildContactColumn(context),
+          ],
+
+          const SizedBox(height: 40),
+          const Divider(color: Colors.white12, thickness: 1),
+          const SizedBox(height: 24),
+
+          // Bottom Bar
+          _buildFooterBottomBar(context, isWide),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompanyInfoColumn(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/logo.jpg',
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 36,
+                  height: 36,
+                  color: AppColors.primary,
+                  child: const Icon(Icons.apartment, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'NISSIE IDEAL SHELTERS',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  'Real Estate • Construction • Facilities',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 10.5,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.verified, color: Color(0xFF38BDF8), size: 14),
+              SizedBox(width: 6),
+              Text(
+                'CAC Reg: RC 1894231',
+                style: TextStyle(
+                  color: Color(0xFFE2E8F0),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Nigeria’s trusted proptech platform providing verified properties for rent and sale, anti-extortion inspection scheduling, and institutional title due-diligence in Abuja and Lagos.',
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5, height: 1.55),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildTrustBadge(Icons.shield_outlined, 'Escrow Safe'),
+            _buildTrustBadge(Icons.verified_user_outlined, 'Zero Extortion'),
+            _buildTrustBadge(Icons.domain_verification, 'Verified Titles'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrustBadge(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: const Color(0xFF38BDF8), size: 13),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPropertiesColumn(BuildContext context, MarketplaceNotifier notifier) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PROPERTIES & LIVING',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildFooterLink(
+          'Apartments & Houses for Rent',
+          onTap: () {
+            notifier.setListingType('rent');
+            _scrollToTop();
+          },
+        ),
+        _buildFooterLink(
+          'Properties & Land for Sale',
+          onTap: () {
+            notifier.setListingType('sale');
+            _scrollToTop();
+          },
+        ),
+        _buildFooterLink(
+          'Shortlet & Serviced Apartments',
+          onTap: () {
+            notifier.setListingType('shortlet');
+            _scrollToTop();
+          },
+        ),
+        _buildFooterLink(
+          'List Your Property (Landlords)',
+          onTap: () => context.push('/list-property'),
+        ),
+        _buildFooterLink(
+          'Verify Field Agent PIN',
+          onTap: () => AgentPinVerificationModal.show(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortalsColumn(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'TRUST & PORTALS',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildFooterLink(
+          'About Nissie Shelters',
+          onTap: () => context.push('/about'),
+        ),
+        _buildFooterLink(
+          'Staff & Partner Portal',
+          onTap: () => context.push('/login'),
+        ),
+        _buildFooterLink(
+          'Tenant / Buyer Digital Wallet',
+          onTap: () => RenterWalletModal.show(context),
+        ),
+        _buildFooterLink(
+          'Inspection Safety Policy',
+          onTap: () => context.push('/about'),
+        ),
+        _buildFooterLink(
+          'Contact Customer Support',
+          onTap: () => context.push('/contact'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactColumn(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'CONTACT & OFFICES',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildOfficeItem(
+          icon: Icons.location_on_outlined,
+          title: 'Abuja Head Office:',
+          detail: 'Suite 302, Oakland Centre, Plot 2940 Aguiyi Ironsi St, Maitama / CBD, Abuja, FCT',
+        ),
+        const SizedBox(height: 10),
+        _buildOfficeItem(
+          icon: Icons.business_outlined,
+          title: 'Lagos Branch Office:',
+          detail: 'Victoria Island, Lagos State, Nigeria',
+        ),
+        const SizedBox(height: 12),
+        // Phone
+        InkWell(
+          onTap: () => _launchExternalUrl('tel:+2348000000000'),
+          child: const Row(
+            children: [
+              Icon(Icons.phone_outlined, color: Color(0xFF38BDF8), size: 15),
+              SizedBox(width: 8),
+              Text(
+                '+234 800 000 0000',
+                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // WhatsApp
+        InkWell(
+          onTap: () => _launchExternalUrl('https://wa.me/2348000000000?text=Hello%20Nissie%20Ideal%20Shelters'),
+          child: const Row(
+            children: [
+              Icon(Icons.chat_bubble_outline, color: Color(0xFF22C55E), size: 15),
+              SizedBox(width: 8),
+              Text(
+                'WhatsApp Support Desk',
+                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Email
+        InkWell(
+          onTap: () => _launchExternalUrl('mailto:nissieidealshelterslimited@gmail.com'),
+          child: const Row(
+            children: [
+              Icon(Icons.email_outlined, color: Color(0xFF38BDF8), size: 15),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'nissieidealshelterslimited@gmail.com',
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xFF38BDF8)),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.send_outlined, size: 15, color: Color(0xFF38BDF8)),
+            label: const Text(
+              'Send Inquiry / Message',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+            ),
+            onPressed: () => context.push('/contact'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOfficeItem({
+    required IconData icon,
+    required String title,
+    required String detail,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.white54, size: 15),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(fontSize: 12, height: 1.4),
+              children: [
+                TextSpan(
+                  text: '$title ',
+                  style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                ),
+                TextSpan(
+                  text: detail,
+                  style: const TextStyle(color: Color(0xFF94A3B8)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooterLink(String label, {required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF94A3B8),
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooterBottomBar(BuildContext context, bool isWide) {
+    const copyright = '© 2026 Nissie Ideal Shelters Limited (RC: 1894231). All rights reserved.';
+    final links = [
+      TextButton(
+        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+        onPressed: () => _showPolicyDialog(
+          context,
+          'Terms of Service',
+          'Nissie Ideal Shelters Limited provides property listing verification, inspection escrow, and agency coordination services. All listing details and pricing are provided by verified property owners and developers. Clients agree to conduct physical inspections using the official 4-digit verification PIN to ensure safety and prevent fraudulent fees.',
+        ),
+        child: const Text('Terms of Service', style: TextStyle(color: Colors.white54, fontSize: 11.5)),
+      ),
+      TextButton(
+        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+        onPressed: () => _showPolicyDialog(
+          context,
+          'Privacy Policy',
+          'Your contact and inquiry information is encrypted and transmitted securely via Supabase. We do not sell or lease your personal information to third parties. Contact details are solely utilized to coordinate scheduled property viewings and client communication.',
+        ),
+        child: const Text('Privacy Policy', style: TextStyle(color: Colors.white54, fontSize: 11.5)),
+      ),
+      TextButton(
+        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+        onPressed: () => context.push('/about'),
+        child: const Text('Anti-Extortion Guarantee', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11.5)),
+      ),
+      TextButton.icon(
+        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+        onPressed: () => _launchExternalUrl(_apkDownloadUrl()),
+        icon: const Icon(Icons.android_rounded, color: Color(0xFF22C55E), size: 15),
+        label: Text(
+          'Download Android App (v${AppStrings.androidApkVersion})',
+          style: const TextStyle(color: Color(0xFF22C55E), fontSize: 11.5, fontWeight: FontWeight.bold),
+        ),
+      ),
+    ];
+
+    if (isWide) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            copyright,
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          Row(children: links),
+        ],
+      );
+    } else {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(children: links),
+          const SizedBox(height: 8),
+          const Text(
+            copyright,
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+        ],
+      );
+    }
   }
 }

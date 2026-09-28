@@ -30,6 +30,7 @@ class _AgentWithdrawalModalState extends ConsumerState<AgentWithdrawalModal> {
 
   late NigerianBank _selectedBank;
   bool _isResolvingAccount = false;
+  String? _resolutionError;
   bool _isWithdrawing = false;
   bool _withdrawalSuccess = false;
   double? _withdrawnAmount;
@@ -56,7 +57,10 @@ class _AgentWithdrawalModalState extends ConsumerState<AgentWithdrawalModal> {
   Future<void> _onAccountNumberChanged(String val) async {
     final clean = val.trim();
     if (clean.length == 10) {
-      setState(() => _isResolvingAccount = true);
+      setState(() {
+        _isResolvingAccount = true;
+        _resolutionError = null;
+      });
       final result = await ref.read(paystackServiceProvider).resolveAccountNumber(
         accountNumber: clean,
         bankCode: _selectedBank.code,
@@ -66,12 +70,19 @@ class _AgentWithdrawalModalState extends ConsumerState<AgentWithdrawalModal> {
           _isResolvingAccount = false;
           if (result.isValid) {
             _accountNameController.text = result.accountName;
+            _resolutionError = null;
+          } else {
+            _accountNameController.clear();
+            _resolutionError = result.errorMessage;
           }
         });
       }
     } else {
-      if (_accountNameController.text.isNotEmpty) {
-        setState(() => _accountNameController.clear());
+      if (_accountNameController.text.isNotEmpty || _resolutionError != null) {
+        setState(() {
+          _accountNameController.clear();
+          _resolutionError = null;
+        });
       }
     }
   }
@@ -314,6 +325,35 @@ class _AgentWithdrawalModalState extends ConsumerState<AgentWithdrawalModal> {
             },
           ),
           const SizedBox(height: 12),
+
+          // Resolution Error Feedback
+          if (_resolutionError != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _resolutionError!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Resolved Account Name
           if (_accountNameController.text.isNotEmpty) ...[

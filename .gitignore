@@ -5,6 +5,7 @@ env.txt
 .env.local
 .supabase_dbpw
 .supabase_pat
+.paystack_secret
 
 # Miscellaneous
 *.class
@@ -56,4 +57,5 @@ scratch/
 android/key.properties
 android/*.keystore
 android/*.jks
+supabase/.temp/
 

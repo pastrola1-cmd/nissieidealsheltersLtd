@@ -144,7 +144,7 @@ class MyInspectionsModal extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Browse verified rental or sale properties and click "Book Inspection" to secure a site visit protected by our ₦3,000 PIN verification system.',
+              'Browse verified rental or sale properties and click "Book Inspection" to secure a site visit protected by our ₦10,000 PIN verification system.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600, height: 1.4),
             ),

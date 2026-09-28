@@ -593,20 +593,25 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    widget.property.images.isNotEmpty
-                        ? widget.property.images.first
-                        : 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80',
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.grey.shade300,
-                      child: const Icon(Icons.home, color: Colors.grey),
-                    ),
-                  ),
+                  child: widget.property.images.isNotEmpty
+                      ? Image.network(
+                          widget.property.images.first,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey.shade300,
+                            child: const Icon(Icons.home, color: Colors.grey),
+                          ),
+                        )
+                      : Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey.shade300,
+                          child: const Icon(Icons.home, color: Colors.grey),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

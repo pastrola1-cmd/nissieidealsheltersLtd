@@ -216,7 +216,7 @@ class WalletNotifier extends Notifier<WalletState> {
   Future<bool> payInspectionDeposit({
     required String propertyTitle,
     String? bookingId,
-    double amount = 3000.0,
+    double amount = 10000.0,
   }) async {
     if (amount < 0) {
       state = state.copyWith(errorMessage: 'Invalid deposit amount');
@@ -380,13 +380,37 @@ class WalletNotifier extends Notifier<WalletState> {
       });
 
       if (rpcRes != null && rpcRes['success'] == true) {
+        final reference = (rpcRes['reference'] as String?) ?? '';
+        if (reference.isNotEmpty) {
+          try {
+            final payoutRes = await ref.read(paystackServiceProvider).initiatePayout(
+              reference: reference,
+              amount: amount,
+              accountNumber: accountNumber,
+              bankCode: bankCode,
+              accountName: accountName,
+            );
+            if (payoutRes['success'] != true) {
+              // If payout initiation was rejected, the edge function safely refunded the wallet
+              await _syncWithSupabase(userId);
+              state = state.copyWith(
+                isLoading: false,
+                errorMessage: (payoutRes['message'] as String?) ?? 'Payout initiation rejected. Wallet refunded.',
+              );
+              return false;
+            }
+          } catch (payoutErr) {
+            debugPrint('Paystack automated payout initiation notice: $payoutErr');
+            // Network interruption: withdrawal transaction remains pending in database
+          }
+        }
         await _syncWithSupabase(userId);
         state = state.copyWith(isLoading: false);
         return true;
       }
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Withdrawal rejected by server',
+        errorMessage: (rpcRes?['message'] as String?) ?? 'Withdrawal rejected by server',
       );
       return false;
     } catch (e) {

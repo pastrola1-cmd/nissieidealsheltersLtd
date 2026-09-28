@@ -10,6 +10,10 @@ class AppStrings {
   static const String defaultCompanyId = 'd3b07384-d113-4ec6-a5d7-ecf9e01103e6';
   static const String currency = '₦';
 
+  // ── Android app download (production URL; localhost auto-resolves) ──
+  static const String androidApkUrl = 'https://nissieidealshelters.com.ng/app/nissie-app.apk';
+  static const String androidApkVersion = '1.0.0';
+
   // ── Auth ──
   static const String login = 'Login';
   static const String signUp = 'Create Account';

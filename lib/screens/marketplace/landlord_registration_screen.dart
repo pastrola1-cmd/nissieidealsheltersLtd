@@ -35,7 +35,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
   String _propertyCategory = 'apartment';
   final _districtController = TextEditingController();
   final _priceController = TextEditingController();
-  final _inspectionFeeController = TextEditingController(text: '3000');
+  final _inspectionFeeController = TextEditingController(text: '10000');
   int _bedrooms = 3;
   int _bathrooms = 3;
   final _descController = TextEditingController();
@@ -172,8 +172,9 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         return;
       }
 
-      // 3. Upload images if selected
+      // 3. Upload images if selected (failures are reported, never silent)
       List<String> imageUrls = [];
+      int failedUploads = 0;
       if (_imageBytesList.isNotEmpty) {
         for (int i = 0; i < _imageBytesList.length; i++) {
           try {
@@ -188,24 +189,42 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
             );
             imageUrls.add(url);
           } catch (_) {
-            // Keep going if one fails
+            failedUploads++;
           }
+        }
+        // All photos failed: stop instead of submitting with a stock photo.
+        if (imageUrls.isEmpty) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo upload failed. Check your connection and try again — listing not submitted.'),
+                backgroundColor: Colors.redAccent,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
+        if (failedUploads > 0 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$failedUploads photo(s) failed to upload. Submitting with the rest.'),
+              backgroundColor: Colors.orangeAccent,
+              duration: const Duration(seconds: 4),
+            ),
+          );
         }
       }
 
-      if (imageUrls.isEmpty) {
-        imageUrls = [
-          _listingType == 'rent'
-              ? 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80'
-              : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-        ];
-      }
+      // No stock fallbacks: a photo-less listing honestly carries no images.
+      // (Cards and detail screens render a neutral placeholder instead.)
 
       final creatorId = ref.read(authProvider).profile?.id;
       final inspectionFee = double.tryParse(
             _inspectionFeeController.text.replaceAll(',', '').trim(),
           ) ??
-          3000.0;
+          10000.0;
       final newProp = Property(
         id: 'prop_landlord_${DateTime.now().millisecondsSinceEpoch}',
         companyId: AppStrings.defaultCompanyId,
@@ -753,7 +772,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                           controller: _inspectionFeeController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            hintText: 'e.g. 3,000',
+                            hintText: 'e.g. 10,000',
                             prefixText: '₦ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),

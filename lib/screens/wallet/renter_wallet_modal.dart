@@ -250,9 +250,9 @@ class _RenterWalletModalState extends ConsumerState<RenterWalletModal> {
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      _buildPresetChip(3000, '₦3,000 (1 Tour)'),
-                      _buildPresetChip(6000, '₦6,000 (2 Tours)'),
-                      _buildPresetChip(10000, '₦10,000 (3 Tours)'),
+                      _buildPresetChip(10000, '₦10,000 (1 Tour)'),
+                      _buildPresetChip(20000, '₦20,000 (2 Tours)'),
+                      _buildPresetChip(50000, '₦50,000 (5 Tours)'),
                     ],
                   ),
                   const SizedBox(height: 14),

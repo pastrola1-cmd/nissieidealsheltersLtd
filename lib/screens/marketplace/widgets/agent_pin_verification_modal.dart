@@ -93,9 +93,9 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
               ? DateTime.tryParse(m['scheduled_date'].toString()) ?? DateTime.now()
               : DateTime.now(),
           scheduledTime: (m['scheduled_time'] as String?) ?? '',
-          feeAmount: (m['fee_amount'] as num?)?.toDouble() ?? 3000.0,
-          agentPayoutAmount: (m['agent_payout_amount'] as num?)?.toDouble() ?? 2000.0,
-          platformFeeAmount: (m['platform_fee_amount'] as num?)?.toDouble() ?? 1000.0,
+          feeAmount: (m['fee_amount'] as num?)?.toDouble() ?? 10000.0,
+          agentPayoutAmount: (m['agent_payout_amount'] as num?)?.toDouble() ?? 7000.0,
+          platformFeeAmount: (m['platform_fee_amount'] as num?)?.toDouble() ?? 3000.0,
           completionPin: pin,
           status: InspectionEscrowStatus.paidEscrow,
           createdAt: DateTime.now(),

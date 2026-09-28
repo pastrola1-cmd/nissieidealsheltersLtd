@@ -23,6 +23,7 @@ import 'package:nissie_ideal_shelters/screens/auth/signup_screen.dart';
 import 'package:nissie_ideal_shelters/screens/auth/awaiting_approval_screen.dart';
 import 'package:nissie_ideal_shelters/screens/auth/profile_completion_screen.dart';
 import 'package:nissie_ideal_shelters/screens/auth/onboarding_screen.dart';
+import 'package:nissie_ideal_shelters/screens/auth/reset_password_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/company_profile_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_settings_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/billing_screen.dart';
@@ -79,6 +80,8 @@ import 'package:nissie_ideal_shelters/screens/admin/admin_guide_screen.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/marketplace_landing_screen.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/landlord_registration_screen.dart';
 import 'package:nissie_ideal_shelters/screens/landlord/landlord_dashboard_screen.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/about_us_screen.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/contact_us_screen.dart';
 
 
 
@@ -138,17 +141,19 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: RouterRefreshListenable(ref),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
+      final isResetPassword = state.matchedLocation == '/reset-password';
       final loggingIn = state.matchedLocation == '/login' ||
           state.matchedLocation == '/signup' ||
           state.matchedLocation == '/onboarding';
       final isAuthLoading = state.matchedLocation == '/auth-loading';
       final isMarketplace = state.matchedLocation == '/' || state.matchedLocation == '/marketplace';
       final isLandlordRegister = state.matchedLocation == '/list-property' || state.matchedLocation == '/landlord/register';
+      final isPublicInfo = state.matchedLocation == '/about' || state.matchedLocation == '/contact';
 
       // ── While auth is loading, show a branded loading screen ──
       if (authState.isLoading) {
-        // Don't redirect if already on the loading screen, marketplace, or on auth pages
-        return (isAuthLoading || isMarketplace || isLandlordRegister || loggingIn) ? null : '/auth-loading';
+        // Don't redirect if already on the loading screen, marketplace, reset password, about/contact, or on auth pages
+        return (isAuthLoading || isMarketplace || isLandlordRegister || isPublicInfo || loggingIn || isResetPassword) ? null : '/auth-loading';
       }
 
       // ── If loading just finished, redirect away from auth-loading ──
@@ -159,11 +164,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/';
       }
 
-      // ── Unauthenticated visitors can view marketplace, property details, and auth ──
+      // ── Unauthenticated visitors can view marketplace, property details, about/contact, and auth ──
       if (!authState.isAuthenticated) {
         final isPropertyDetail = state.matchedLocation.startsWith('/properties/');
         final isLandingPage = state.matchedLocation.startsWith('/lp/');
-        return (loggingIn || isPropertyDetail || isLandingPage || isMarketplace || isLandlordRegister) ? null : '/';
+        return (loggingIn || isResetPassword || isPropertyDetail || isLandingPage || isMarketplace || isLandlordRegister || isPublicInfo) ? null : '/';
       }
 
       final profile = authState.profile;
@@ -208,6 +213,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If they are fully completed but on profile completion page, send them to dashboard
       if (state.matchedLocation == '/profile-completion') {
         return _getDefaultRouteForRole(profile.role);
+      }
+
+      // ── Allow recovery sessions to set new password ──
+      if (isResetPassword) {
+        return null;
       }
 
        // ── If already logged in, prevent going to auth screens ──
@@ -287,6 +297,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/buyer/dashboard',
         redirect: (context, state) => '/buyer/browse',
       ),
+      GoRoute(
+        path: '/about',
+        name: 'aboutUs',
+        builder: (context, state) => const AboutUsScreen(),
+      ),
+      GoRoute(
+        path: '/contact',
+        name: 'contactUs',
+        builder: (context, state) => const ContactUsScreen(),
+      ),
 
       // ── Auth routes (no shell) ──────────────────────────────────────────
       GoRoute(
@@ -298,6 +318,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: 'resetPassword',
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
       GoRoute(
         path: '/auth-loading',

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -325,6 +326,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       try {
                         await SupabaseConfig.auth.resetPasswordForEmail(
                           resetEmailController.text.trim(),
+                          redirectTo: kIsWeb
+                              ? '${Uri.base.origin}/#/reset-password'
+                              : 'io.supabase.nissie://reset-callback',
                         );
                         if (dialogContext.mounted) {
                           Navigator.of(dialogContext).pop();

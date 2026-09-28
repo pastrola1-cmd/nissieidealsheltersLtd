@@ -87,7 +87,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
     String stateLocation = 'FCT',
     String? district,
     String rentPeriod = 'year',
-    double inspectionFee = 3000.0,
+    double inspectionFee = 10000.0,
     bool isMarketplace = true,
     bool isVerified = true,
     bool shieldedContact = true,

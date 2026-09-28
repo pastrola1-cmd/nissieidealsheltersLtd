@@ -48,11 +48,18 @@ class AccountResolutionResult {
 class PaystackService {
   static const String _baseUrl = 'https://api.paystack.co';
 
+  static const String _defaultPublicKey = 'pk_live_05c3f6c24b453816614c11e1a3d61e3c6842e8eb';
+
   /// Standard default public key for Nissie testing / fallback
-  /// NOTE: Never hardcode a real key. Provide via --dart-define=PAYSTACK_PUBLIC_KEY.
-  String get publicKey =>
-      dotenv.env['PAYSTACK_PUBLIC_KEY'] ??
-      const String.fromEnvironment('PAYSTACK_PUBLIC_KEY', defaultValue: '');
+  String get publicKey {
+    const defined = String.fromEnvironment('PAYSTACK_PUBLIC_KEY');
+    if (defined.isNotEmpty) return defined;
+    try {
+      final envVal = dotenv.env['PAYSTACK_PUBLIC_KEY'];
+      if (envVal != null && envVal.isNotEmpty) return envVal;
+    } catch (_) {}
+    return _defaultPublicKey;
+  }
 
   String? get secretKey {
     const defined = String.fromEnvironment('PAYSTACK_SECRET_KEY');
@@ -80,7 +87,7 @@ class PaystackService {
   ];
 
   /// Resolves a 10-digit NUBAN account number with any Nigerian bank.
-  /// Confirms the real legal account name before withdrawal.
+  /// Confirms the real legal account name before withdrawal via server Edge Function.
   Future<AccountResolutionResult> resolveAccountNumber({
     required String accountNumber,
     required String bankCode,
@@ -95,50 +102,77 @@ class PaystackService {
     }
 
     try {
-      final key = secretKey;
-      if (key == null || key.isEmpty) {
-        // Fail closed: client must not invent account names.
-        // Caller should route verification through a server Edge Function
-        // holding PAYSTACK_SECRET_KEY.
-        debugPrint('PaystackService: Secret key not available in client — refusing local verification');
+      final base = SupabaseConfig.supabaseUrl;
+      final anon = SupabaseConfig.supabaseAnonKey;
+
+      // 1. Primary path: Route verification through secure Edge Function holding SECRET
+      if (base.isNotEmpty && anon.isNotEmpty) {
+        final res = await http.post(
+          Uri.parse('$base/functions/v1/paystack-resolve-account'),
+          headers: {
+            'apikey': anon,
+            'Authorization': 'Bearer $anon',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'accountNumber': accountNumber,
+            'bankCode': bankCode,
+          }),
+        ).timeout(const Duration(seconds: 12));
+
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          if (data['success'] == true && data['accountName'] != null) {
+            return AccountResolutionResult(
+              isValid: true,
+              accountName: data['accountName'] as String,
+              accountNumber: (data['accountNumber'] as String?) ?? accountNumber,
+            );
+          }
+        }
+
+        final errData = jsonDecode(res.body) as Map<String, dynamic>?;
+        final msg = errData?['message'] as String? ?? 'Could not resolve account name';
         return AccountResolutionResult(
           isValid: false,
           accountName: '',
           accountNumber: accountNumber,
-          errorMessage: 'Bank verification unavailable. Please try again when online.',
+          errorMessage: msg,
         );
       }
 
-      final response = await http.get(
-        Uri.parse('$_baseUrl/bank/resolve?account_number=$accountNumber&bank_code=$bankCode'),
-        headers: {
-          'Authorization': 'Bearer $key',
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
+      // 2. Direct Fallback: Only if client secretKey was provided in local test environment
+      final key = secretKey;
+      if (key != null && key.isNotEmpty) {
+        final response = await http.get(
+          Uri.parse('$_baseUrl/bank/resolve?account_number=$accountNumber&bank_code=$bankCode'),
+          headers: {
+            'Authorization': 'Bearer $key',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (data['status'] == true && data['data'] != null) {
-          final accountName = data['data']['account_name'] as String? ?? 'VERIFIED RECIPIENT';
-          return AccountResolutionResult(
-            isValid: true,
-            accountName: accountName,
-            accountNumber: accountNumber,
-          );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          if (data['status'] == true && data['data'] != null) {
+            final accountName = data['data']['account_name'] as String? ?? 'VERIFIED RECIPIENT';
+            return AccountResolutionResult(
+              isValid: true,
+              accountName: accountName,
+              accountNumber: accountNumber,
+            );
+          }
         }
       }
 
-      final errData = jsonDecode(response.body) as Map<String, dynamic>?;
       return AccountResolutionResult(
         isValid: false,
         accountName: '',
         accountNumber: accountNumber,
-        errorMessage: errData?['message'] as String? ?? 'Could not resolve account number',
+        errorMessage: 'Bank verification unavailable. Please try again when online.',
       );
     } catch (e) {
       debugPrint('PaystackService.resolveAccountNumber error: $e');
-      // Fail closed on network error — do not allow withdrawal to unknown name.
       return AccountResolutionResult(
         isValid: false,
         accountName: '',
@@ -251,6 +285,61 @@ class PaystackService {
       onError?.call(e.toString());
       onCancel();
       return false;
+    }
+  }
+
+  /// Initiates automated transfer payout via the paystack-payout Edge Function.
+  Future<Map<String, dynamic>> initiatePayout({
+    required String reference,
+    required double amount,
+    required String accountNumber,
+    required String bankCode,
+    required String accountName,
+  }) async {
+    final base = SupabaseConfig.supabaseUrl;
+    final anon = SupabaseConfig.supabaseAnonKey;
+    final token = SupabaseConfig.client.auth.currentSession?.accessToken ?? anon;
+
+    if (base.isEmpty || anon.isEmpty) {
+      return {'success': false, 'message': 'Payment service configuration missing'};
+    }
+
+    try {
+      final res = await http.post(
+        Uri.parse('$base/functions/v1/paystack-payout'),
+        headers: {
+          'apikey': anon,
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'reference': reference,
+          'amount': amount,
+          'accountNumber': accountNumber,
+          'bankCode': bankCode,
+          'accountName': accountName,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>? ?? {};
+      if (res.statusCode == 200 && data['success'] == true) {
+        return {
+          'success': true,
+          'reference': data['reference'],
+          'transferCode': data['transferCode'],
+          'status': data['status'],
+        };
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Payout transfer could not be initiated',
+      };
+    } catch (e) {
+      debugPrint('PaystackService.initiatePayout error: $e');
+      return {
+        'success': false,
+        'message': 'Network error calling payout service: $e',
+      };
     }
   }
 }

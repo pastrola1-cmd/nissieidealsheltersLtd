@@ -163,7 +163,10 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
       );
     } finally {
-      completer.complete();
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+      _activeFetch = null;
     }
   }
 

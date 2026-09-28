@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
@@ -161,7 +162,8 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     try {
       final dbProperties = await _supabaseService.getProperties();
       state = state.copyWith(allProperties: dbProperties, isLoading: false);
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Marketplace load error: $e\n$stack');
       state = state.copyWith(
         allProperties: const [],
         isLoading: false,
@@ -227,7 +229,7 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
     required DateTime date,
     required String time,
     String? notes,
-    double feeAmount = 3000.0,
+    double feeAmount = 10000.0,
   }) {
     final random = Random.secure();
     // Ensure uniqueness within local session (1/9000 collision space).
@@ -248,8 +250,8 @@ class MarketplaceNotifier extends Notifier<MarketplaceState> {
       scheduledTime: time,
       completionPin: pin,
       feeAmount: feeAmount,
-      agentPayoutAmount: feeAmount <= 0 ? 0 : 2000.0,
-      platformFeeAmount: feeAmount <= 0 ? 0 : 1000.0,
+      agentPayoutAmount: feeAmount <= 0 ? 0 : (feeAmount >= 10000.0 ? 7000.0 : (feeAmount * 0.70).roundToDouble()),
+      platformFeeAmount: feeAmount <= 0 ? 0 : (feeAmount >= 10000.0 ? 3000.0 : (feeAmount * 0.30).roundToDouble()),
       status: feeAmount <= 0
           ? InspectionEscrowStatus.agentAssigned
           : InspectionEscrowStatus.paidEscrow,

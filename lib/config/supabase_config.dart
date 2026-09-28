@@ -14,28 +14,32 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseConfig {
   SupabaseConfig._();
 
+  static const String _defaultUrl = 'https://mrwgijaypgtkoyaizjpg.supabase.co';
+  static const String _defaultAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1yd2dpamF5cGd0a295YWl6anBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MjkzNjMsImV4cCI6MjA5NzEwNTM2M30.nS0Z96NwklNEQdv_Spc1F154iWLco0JJTaBbmk6G0lo';
+
   /// The Supabase project URL.
-  /// Priority: --dart-define=SUPABASE_URL, then dotenv (local dev only).
+  /// Priority: --dart-define=SUPABASE_URL, then dotenv, then fallback constant.
   static String get supabaseUrl {
     const defined = String.fromEnvironment('SUPABASE_URL');
     if (defined.isNotEmpty) return defined;
     try {
-      return dotenv.env['SUPABASE_URL'] ?? '';
-    } catch (_) {
-      return '';
-    }
+      final envVal = dotenv.env['SUPABASE_URL'];
+      if (envVal != null && envVal.isNotEmpty) return envVal;
+    } catch (_) {}
+    return _defaultUrl;
   }
 
   /// The Supabase anonymous/public key.
-  /// Priority: --dart-define=SUPABASE_ANON_KEY, then dotenv (local dev only).
+  /// Priority: --dart-define=SUPABASE_ANON_KEY, then dotenv, then fallback constant.
   static String get supabaseAnonKey {
     const defined = String.fromEnvironment('SUPABASE_ANON_KEY');
     if (defined.isNotEmpty) return defined;
     try {
-      return dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-    } catch (_) {
-      return '';
-    }
+      final envVal = dotenv.env['SUPABASE_ANON_KEY'];
+      if (envVal != null && envVal.isNotEmpty) return envVal;
+    } catch (_) {}
+    return _defaultAnonKey;
   }
 
   /// Initializes the Supabase client with URL and anon key from environment.
