@@ -675,10 +675,9 @@ class SupabaseService {
     return getProperty(propertyId);
   }
 
-  /// Submits a lead captured from a landing page using the secure postgres RPC.
   Future<String> submitPublicLead({
     required String companyId,
-    required String propertyId,
+    String? propertyId,
     required String buyerName,
     required String buyerPhone,
     String? buyerEmail,
@@ -692,7 +691,7 @@ class SupabaseService {
       'create_public_lead',
       params: {
         'p_company_id': companyId,
-        'p_property_id': propertyId,
+        'p_property_id': (propertyId != null && propertyId.isNotEmpty) ? propertyId : null,
         'p_buyer_name': buyerName,
         'p_buyer_phone': buyerPhone,
         'p_buyer_email': buyerEmail,

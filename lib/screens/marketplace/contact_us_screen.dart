@@ -62,15 +62,14 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
 
     try {
       final supabaseService = ref.read(supabaseServiceProvider);
-      await supabaseService.insert('leads', {
-        'company_id': AppStrings.defaultCompanyId,
-        'name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-        'notes': _messageController.text.trim(),
-        'stage': 'new',
-        'source': 'website_contact_page',
-      });
+      await supabaseService.submitPublicLead(
+        companyId: AppStrings.defaultCompanyId,
+        buyerName: _nameController.text.trim(),
+        buyerPhone: _phoneController.text.trim(),
+        buyerEmail: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+        notes: _messageController.text.trim(),
+        consentText: 'Inquiry submitted from Nissie website contact page.',
+      );
 
       if (!mounted) return;
       setState(() {

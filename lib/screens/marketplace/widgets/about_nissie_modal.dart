@@ -47,85 +47,100 @@ class AboutNissieModal extends StatelessWidget {
               ? BorderRadius.circular(24)
               : const BorderRadius.vertical(top: Radius.circular(24)),
           clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.white,
+          borderRadius: isDialog
+              ? BorderRadius.circular(24)
+              : const BorderRadius.vertical(top: Radius.circular(24)),
+          clipBehavior: Clip.antiAlias,
           elevation: isDialog ? 12 : 4,
           child: SafeArea(
             top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!isDialog) ...[
-                    // Drag Indicator for mobile bottom sheet
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isDialog) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                  ],
-
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.asset(
-                        'assets/app_icon.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.apartment_rounded,
-                          color: AppColors.primary,
-                          size: 30,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Nissie Ideal Shelters Ltd',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'RC: 7867098 • Real Estate & Development Firm',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF059669),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
-                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
-              ),
-              const SizedBox(height: 20),
+
+                // Pinned Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 16, 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.asset(
+                            'assets/app_icon.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.apartment_rounded,
+                              color: AppColors.primary,
+                              size: 30,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Nissie Ideal Shelters Ltd',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'RC: 7867098 • Real Estate & Development Firm',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 22, color: Color(0xFF64748B)),
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+
+                // Scrollable Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
 
               // Company Mission
               Text(

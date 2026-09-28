@@ -97,15 +97,14 @@ class _ContactModalState extends ConsumerState<ContactModal> {
 
     try {
       final supabaseService = ref.read(supabaseServiceProvider);
-      await supabaseService.insert('leads', {
-        'company_id': AppStrings.defaultCompanyId,
-        'name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-        'notes': '[$_inquiryType] ${_messageController.text.trim()}',
-        'stage': 'new',
-        'source': 'website_contact_modal',
-      });
+      await supabaseService.submitPublicLead(
+        companyId: AppStrings.defaultCompanyId,
+        buyerName: _nameController.text.trim(),
+        buyerPhone: _phoneController.text.trim(),
+        buyerEmail: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+        notes: '[$_inquiryType] ${_messageController.text.trim()}',
+        consentText: 'Inquiry submitted from Nissie website contact modal.',
+      );
 
       if (!mounted) return;
       setState(() {
@@ -140,72 +139,81 @@ class _ContactModalState extends ConsumerState<ContactModal> {
           elevation: widget.isDialog ? 12 : 4,
           child: SafeArea(
             top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!widget.isDialog) ...[
-                    // Drag indicator for mobile bottom sheet
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!widget.isDialog) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                  ],
-
-              // Header
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Contact Nissie Ideal Shelters',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'RC: 7867098 • Abuja, Nigeria',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
-                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
-              ),
-              const SizedBox(height: 18),
+
+                // Pinned Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 16, 14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 26),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Contact Nissie Ideal Shelters',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'RC: 7867098 • Abuja, Nigeria',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 22, color: Color(0xFF64748B)),
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+
+                // Scrollable Body Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
 
               // Direct Quick Action Buttons
               Row(
@@ -484,13 +492,16 @@ class _ContactModalState extends ConsumerState<ContactModal> {
                   ),
                 ),
               ],
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     ),
-    ),
-    );
+  ),
+),
+),
+);
   }
 
   Widget _buildActionTile({
