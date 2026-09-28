@@ -108,7 +108,7 @@ class RouterRefreshListenable extends ChangeNotifier {
 }
 
 /// Helper function to route authenticated users to their default dashboard.
-String _getDefaultRouteForRole(UserRole role) {
+String getDefaultRouteForRole(UserRole role) {
   switch (role) {
     case UserRole.admin:
       return '/admin/dashboard';
@@ -126,6 +126,8 @@ String _getDefaultRouteForRole(UserRole role) {
       return '/landlord/dashboard';
   }
 }
+
+String _getDefaultRouteForRole(UserRole role) => getDefaultRouteForRole(role);
 
 /// Provider to store onboarding completion status
 final onboardingCompletedProvider = FutureProvider<bool>((ref) async {

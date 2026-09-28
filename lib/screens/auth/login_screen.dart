@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/config/supabase_config.dart';
+import 'package:nissie_ideal_shelters/config/routes.dart';
+import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/config/app_logger.dart';
 
@@ -39,15 +41,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
 
       logDebug('LoginScreen._handleLogin completed with success: $success');
-      if (!success && mounted) {
-        final errorMessage = ref.read(authProvider).errorMessage ?? 'Login failed';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.error,
-          ),
-        );
+      if (mounted) {
+        if (success) {
+          final profile = ref.read(authProvider).profile;
+          final target = profile != null
+              ? getDefaultRouteForRole(profile.role)
+              : '/admin/dashboard';
+          context.go(target);
+        } else {
+          final errorMessage = ref.read(authProvider).errorMessage ?? 'Login failed';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     }
   }

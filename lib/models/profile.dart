@@ -39,21 +39,23 @@ class Profile {
 
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? '',
       companyId: json['company_id'] as String?,
-      role: UserRole.fromString(json['role'] as String),
+      role: UserRole.fromString((json['role'] as String?) ?? 'buyer'),
       fullName: json['full_name'] as String?,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       referralCode: json['referral_code'] as String?,
-      status: PartnerStatus.fromString(json['status'] as String),
+      status: PartnerStatus.fromString((json['status'] as String?) ?? 'approved'),
       bankName: json['bank_name'] as String?,
       accountNumber: json['account_number'] as String?,
       accountName: json['account_name'] as String?,
       fcmToken: json['fcm_token'] as String?,
       managerId: json['manager_id'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
+          : DateTime.now(),
     );
   }
 

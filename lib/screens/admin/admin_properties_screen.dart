@@ -725,6 +725,14 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                             constraints: const BoxConstraints(),
                             padding: const EdgeInsets.all(4),
                           ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.cancel_outlined, size: 20, color: AppColors.error),
+                            onPressed: () => _showDeclineConfirmation(context, property),
+                            tooltip: 'Decline Listing',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                          ),
                           const SizedBox(width: 12),
                         ],
                         if (ref.read(companyProvider).company?.subscriptionTier != 'basic' && ref.read(companyProvider).company?.lpModuleEnabled == true) ...[
@@ -842,6 +850,49 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Approve'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeclineConfirmation(BuildContext context, Property property) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Decline Listing?'),
+          content: Text(
+            'Are you sure you want to decline "${property.title}"? This unverified listing will be permanently removed.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                final success = await ref.read(propertyProvider.notifier).deleteProperty(property.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? 'Listing declined and removed.' : (ref.read(propertyProvider).errorMessage ?? 'Failed to decline')),
+                      backgroundColor: success ? AppColors.textPrimary : AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Decline Listing'),
             ),
           ],
         );

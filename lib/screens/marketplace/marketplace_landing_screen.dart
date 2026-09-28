@@ -448,7 +448,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         foregroundColor: const Color(0xFF0F172A),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      onPressed: () => context.push('/login'),
+                      onPressed: () => context.go('/login'),
                       child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     ),
                   ),
@@ -462,7 +462,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
-                      onPressed: () => context.push('/signup'),
+                      onPressed: () => context.go('/signup'),
                       child: const Text('Sign Up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     ),
                   ),
@@ -563,11 +563,11 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                     ],
                     onSelected: (val) {
                       if (val == 'login') {
-                        context.push('/login');
+                        context.go('/login');
                       } else if (val == 'signup') {
-                        context.push('/signup');
+                        context.go('/signup');
                       } else if (val == 'staff_login') {
-                        context.push('/login');
+                        context.go('/login');
                       } else if (val == 'about') {
                         context.push('/about');
                       } else if (val == 'contact') {
@@ -1555,7 +1555,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         ),
         _buildFooterLink(
           'Staff & Partner Portal',
-          onTap: () => context.push('/login'),
+          onTap: () => context.go('/login'),
         ),
         _buildFooterLink(
           'Tenant / Buyer Digital Wallet',

@@ -82,10 +82,13 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true);
 
     try {
-      // Retry mechanism to account for slight database trigger delays on signup
+      // Retry mechanism to account for slight database trigger delays on signup.
+      // Each hop has a timeout so slow networks retry instead of hanging.
       for (int i = 0; i < 4; i++) {
         try {
-          var profile = await _supabaseService.getProfile(userId);
+          var profile = await _supabaseService
+              .getProfile(userId)
+              .timeout(const Duration(seconds: 15));
           if (profile != null) {
             // Auto-heal missing email or phone on profile if available in auth session
             final user = _client.auth.currentUser;
@@ -104,7 +107,9 @@ class AuthNotifier extends Notifier<AuthState> {
                 needUpdate = true;
               }
               if (needUpdate) {
-                await _supabaseService.update('profiles', userId, updates);
+                await _supabaseService
+                    .update('profiles', userId, updates)
+                    .timeout(const Duration(seconds: 15));
                 profile = profile.copyWith(
                   email: updates['email'] as String? ?? profile.email,
                   phone: updates['phone'] as String? ?? profile.phone,
@@ -114,7 +119,9 @@ class AuthNotifier extends Notifier<AuthState> {
 
             Company? company;
             if (profile.companyId != null) {
-              company = await _supabaseService.getCompany(profile.companyId!);
+              company = await _supabaseService
+                  .getCompany(profile.companyId!)
+                  .timeout(const Duration(seconds: 15));
             }
             state = AuthState(
               profile: profile,
@@ -171,20 +178,48 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   /// Logs in a user with email and password.
-  Future<bool> login(String email, String password) async {
-    state = state.copyWith(isLoading: true);
+  /// Every network hop has a timeout so slow mobile data shows an error
+  /// instead of spinning forever.
+  Future<bool> login(String input, String password) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final response = await _client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+      final clean = input.trim();
+      final isEmail = clean.contains('@');
+      final response = await (isEmail
+              ? _client.auth.signInWithPassword(
+                  email: clean.toLowerCase(),
+                  password: password,
+                )
+              : _client.auth.signInWithPassword(
+                  phone: clean,
+                  password: password,
+                ))
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw TimeoutException('Sign-in timed out'),
+          );
       if (response.user != null) {
-        await _fetchProfile(response.user!.id);
+        await _fetchProfile(response.user!.id).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => throw TimeoutException('Profile load timed out'),
+        );
+        if (!state.isAuthenticated) {
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: state.errorMessage ?? 'Could not load your profile. Try again.',
+          );
+        }
         return state.isAuthenticated;
       }
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'User profile missing from login response.',
+      );
+      return false;
+    } on TimeoutException {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Connection timed out. Check your internet and try again.',
       );
       return false;
     } catch (e) {
