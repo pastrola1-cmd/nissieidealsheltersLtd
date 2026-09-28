@@ -18,9 +18,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Recreate env.txt
+      - name: Recreate env.txt & .env
         run: |
           echo "$ENV_TXT" > env.txt
+          echo "$ENV_TXT" > .env
         env:
           ENV_TXT: ${{ secrets.ENV_TXT }}
 
@@ -80,6 +81,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Recreate env.txt & .env
+        run: |
+          echo "$ENV_TXT" > env.txt
+          echo "$ENV_TXT" > .env
+        env:
+          ENV_TXT: ${{ secrets.ENV_TXT }}
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -111,6 +119,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Recreate env.txt & .env
+        run: |
+          echo "$ENV_TXT" > env.txt
+          echo "$ENV_TXT" > .env
+        env:
+          ENV_TXT: ${{ secrets.ENV_TXT }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
