@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
@@ -20,14 +19,16 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
   final _emailController = TextEditingController();
   final _messageController = TextEditingController();
 
-  String _inquiryType = 'Rent an Apartment';
   bool _isSending = false;
   bool _isSuccess = false;
   String? _errorMessage;
 
-  static const String _companyPhone = '+2348000000000';
-  static const String _companyWhatsApp = '2348000000000';
-  static const String _companyEmail = 'nissieidealshelterslimited@gmail.com';
+  static const String _phone1 = '+2349135598800';
+  static const String _phone2 = '+2348065441537';
+  static const String _whatsAppNumber = '2349135598800';
+  static const String _email = 'nissieidealshelterslimited@gmail.com';
+  static const String _address =
+      'Suite 2, Shema filling station complex, Asokoro extension, After Abacha barracks bridge, Abuja Keffi Expressway.';
 
   @override
   void dispose() {
@@ -38,31 +39,20 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
     super.dispose();
   }
 
+  Future<void> _launchUrlHelper(String urlStr) async {
+    final uri = Uri.parse(urlStr);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Future<void> _openWhatsApp() async {
-    final msg = Uri.encodeComponent(
-      'Hello Nissie Ideal Shelters, I am contacting you from your website to inquire about your verified properties.',
-    );
-    final url = Uri.parse('https://wa.me/$_companyWhatsApp?text=$msg');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+    const msg = 'Hello Nissie Ideal Shelters, I am contacting you from your website to inquire about your verified properties.';
+    final url = 'https://wa.me/$_whatsAppNumber?text=${Uri.encodeComponent(msg)}';
+    await _launchUrlHelper(url);
   }
 
-  Future<void> _callPhone() async {
-    final url = Uri.parse('tel:$_companyPhone');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    }
-  }
-
-  Future<void> _sendEmail() async {
-    final url = Uri.parse('mailto:$_companyEmail?subject=Property%20Inquiry%20-%20Nissie%20Ideal%20Shelters');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    }
-  }
-
-  Future<void> _handleSubmitInquiry() async {
+  Future<void> _handleSubmit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() {
@@ -77,7 +67,7 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-        'notes': '[$_inquiryType] ${_messageController.text.trim()}',
+        'notes': _messageController.text.trim(),
         'stage': 'new',
         'source': 'website_contact_page',
       });
@@ -91,7 +81,7 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
       if (!mounted) return;
       setState(() {
         _isSending = false;
-        _errorMessage = 'Could not submit inquiry right now. Please message us directly on WhatsApp!';
+        _errorMessage = 'Could not send message right now. Please reach out via WhatsApp!';
       });
     }
   }
@@ -99,278 +89,374 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isWide = size.width > 900;
+    final isWide = size.width > 960;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        automaticallyImplyLeading: false,
-        toolbarHeight: 68,
-        title: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/logo.jpg',
-                width: 38,
-                height: 38,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 38,
-                  height: 38,
-                  color: AppColors.primary,
-                  child: const Icon(Icons.apartment, color: Colors.white, size: 22),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'NISSIE IDEAL SHELTERS',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0F172A),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                Text(
-                  'Verified Properties • Rent & Sale',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF334155),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            ),
-            icon: const Icon(Icons.arrow_back, size: 18),
-            label: const Text('Back to Marketplace', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            },
-          ),
-          const SizedBox(width: 12),
-        ],
+      backgroundColor: const Color(0xFFF1F5F9),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openWhatsApp,
+        backgroundColor: const Color(0xFF25D366),
+        elevation: 6,
+        child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 28),
       ),
+      appBar: _buildNavBar(context, isWide),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header Hero Banner
+            // Top Section Header
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                horizontal: isWide ? (size.width - 900) / 2 : 24,
-                vertical: 40,
-              ),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
-                    ),
-                    child: const Text(
-                      'DIRECT CLIENT SUPPORT & INQUIRIES',
-                      style: TextStyle(
-                        color: Color(0xFF34D399),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Contact Nissie Ideal Shelters Limited',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'We are here to assist with verified property viewings, rent agreements, developer land sales, or escrow support.',
-                    style: TextStyle(fontSize: 15, color: Color(0xFF94A3B8), height: 1.55),
-                  ),
-                ],
-              ),
-            ),
-
-            // Main Interactive Section
-            Container(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Fast Contact Actions
-                  Row(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1100),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: _buildActionTile(
-                          icon: Icons.chat_bubble_rounded,
-                          color: const Color(0xFF25D366),
-                          bgColor: const Color(0xFFE8F9EE),
-                          title: 'WhatsApp Chat',
-                          subtitle: 'Instant Response',
-                          onTap: _openWhatsApp,
+                      const Text(
+                        'Get In Touch',
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _buildActionTile(
-                          icon: Icons.phone_in_talk_rounded,
-                          color: const Color(0xFF0284C7),
-                          bgColor: const Color(0xFFE0F2FE),
-                          title: 'Call Desk',
-                          subtitle: '+234 800 000 0000',
-                          onTap: _callPhone,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _buildActionTile(
-                          icon: Icons.email_rounded,
-                          color: const Color(0xFFE11D48),
-                          bgColor: const Color(0xFFFFE4E6),
-                          title: 'Email Us',
-                          subtitle: 'Official Inquiries',
-                          onTap: _sendEmail,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Have questions about our listings or want to schedule a site inspection? Contact our Abuja team today.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 36),
-
-                  // Two column layout on wide screens: Form + Office Locations
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isTwoCol = constraints.maxWidth > 700;
-                      if (isTwoCol) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(flex: 3, child: _buildFormCard()),
-                            const SizedBox(width: 24),
-                            Expanded(flex: 2, child: _buildOfficesCard()),
-                          ],
-                        );
-                      } else {
-                        return Column(
-                          children: [
-                            _buildFormCard(),
-                            const SizedBox(height: 24),
-                            _buildOfficesCard(),
-                          ],
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            // Footer
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              color: Colors.white,
-              child: Center(
-                child: Text(
-                  '© ${DateTime.now().year} Nissie Ideal Shelters Limited. All rights reserved. RC: 1894231',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
               ),
             ),
+            const SizedBox(height: 28),
+
+            // Two-column Card (Matching Screenshot exactly)
+            Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: isWide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 5, child: _buildContactInfoPanel()),
+                          Expanded(flex: 7, child: _buildMessageFormPanel(isWide)),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildContactInfoPanel(),
+                          _buildMessageFormPanel(isWide),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 50),
+
+            // Official Footer
+            _buildFooter(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFormCard() {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+  PreferredSizeWidget _buildNavBar(BuildContext context, bool isWide) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0.5,
+      automaticallyImplyLeading: false,
+      toolbarHeight: 70,
+      title: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/logo.jpg',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 40,
+                height: 40,
+                color: const Color(0xFF0077B6),
+                child: const Icon(Icons.apartment, color: Colors.white),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'NIS LTD',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF0F172A),
+              letterSpacing: 0.5,
+            ),
           ),
         ],
+      ),
+      actions: [
+        if (isWide) ...[
+          _navLink('Home', () => context.go('/')),
+          _navLink('Properties', () => context.go('/')),
+          _navLink('About Us', () => context.push('/about')),
+          _navLink('Contact', () {}, isActive: true),
+          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.only(right: 18.0),
+            child: ElevatedButton(
+              onPressed: () => context.push('/login'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0088CC),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                elevation: 0,
+              ),
+              child: const Text('Portal Access', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+            ),
+          ),
+        ] else ...[
+          IconButton(
+            icon: const Icon(Icons.home_outlined, color: Color(0xFF0F172A)),
+            onPressed: () => context.go('/'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline, color: Color(0xFF0F172A)),
+            onPressed: () => context.push('/about'),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: TextButton(
+              onPressed: () => context.push('/login'),
+              child: const Text('Portal', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0088CC))),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _navLink(String label, VoidCallback onTap, {bool isActive = false}) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: isActive ? const Color(0xFF0088CC) : const Color(0xFF334155),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          if (isActive)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              height: 2.5,
+              width: 36,
+              color: const Color(0xFF0088CC),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactInfoPanel() {
+    return Container(
+      padding: const EdgeInsets.all(36),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0077B6),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Send an Online Property Inquiry',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            'Contact Information',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 14),
+          const Text(
+            'Reach out through any of our channels or visit our office. Our client advisors are ready to assist you.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFFE0F2FE),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 36),
+
+          // Office Headquarters
+          _buildInfoItem(
+            icon: Icons.location_on_rounded,
+            title: 'OFFICE HEADQUARTERS',
+            content: _address,
+          ),
+          const SizedBox(height: 28),
+
+          // Call Representatives
+          _buildInfoItem(
+            icon: Icons.phone_rounded,
+            title: 'CALL REPRESENTATIVE',
+            content: '$_phone1\n$_phone2',
+            onTap: () => _launchUrlHelper('tel:$_phone1'),
+          ),
+          const SizedBox(height: 28),
+
+          // Email Inquiries
+          _buildInfoItem(
+            icon: Icons.email_rounded,
+            title: 'EMAIL INQUIRIES',
+            content: _email,
+            onTap: () => _launchUrlHelper('mailto:$_email'),
+          ),
+          const SizedBox(height: 36),
+
+          // WhatsApp Direct Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _openWhatsApp,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF25D366),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.chat_bubble_rounded, size: 20),
+              label: const Text('Chat On WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String title,
+    required String content,
+    VoidCallback? onTap,
+  }) {
+    final body = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFBAE6FD),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                content,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (onTap != null) {
+      return InkWell(onTap: onTap, child: body);
+    }
+    return body;
+  }
+
+  Widget _buildMessageFormPanel(bool isWide) {
+    return Container(
+      padding: const EdgeInsets.all(36),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Send A Message',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0077B6),
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
-            'Leave a message and an advisor will contact you within 30 minutes.',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            'Fill in the form fields. A customer representative will get in touch with you shortly.',
+            style: TextStyle(
+              fontSize: 13.5,
+              color: Colors.grey.shade600,
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 28),
 
           if (_isSuccess) ...[
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.teal.shade50,
+                color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.teal.shade200),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.teal, size: 28),
-                  const SizedBox(width: 14),
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 28),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Inquiry Sent Successfully!',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal.shade900, fontSize: 15),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Thank you! Our property advisory team will reach out to you directly.',
-                          style: TextStyle(color: Colors.teal.shade800, fontSize: 13),
-                        ),
+                        Text('Message Received!', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF065F46), fontSize: 15)),
+                        SizedBox(height: 2),
+                        Text('Our representative will contact you via WhatsApp/call shortly.', style: TextStyle(color: Color(0xFF047857), fontSize: 13)),
                       ],
                     ),
                   ),
@@ -378,41 +464,30 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _isSuccess = false;
-                    _nameController.clear();
-                    _phoneController.clear();
-                    _emailController.clear();
-                    _messageController.clear();
-                  });
-                },
-                child: const Text('Send Another Inquiry'),
-              ),
+            OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _isSuccess = false;
+                  _nameController.clear();
+                  _phoneController.clear();
+                  _emailController.clear();
+                  _messageController.clear();
+                });
+              },
+              child: const Text('Send Another Message'),
             ),
           ] else ...[
             if (_errorMessage != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: const Color(0xFFFEF2F2),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.shade200),
+                  border: Border.all(color: const Color(0xFFFECACA)),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_errorMessage!, style: TextStyle(color: Colors.red.shade800, fontSize: 13)),
-                    ),
-                  ],
-                ),
+                child: Text(_errorMessage!, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13)),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
             ],
 
             Form(
@@ -420,106 +495,102 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('What can we help you with? *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  // Full Name
+                  _formLabel('YOUR FULL NAME'),
                   const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: _inquiryType,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'Rent an Apartment', child: Text('Rent a House / Apartment')),
-                      DropdownMenuItem(value: 'Buy a Property', child: Text('Buy a House or Land')),
-                      DropdownMenuItem(value: 'Shortlet Booking', child: Text('Shortlet / Serviced Apartment')),
-                      DropdownMenuItem(value: 'List Property (Landlord)', child: Text('List My Property as a Landlord')),
-                      DropdownMenuItem(value: 'Partnership / Realtor', child: Text('Realtor / Partner Program')),
-                      DropdownMenuItem(value: 'General Inquiry', child: Text('General Inquiry')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) setState(() => _inquiryType = val);
-                    },
-                  ),
-                  const SizedBox(height: 14),
-
-                  TextFormField(
+                  _buildTextField(
                     controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Full Name *',
-                      hintText: 'e.g. Samuel Adeyemi',
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    ),
+                    hintText: 'e.g. John Doe',
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your name' : null,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 18),
 
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: InputDecoration(
-                      labelText: 'Phone / WhatsApp Number *',
-                      hintText: 'e.g. 0801 234 5678',
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  // Phone & Email Row
+                  if (isWide)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _formLabel('WHATSAPP NUMBER'),
+                              const SizedBox(height: 6),
+                              _buildTextField(
+                                controller: _phoneController,
+                                hintText: 'e.g. 08123456789',
+                                keyboardType: TextInputType.phone,
+                                validator: (v) => (v == null || v.trim().length < 8) ? 'Enter valid number' : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _formLabel('EMAIL ADDRESS'),
+                              const SizedBox(height: 6),
+                              _buildTextField(
+                                controller: _emailController,
+                                hintText: 'e.g. j.doe@example.com',
+                                keyboardType: TextInputType.emailAddress,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    _formLabel('WHATSAPP NUMBER'),
+                    const SizedBox(height: 6),
+                    _buildTextField(
+                      controller: _phoneController,
+                      hintText: 'e.g. 08123456789',
+                      keyboardType: TextInputType.phone,
+                      validator: (v) => (v == null || v.trim().length < 8) ? 'Enter valid number' : null,
                     ),
-                    validator: (v) => (v == null || v.trim().length < 8) ? 'Enter a valid phone number' : null,
-                  ),
-                  const SizedBox(height: 14),
-
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email Address (Optional)',
-                      hintText: 'e.g. you@example.com',
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    const SizedBox(height: 18),
+                    _formLabel('EMAIL ADDRESS'),
+                    const SizedBox(height: 6),
+                    _buildTextField(
+                      controller: _emailController,
+                      hintText: 'e.g. j.doe@example.com',
+                      keyboardType: TextInputType.emailAddress,
                     ),
-                  ),
-                  const SizedBox(height: 14),
+                  ],
+                  const SizedBox(height: 18),
 
-                  TextFormField(
+                  // Message / Property Interest
+                  _formLabel('MESSAGE / PROPERTY INTEREST'),
+                  const SizedBox(height: 6),
+                  _buildTextField(
                     controller: _messageController,
+                    hintText: "I'm interested in properties around Asokoro...",
                     maxLines: 4,
-                    decoration: InputDecoration(
-                      labelText: 'Your Requirements / Message *',
-                      hintText: 'Describe preferred location, budget, number of bedrooms, or questions...',
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please specify your requirements' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter your message' : null,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
+                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isSending ? null : _handleSubmitInquiry,
+                      onPressed: _isSending ? null : _handleSubmit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: const Color(0xFF0077B6),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
                       child: _isSending
                           ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
-                          : const Text('Send Inquiry Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          : const Text('Send Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ),
                 ],
@@ -531,79 +602,95 @@ class _ContactUsScreenState extends ConsumerState<ContactUsScreen> {
     );
   }
 
-  Widget _buildOfficesCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Office Locations & Desk Hours',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-          ),
-          const SizedBox(height: 16),
-          _buildInfoRow(Icons.location_on_rounded, 'Abuja Head Office', 'Central Business District, Abuja FCT'),
-          const Divider(height: 20, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.apartment_rounded, 'Lagos Branch Office', 'Victoria Island, Lagos State'),
-          const Divider(height: 20, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.access_time_rounded, 'Business Hours', 'Mon – Sat: 8:00 AM – 6:00 PM'),
-          const Divider(height: 20, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.verified_user_rounded, 'Verified Escrow Desk', 'Anti-Extortion PIN releases 24/7'),
-        ],
+  Widget _formLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF0077B6),
+        letterSpacing: 0.5,
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String title, String subtitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: AppColors.primary, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF0077B6), width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF0F172A),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
-              const SizedBox(height: 2),
-              Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'NISSIE IDEALSHELTERS LTD',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Premium real estate agency delivering modern duplexes, serviced apartments, and secure lands across Abuja and surrounding districts.',
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 12.5, height: 1.5),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'RC: 7867098',
+                          style: TextStyle(color: Color(0xFF38BDF8), fontWeight: FontWeight.w600, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(color: Color(0xFF334155), height: 40),
+              Text(
+                '© 2026 Nissie Ideal Shelters Ltd. All rights reserved. | RC: 7867098',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionTile({
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: color)),
-            const SizedBox(height: 3),
-            Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
-          ],
         ),
       ),
     );

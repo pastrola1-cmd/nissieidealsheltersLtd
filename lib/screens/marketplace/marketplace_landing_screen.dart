@@ -1589,25 +1589,34 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         const SizedBox(height: 16),
         _buildOfficeItem(
           icon: Icons.location_on_outlined,
-          title: 'Abuja Head Office:',
-          detail: 'Suite 302, Oakland Centre, Plot 2940 Aguiyi Ironsi St, Maitama / CBD, Abuja, FCT',
-        ),
-        const SizedBox(height: 10),
-        _buildOfficeItem(
-          icon: Icons.business_outlined,
-          title: 'Lagos Branch Office:',
-          detail: 'Victoria Island, Lagos State, Nigeria',
+          title: 'Office Headquarters:',
+          detail: 'Suite 2, Shema filling station complex, Asokoro extension, After Abacha barracks bridge, Abuja Keffi Expressway.',
         ),
         const SizedBox(height: 12),
-        // Phone
+        // Phone 1
         InkWell(
-          onTap: () => _launchExternalUrl('tel:+2348000000000'),
+          onTap: () => _launchExternalUrl('tel:+2349135598800'),
           child: const Row(
             children: [
               Icon(Icons.phone_outlined, color: Color(0xFF38BDF8), size: 15),
               SizedBox(width: 8),
               Text(
-                '+234 800 000 0000',
+                '+234 913 559 8800',
+                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        // Phone 2
+        InkWell(
+          onTap: () => _launchExternalUrl('tel:+2348065441537'),
+          child: const Row(
+            children: [
+              Icon(Icons.phone_outlined, color: Color(0xFF38BDF8), size: 15),
+              SizedBox(width: 8),
+              Text(
+                '+234 806 544 1537',
                 style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5, fontWeight: FontWeight.w500),
               ),
             ],
@@ -1616,13 +1625,13 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         const SizedBox(height: 8),
         // WhatsApp
         InkWell(
-          onTap: () => _launchExternalUrl('https://wa.me/2348000000000?text=Hello%20Nissie%20Ideal%20Shelters'),
+          onTap: () => _launchExternalUrl('https://wa.me/2349135598800?text=Hello%20Nissie%20Ideal%20Shelters'),
           child: const Row(
             children: [
               Icon(Icons.chat_bubble_outline, color: Color(0xFF22C55E), size: 15),
               SizedBox(width: 8),
               Text(
-                'WhatsApp Support Desk',
+                'WhatsApp (+234 913 559 8800)',
                 style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5, fontWeight: FontWeight.w500),
               ),
             ],
@@ -1718,7 +1727,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
   }
 
   Widget _buildFooterBottomBar(BuildContext context, bool isWide) {
-    const copyright = '© 2026 Nissie Ideal Shelters Limited (RC: 1894231). All rights reserved.';
+    const copyright = '© 2026 Nissie Ideal Shelters Limited (RC: 7867098). All rights reserved.';
     final links = [
       TextButton(
         style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),

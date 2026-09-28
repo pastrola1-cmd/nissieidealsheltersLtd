@@ -109,7 +109,7 @@ class AboutNissieModal extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         const Text(
-                          'RC: 1894231 • Real Estate & Development Firm',
+                          'RC: 7867098 • Real Estate & Development Firm',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -186,9 +186,7 @@ class AboutNissieModal extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
                     ),
                     const SizedBox(height: 8),
-                    _buildOfficeRow(Icons.place_rounded, 'Abuja HQ: Central Business District, Abuja FCT'),
-                    const SizedBox(height: 6),
-                    _buildOfficeRow(Icons.place_rounded, 'Lagos Branch: Victoria Island, Lagos State'),
+                    _buildOfficeRow(Icons.place_rounded, 'HQ: Suite 2, Shema filling station complex, Asokoro extension, After Abacha barracks bridge, Abuja Keffi Expressway.'),
                     const SizedBox(height: 6),
                     _buildOfficeRow(Icons.access_time_rounded, 'Working Hours: Monday – Saturday (8:00 AM – 6:00 PM)'),
                   ],

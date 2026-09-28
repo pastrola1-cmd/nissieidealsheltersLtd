@@ -50,8 +50,8 @@ class _ContactModalState extends ConsumerState<ContactModal> {
   bool _isSuccess = false;
   String? _errorMessage;
 
-  static const String _companyPhone = '+2348000000000';
-  static const String _companyWhatsApp = '2348000000000';
+  static const String _companyPhone = '+2349135598800';
+  static const String _companyWhatsApp = '2349135598800';
   static const String _companyEmail = 'nissieidealshelterslimited@gmail.com';
 
   @override
@@ -189,7 +189,7 @@ class _ContactModalState extends ConsumerState<ContactModal> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'RC: 1894231 • Abuja & Lagos, Nigeria',
+                          'RC: 7867098 • Abuja, Nigeria',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -227,7 +227,7 @@ class _ContactModalState extends ConsumerState<ContactModal> {
                       color: const Color(0xFF0284C7),
                       bgColor: const Color(0xFFE0F2FE),
                       title: 'Call Desk',
-                      subtitle: '+234 800 000 0000',
+                      subtitle: '+234 913 559 8800',
                       onTap: _callPhone,
                     ),
                   ),
@@ -268,7 +268,7 @@ class _ContactModalState extends ConsumerState<ContactModal> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Abuja: Central Business District, FCT • Lagos: Victoria Island\nMonday – Saturday: 8:00 AM – 6:00 PM',
+                            'Suite 2, Shema filling station complex, Asokoro extension, After Abacha barracks bridge, Abuja Keffi Expressway.\nMonday – Saturday: 8:00 AM – 6:00 PM',
                             style: TextStyle(fontSize: 11, color: Colors.grey.shade600, height: 1.4),
                           ),
                         ],
