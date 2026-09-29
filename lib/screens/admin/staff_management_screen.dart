@@ -7,7 +7,6 @@ import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/attendance_provider.dart';
-import 'package:nissie_ideal_shelters/providers/report_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 
 // ─── Staff List Provider ───
@@ -28,93 +27,68 @@ final allStaffProvider = FutureProvider.autoDispose<List<Profile>>((ref) async {
 
 // ─── Staff Weekly Performance Provider ───
 
-/// Aggregates performance per staff member from daily reports with real-time leads fallback.
+/// Fetches real-time performance and lead metrics per staff member directly from the leads table.
 final staffWeeklyPerformanceProvider = FutureProvider.autoDispose<List<StaffPerformance>>((ref) async {
-  final notifier = ref.read(reportProvider.notifier);
-  final Map<String, StaffPerformance> map = {};
+  final service = ref.watch(supabaseServiceProvider);
+  final authState = ref.watch(authProvider);
+  final companyId = authState.profile?.companyId;
+
+  if (companyId == null) return [];
 
   try {
-    for (int i = 0; i < 7; i++) {
-      final date = DateTime.now().subtract(Duration(days: i));
-      final report = await notifier.fetchReportForDate(date);
-      if (report == null) continue;
+    // 1. Fetch all staff profiles for this company
+    final profilesResponse = await service.client
+        .from('profiles')
+        .select()
+        .eq('company_id', companyId);
 
-      for (final s in report.topStaff) {
-        if (map.containsKey(s.profileId)) {
-          final prev = map[s.profileId]!;
-          final totalLeads = prev.leadsHandled + s.leadsHandled;
-          final totalConv = prev.conversions + s.conversions;
-          map[s.profileId] = StaffPerformance(
-            profileId: s.profileId,
-            name: s.name,
-            leadsHandled: totalLeads,
-            conversions: totalConv,
-            conversionRate: totalLeads == 0 ? 0 : (totalConv / totalLeads) * 100,
-          );
-        } else {
-          map[s.profileId] = s;
-        }
+    final profilesList = (profilesResponse as List)
+        .map((e) => Profile.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    // 2. Fetch all leads for this company
+    final leadsResponse = await service.client
+        .from('leads')
+        .select()
+        .eq('company_id', companyId);
+
+    final leadsList = (leadsResponse as List)
+        .map((e) => Lead.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    // Group leads by assigned agent (or partner)
+    final Map<String, List<Lead>> grouped = {};
+    for (final l in leadsList) {
+      final agentId = l.assignedAgentId ?? l.partnerId;
+      if (agentId != null && agentId.isNotEmpty) {
+        grouped.putIfAbsent(agentId, () => []).add(l);
       }
     }
-  } catch (_) {}
 
-  // Real-time calculation fallback directly from leads table if daily_reports is empty
-  if (map.isEmpty) {
-    try {
-      final service = ref.read(supabaseServiceProvider);
-      final authState = ref.read(authProvider);
-      final companyId = authState.profile?.companyId;
+    // Build StaffPerformance for every staff member
+    final List<StaffPerformance> results = [];
+    for (final staff in profilesList) {
+      final agentLeads = grouped[staff.id] ?? [];
+      final totalLeads = agentLeads.length;
+      final closedCount = agentLeads.where((l) => l.stage == LeadStage.closed).length;
 
-      if (companyId != null) {
-        final leadsResponse = await service.client
-            .from('leads')
-            .select()
-            .eq('company_id', companyId);
-
-        final leadsList = (leadsResponse as List).map((e) => Lead.fromJson(e as Map<String, dynamic>)).toList();
-        final Map<String, List<Lead>> grouped = {};
-
-        for (final l in leadsList) {
-          final agentId = l.assignedAgentId ?? l.partnerId;
-          if (agentId != null && agentId.isNotEmpty) {
-            grouped.putIfAbsent(agentId, () => []).add(l);
-          }
-        }
-
-        if (grouped.isNotEmpty) {
-          final profilesResponse = await service.client
-              .from('profiles')
-              .select()
-              .eq('company_id', companyId);
-
-          final profilesList = (profilesResponse as List).map((e) => Profile.fromJson(e as Map<String, dynamic>)).toList();
-          final profileMap = {for (var p in profilesList) p.id: p.fullName ?? p.email ?? 'Staff Member'};
-
-          for (final entry in grouped.entries) {
-            final agentId = entry.key;
-            final agentLeads = entry.value;
-            final totalLeads = agentLeads.length;
-            final closedCount = agentLeads.where((l) => l.stage == LeadStage.closed).length;
-            final agentName = profileMap[agentId] ?? 'Staff Member';
-
-            map[agentId] = StaffPerformance(
-              profileId: agentId,
-              name: agentName,
-              leadsHandled: totalLeads,
-              conversions: closedCount,
-              conversionRate: totalLeads == 0 ? 0 : (closedCount / totalLeads) * 100,
-            );
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Real-time staff performance calculation note: $e');
+      results.add(StaffPerformance(
+        profileId: staff.id,
+        name: staff.fullName ?? staff.email ?? 'Staff Member',
+        leadsHandled: totalLeads,
+        conversions: closedCount,
+        conversionRate: totalLeads == 0 ? 0.0 : (closedCount / totalLeads) * 100.0,
+      ));
     }
+
+    // Sort by conversions descending, then leads handled descending
+    return results..sort((a, b) => b.conversions != a.conversions
+        ? b.conversions.compareTo(a.conversions)
+        : b.leadsHandled.compareTo(a.leadsHandled));
+  } catch (e) {
+    debugPrint('Staff performance calculation error: $e');
+    return [];
   }
-
-  return map.values.toList()..sort((a, b) => b.conversions != a.conversions 
-      ? b.conversions.compareTo(a.conversions) 
-      : b.leadsHandled.compareTo(a.leadsHandled));
 });
 
 // ─── Screen ───
@@ -395,7 +369,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen>
                           Icon(Icons.calendar_today_rounded, color: AppColors.accent, size: 16),
                           SizedBox(width: 8),
                           Text(
-                            'Aggregated performance for the last 7 days',
+                            'Real-time team performance & conversion ranking',
                             style: TextStyle(
                               color: AppColors.accent,
                               fontSize: 13,

@@ -94,8 +94,10 @@ class ReportNotifier extends Notifier<ReportState> {
       final staffList = (staffRes as List).map((e) => Profile.fromJson(e as Map<String, dynamic>)).toList();
 
       final topStaff = staffList.map((s) {
-        final handled = allLeads.where((l) => l.assignedAgentId == s.id).length;
-        final closed = allLeads.where((l) => l.assignedAgentId == s.id && l.stage == LeadStage.closed).length;
+        final handled = allLeads.where((l) => l.assignedAgentId == s.id &&
+            l.createdAt.year == date.year && l.createdAt.month == date.month && l.createdAt.day == date.day).length;
+        final closed = allLeads.where((l) => l.assignedAgentId == s.id && l.stage == LeadStage.closed &&
+            l.updatedAt.year == date.year && l.updatedAt.month == date.month && l.updatedAt.day == date.day).length;
         final rate = handled > 0 ? (closed / handled) * 100 : 0.0;
         return StaffPerformance(
           profileId: s.id,
@@ -104,7 +106,9 @@ class ReportNotifier extends Notifier<ReportState> {
           conversions: closed,
           conversionRate: rate,
         );
-      }).toList()..sort((a, b) => b.conversions.compareTo(a.conversions));
+      }).toList()..sort((a, b) => b.conversions != a.conversions
+          ? b.conversions.compareTo(a.conversions)
+          : b.leadsHandled.compareTo(a.leadsHandled));
 
       final liveReport = DailyReport(
         id: 'live-$dateStr',

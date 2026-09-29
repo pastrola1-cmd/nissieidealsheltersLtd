@@ -24,6 +24,9 @@ class PartnerDashboardScreen extends ConsumerWidget {
     final company = companyState.company;
     final profile = authState.profile;
     final unreadNotifications = notificationState.notifications.where((n) => !n.read).length;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final isSmall = screenWidth < 400;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,7 +35,7 @@ class PartnerDashboardScreen extends ConsumerWidget {
           onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -149,11 +152,11 @@ class PartnerDashboardScreen extends ConsumerWidget {
                 // ── Summary Cards Grid ──
                 GridView.count(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: isMobile ? 12 : 16,
+                  mainAxisSpacing: isMobile ? 12 : 16,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.35,
+                  childAspectRatio: isSmall ? 1.05 : (isMobile ? 1.15 : 1.35),
                   children: [
                     _buildStatCard(
                       title: 'Total Referrals',

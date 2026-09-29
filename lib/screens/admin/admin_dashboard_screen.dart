@@ -26,6 +26,9 @@ class AdminDashboardScreen extends ConsumerWidget {
     final company = companyState.company;
     final profile = authState.profile;
     final unreadNotifications = notificationState.notifications.where((n) => !n.read).length;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final isSmall = screenWidth < 400;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -34,7 +37,7 @@ class AdminDashboardScreen extends ConsumerWidget {
           onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -42,62 +45,79 @@ class AdminDashboardScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary, size: 26),
-                          tooltip: 'Open Navigation Menu',
-                          onPressed: () => Scaffold.of(context).openDrawer(),
-                        ),
-                        const SizedBox(width: 4),
-                        // Company Logo
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.border),
-                            image: company?.logoUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(company!.logoUrl!),
-                                    fit: BoxFit.cover,
-                                  )
+                    Expanded(
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary, size: 26),
+                            tooltip: 'Open Navigation Menu',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            onPressed: () => Scaffold.of(context).openDrawer(),
+                          ),
+                          const SizedBox(width: 4),
+                          // Company Logo
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                              image: company?.logoUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(company!.logoUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: company?.logoUrl == null
+                                ? const Icon(Icons.business_rounded, size: 20, color: AppColors.textTertiary)
                                 : null,
                           ),
-                          child: company?.logoUrl == null
-                              ? const Icon(Icons.business_rounded, size: 24, color: AppColors.textTertiary)
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              company?.name ?? 'Loading Agency...',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textPrimary,
-                              ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  company?.name ?? 'Loading Agency...',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.textPrimary,
+                                    fontSize: isSmall ? 14 : 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                Text(
+                                  'Agency Admin',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ],
                             ),
-                            Text(
-                              'Agency Admin Dashboard',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 6),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Notification Bell
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+                              icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary, size: 22),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                               onPressed: () => context.push('/notifications'),
                             ),
                             if (unreadNotifications > 0)
@@ -127,17 +147,21 @@ class AdminDashboardScreen extends ConsumerWidget {
                               ),
                           ],
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         // Admin Guide Book Icon
                         IconButton(
-                          icon: const Icon(Icons.menu_book_rounded, color: AppColors.accent),
+                          icon: const Icon(Icons.menu_book_rounded, color: AppColors.accent, size: 22),
                           tooltip: 'Admin Operating Manual & Guide',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                           onPressed: () => context.push('/admin/guide'),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         // Company Settings Cog
                         IconButton(
-                          icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
+                          icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary, size: 22),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                           onPressed: () => context.push('/admin/company-profile'),
                         ),
                         const SizedBox(width: 4),
@@ -145,8 +169,8 @@ class AdminDashboardScreen extends ConsumerWidget {
                         GestureDetector(
                           onTap: () => context.push('/admin/settings'),
                           child: Container(
-                            width: 38,
-                            height: 38,
+                            width: 34,
+                            height: 34,
                             decoration: BoxDecoration(
                               color: AppColors.surface,
                               shape: BoxShape.circle,
@@ -270,11 +294,11 @@ class AdminDashboardScreen extends ConsumerWidget {
                 // ── Summary Cards Grid ──
                 GridView.count(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: isMobile ? 12 : 16,
+                  mainAxisSpacing: isMobile ? 12 : 16,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.35,
+                  childAspectRatio: isSmall ? 1.05 : (isMobile ? 1.15 : 1.35),
                   children: [
                     _buildStatCard(
                       title: 'Total Listings',

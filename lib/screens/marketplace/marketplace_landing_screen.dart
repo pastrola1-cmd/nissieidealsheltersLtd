@@ -132,29 +132,36 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'NISSIE IDEAL SHELTERS',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                        letterSpacing: 0.5,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        (isWide || isTablet) ? 'NISSIE IDEAL SHELTERS' : 'NISSIE SHELTERS',
+                        style: TextStyle(
+                          fontSize: (isWide || isTablet) ? 15 : 13.5,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: -0.4,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ),
-                    Text(
-                      'Verified Properties • Rent & Sale',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                      if (isWide || isTablet)
+                        const Text(
+                          'Verified Properties • Rent & Sale',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -409,16 +416,27 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                 ] else ...[
                   // Staff / Partner / Landlord Dashboard Button
                   Padding(
-                    padding: const EdgeInsets.only(right: 16.0),
+                    padding: EdgeInsets.only(right: (isWide || isTablet) ? 16.0 : 8.0),
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0F172A),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (isWide || isTablet) ? 14 : 9,
+                          vertical: (isWide || isTablet) ? 10 : 7,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      icon: const Icon(Icons.dashboard_outlined, size: 16),
-                      label: const Text('My Dashboard', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      icon: Icon(Icons.dashboard_outlined, size: (isWide || isTablet) ? 16 : 14),
+                      label: Text(
+                        (isWide || isTablet) ? 'My Dashboard' : 'Dashboard',
+                        style: TextStyle(
+                          fontSize: (isWide || isTablet) ? 13 : 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       onPressed: () {
                         final role = authState.profile!.role;
                         switch (role) {
