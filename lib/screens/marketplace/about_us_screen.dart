@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 class AboutUsScreen extends StatelessWidget {
   const AboutUsScreen({super.key});
@@ -21,8 +22,10 @@ class AboutUsScreen extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final isWide = size.width > 960;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return SafeBackScope(
+      fallbackRoute: '/',
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
       floatingActionButton: FloatingActionButton(
         onPressed: _openWhatsApp,
         backgroundColor: const Color(0xFF25D366),
@@ -345,14 +348,18 @@ class AboutUsScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   PreferredSizeWidget _buildNavBar(BuildContext context, bool isWide) {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0.5,
-      automaticallyImplyLeading: false,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+        onPressed: () => context.popOrGo('/'),
+      ),
       toolbarHeight: 70,
       title: Row(
         children: [

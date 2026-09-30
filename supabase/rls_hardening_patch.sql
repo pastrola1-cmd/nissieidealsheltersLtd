@@ -1,5 +1,5 @@
 -- =====================================================================
--- PPN LOOP 14: DATABASE RLS SECURITY HARDENING PATCH
+-- NISSIE LOOP 14: DATABASE RLS SECURITY HARDENING PATCH
 -- Run this script in the Supabase SQL Editor to update policies
 -- =====================================================================
 

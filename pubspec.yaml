@@ -1,5 +1,5 @@
 name: nissie_ideal_shelters
-description: "Property Partner Network - Real estate sales and commission system"
+description: "Nissie Ideal Shelters - Real estate sales and commission system"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

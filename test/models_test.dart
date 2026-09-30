@@ -77,7 +77,7 @@ void main() {
         'phone': '+2348012345678',
         'email': 'john@partner.com',
         'avatar_url': 'https://example.com/avatar.png',
-        'referral_code': 'PPN-JP-A1B2',
+        'referral_code': 'NISSIE-JP-A1B2',
         'status': 'approved',
         'bank_name': 'Zenith Bank',
         'account_number': '1234567890',

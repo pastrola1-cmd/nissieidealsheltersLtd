@@ -9,6 +9,7 @@ import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Comprehensive Landlord Host Dashboard
 class LandlordDashboardScreen extends ConsumerStatefulWidget {
@@ -102,7 +103,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out of your landlord portal?'),
+        content: const Text('Are you sure you want to sign out of your agent & owner portal?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           ElevatedButton(
@@ -148,8 +149,9 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
     final verifiedCount = mine.where((p) => p.isVerified).length;
     final pendingCount = mine.where((p) => !p.isVerified).length;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return DoubleBackExitScope(
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Row(
           children: [
@@ -160,7 +162,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
-                'HOST PORTAL',
+                'AGENT & OWNER',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -171,7 +173,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
             ),
             const SizedBox(width: 8),
             const Text(
-              'Landlord Dashboard',
+              'Agent & Owner Dashboard',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ],
@@ -301,7 +303,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              onPressed: () => context.go('/list-property'),
+                              onPressed: () => context.push('/list-property'),
                               icon: const Icon(Icons.add, size: 18),
                               label: const Text('List Property', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
@@ -367,7 +369,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                       ),
                       TextButton.icon(
-                        onPressed: () => context.go('/list-property'),
+                        onPressed: () => context.push('/list-property'),
                         icon: const Icon(Icons.add_home_outlined, size: 16),
                         label: const Text('Add Home'),
                       ),
@@ -404,7 +406,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            onPressed: () => context.go('/list-property'),
+                            onPressed: () => context.push('/list-property'),
                             icon: const Icon(Icons.add),
                             label: const Text('List My Property Now'),
                           ),
@@ -444,7 +446,8 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                 ],
               ),
             ),
-    );
+    ),
+  );
   }
 
   Widget _buildMetricCard({
@@ -501,7 +504,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: InkWell(
-        onTap: () => context.go('/properties/${p.id}'),
+        onTap: () => context.push('/properties/${p.id}'),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(12),

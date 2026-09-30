@@ -155,7 +155,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
         final path = 'properties/$propertyId/${DateTime.now().millisecondsSinceEpoch}_$i.$extension';
         
         final url = await _supabaseService.uploadFile(
-          'company-assets',
+          'property-images',
           path,
           bytes,
           mimeType: 'image/$extension',
@@ -223,7 +223,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
         final path = 'properties/$id/${DateTime.now().millisecondsSinceEpoch}_new_$i.$extension';
         
         final url = await _supabaseService.uploadFile(
-          'company-assets',
+          'property-images',
           path,
           bytes,
           mimeType: 'image/$extension',

@@ -9,7 +9,9 @@ import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
+import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 class LandlordRegistrationScreen extends ConsumerStatefulWidget {
   const LandlordRegistrationScreen({super.key});
@@ -182,7 +184,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
             final safeExt = (ext == 'png' || ext == 'webp' || ext == 'jpg' || ext == 'jpeg') ? ext : 'jpg';
             final path = 'properties/landlord_${DateTime.now().millisecondsSinceEpoch}_$i.$safeExt';
             final url = await ref.read(supabaseServiceProvider).uploadFile(
-              'company-assets',
+              'property-images',
               path,
               _imageBytesList[i],
               mimeType: 'image/$safeExt',
@@ -220,14 +222,35 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
       // No stock fallbacks: a photo-less listing honestly carries no images.
       // (Cards and detail screens render a neutral placeholder instead.)
 
-      final creatorId = ref.read(authProvider).profile?.id;
+      final currentAuthUser = ref.read(supabaseServiceProvider).currentUser;
+      final currentProfile = ref.read(authProvider).profile;
+      final creatorId = currentAuthUser?.id ?? currentProfile?.id;
+
+      if (creatorId == null) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Authentication required. Please log in or create an account to list your property.'),
+              backgroundColor: Colors.redAccent,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+
+      final isAdmin = currentProfile?.role == UserRole.admin || currentProfile?.role == UserRole.platformAdmin;
+      final shouldBeVerified = isAdmin;
+      final companyId = currentProfile?.companyId ?? AppStrings.defaultCompanyId;
+
       final inspectionFee = double.tryParse(
             _inspectionFeeController.text.replaceAll(',', '').trim(),
           ) ??
           10000.0;
       final newProp = Property(
         id: 'prop_landlord_${DateTime.now().millisecondsSinceEpoch}',
-        companyId: AppStrings.defaultCompanyId,
+        companyId: companyId,
         title: _propTitleController.text.trim(),
         description: _descController.text.trim().isNotEmpty
             ? _descController.text.trim()
@@ -248,7 +271,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         rentPeriod: _listingType == 'rent' ? 'year' : 'total',
         inspectionFee: inspectionFee,
         isMarketplace: true,
-        isVerified: false,
+        isVerified: shouldBeVerified,
         shieldedContact: true,
         createdBy: creatorId,
         createdAt: DateTime.now(),
@@ -263,27 +286,34 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
           ..remove('id')
           ..remove('created_at')
           ..remove('updated_at');
+        // Explicitly set created_by to match auth.uid()
+        row['created_by'] = creatorId;
         final saved = await ref.read(supabaseServiceProvider).insert('properties', row);
         serverId = saved['id'] as String?;
       } catch (e) {
-        // Keep local copy so UX never blocks; tell user to run landlord SQL
-        // if this is an RLS / missing-column error.
+        setState(() => _isLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Saved locally. Cloud sync failed (${e.toString().split(':').first}). Run supabase/migrations/20260922_landlord_properties.sql in Supabase.',
-              ),
-              backgroundColor: Colors.orangeAccent,
-              duration: const Duration(seconds: 5),
+              content: Text('Failed to submit listing to database: $e'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 6),
             ),
           );
         }
+        return;
       }
 
       // Prepend to marketplace (with server id when available)
-      final displayProp = serverId != null ? newProp.copyWith(id: serverId) : newProp;
+      final displayProp = newProp.copyWith(id: serverId ?? newProp.id);
       ref.read(marketplaceProvider.notifier).addProperty(displayProp);
+
+      // Refresh admin property provider if submitted by admin
+      if (isAdmin) {
+        try {
+          await ref.read(propertyProvider.notifier).loadProperties(companyId);
+        } catch (_) {}
+      }
 
       setState(() {
         _isLoading = false;
@@ -304,27 +334,24 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/');
-            }
-          },
+    return SafeBackScope(
+      fallbackRoute: '/',
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 1,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+            onPressed: () => context.popOrGo('/'),
+          ),
+          title: const Text(
+            'Agent & Property Owner Portal',
+            style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ),
-        title: const Text(
-          'Landlord & Agency Portal',
-          style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        body: _isSuccess ? _buildSuccessScreen() : _buildForm(isWide),
       ),
-      body: _isSuccess ? _buildSuccessScreen() : _buildForm(isWide),
     );
   }
 
@@ -384,10 +411,10 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
             ),
             const SizedBox(height: 28),
 
-            // ── Section 1: Landlord Profile ──
+            // ── Section 1: Agent & Owner Profile ──
             _buildSectionHeader(
               icon: Icons.person_pin_rounded,
-              title: '1. Host & Landlord Profile',
+              title: '1. Agent & Property Owner Profile',
               subtitle: 'Tell us who you are so we can route client inspection alerts directly to you.',
             ),
             const SizedBox(height: 14),
@@ -431,9 +458,9 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                       children: [
                         Expanded(
                           child: _buildRadioTile(
-                            title: 'Direct Landlord',
-                            subtitle: 'I own the property',
-                            value: 'landlord',
+                            title: 'Agent / Caretaker',
+                            subtitle: 'Listing for the owner',
+                            value: 'agency',
                             groupValue: _hostType,
                             onChanged: (val) => setState(() => _hostType = val!),
                           ),
@@ -441,9 +468,9 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                         const SizedBox(width: 10),
                         Expanded(
                           child: _buildRadioTile(
-                            title: 'Licensed Realtor',
-                            subtitle: 'Agency / Manager',
-                            value: 'agency',
+                            title: 'Landlord / Owner',
+                            subtitle: 'I own the property',
+                            value: 'landlord',
                             groupValue: _hostType,
                             onChanged: (val) => setState(() => _hostType = val!),
                           ),
@@ -454,14 +481,14 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
 
                     // Full Name / Agency Name
                     Text(
-                      _hostType == 'agency' ? 'Agency / Brokerage Name' : 'Landlord Full Name',
+                      _hostType == 'agency' ? 'Agent / Agency Name' : 'Landlord / Owner Name',
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _nameController,
                       decoration: InputDecoration(
-                        hintText: _hostType == 'agency' ? 'e.g. Apex Realty Partners Ltd' : 'e.g. Alhaji Mustapha Bello',
+                        hintText: _hostType == 'agency' ? 'e.g. Chukwuemeka Okonkwo / Apex Realty' : 'e.g. Alhaji Mustapha Bello',
                         prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -1057,7 +1084,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                         Icon(Icons.check_circle_outline, color: Color(0xFF2563EB), size: 18),
                         SizedBox(width: 8),
                         Expanded(
-                          child: Text('Your Landlord Account is active.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          child: Text('Your Agent / Owner Account is active.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -1106,7 +1133,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => context.go('/landlord/dashboard'),
-                      child: const Text('Go to Landlord Dashboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: const Text('Go to Agent / Owner Dashboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],

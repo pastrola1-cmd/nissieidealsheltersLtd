@@ -204,7 +204,7 @@ class _CampaignGeneratorScreenState extends ConsumerState<CampaignGeneratorScree
   String _buildReferralUrl(Property property) {
     final profile = ref.read(authProvider).profile;
     final origin = kIsWeb ? Uri.base.origin : 'https://nissie-ideal-shelters.com';
-    final refCode = profile?.referralCode ?? 'PPN-STAFF';
+    final refCode = profile?.referralCode ?? 'NISSIE-STAFF';
     return '$origin/properties/${property.id}?ref=$refCode';
   }
 

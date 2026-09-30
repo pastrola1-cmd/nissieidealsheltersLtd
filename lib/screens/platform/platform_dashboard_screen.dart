@@ -19,7 +19,7 @@ class PlatformDashboardScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'PPN SaaS Platform Admin',
+          'Nissie SaaS Platform Admin',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,

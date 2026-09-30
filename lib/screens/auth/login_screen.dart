@@ -10,8 +10,9 @@ import 'package:nissie_ideal_shelters/config/routes.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/config/app_logger.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
-/// Premium login screen for PPN.
+/// Premium login screen for Nissie Ideal Shelters.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -68,10 +69,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
+    return SafeBackScope(
+      fallbackRoute: '/',
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+            onPressed: () => context.popOrGo('/'),
+          ),
+        ),
+        body: SafeArea(
+          child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
             child: Form(
@@ -200,7 +211,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.go('/signup'),
+                        onPressed: () => context.push('/signup'),
                         child: Text(
                           'Sign Up',
                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -217,7 +228,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   // ── Brand Header ──

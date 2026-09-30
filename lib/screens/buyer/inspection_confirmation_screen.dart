@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 class InspectionConfirmationScreen extends StatelessWidget {
   final String date;
@@ -18,7 +19,9 @@ class InspectionConfirmationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return SafeBackScope(
+      fallbackRoute: '/',
+      child: Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
@@ -158,7 +161,8 @@ class InspectionConfirmationScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildDetailRow({

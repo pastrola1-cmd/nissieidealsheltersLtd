@@ -342,7 +342,7 @@ $referralLink
     // the PUBLIC property landing page without requiring login.
     final origin = kIsWeb ? Uri.base.origin : 'https://nissieidealshelters.com.ng';
     const portalPath = '/portal-new/#/lp';
-    final refCode = profile?.referralCode ?? 'PPN-PENDING';
+    final refCode = profile?.referralCode ?? 'NISSIE-PENDING';
     final referralLink = '$origin$portalPath/${property.id}?ref=$refCode';
 
     return Card(

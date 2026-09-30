@@ -146,7 +146,7 @@ class _RenterWalletModalState extends ConsumerState<RenterWalletModal> {
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         ),
                         Text(
-                          'Real Deposits & Automated Site Tour Payments',
+                          'Real Deposits & Property Transactions',
                           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                       ],
@@ -232,7 +232,7 @@ class _RenterWalletModalState extends ConsumerState<RenterWalletModal> {
                               Icon(Icons.lock_clock, size: 14, color: Colors.amberAccent.shade100),
                               const SizedBox(width: 6),
                               Text(
-                                '₦${currencyFormat.format(wallet.ledgerBalance)} held in pending site tour deposits',
+                                '₦${currencyFormat.format(wallet.ledgerBalance)} held in pending deposits',
                                 style: TextStyle(fontSize: 12, color: Colors.amberAccent.shade100),
                               ),
                             ],
@@ -250,9 +250,7 @@ class _RenterWalletModalState extends ConsumerState<RenterWalletModal> {
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      _buildPresetChip(10000, '₦10,000 (1 Tour)'),
-                      _buildPresetChip(20000, '₦20,000 (2 Tours)'),
-                      _buildPresetChip(50000, '₦50,000 (5 Tours)'),
+                      _buildPresetChip(10000, '₦10,000'),
                     ],
                   ),
                   const SizedBox(height: 14),

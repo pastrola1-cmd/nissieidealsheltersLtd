@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/widgets/app_drawer.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Shell screen for Marketer/Agent users.
 ///
@@ -15,7 +16,15 @@ class MarketerShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
 
-    return Scaffold(
+    return DoubleBackExitScope(
+      onIntercept: () {
+        if (navigationShell.currentIndex != 0) {
+          navigationShell.goBranch(0);
+          return true;
+        }
+        return false;
+      },
+      child: Scaffold(
       drawer: AppDrawer(currentRoute: location),
       body: navigationShell,
       bottomNavigationBar: Container(
@@ -77,7 +86,8 @@ class MarketerShell extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

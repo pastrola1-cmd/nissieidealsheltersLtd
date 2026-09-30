@@ -396,7 +396,7 @@ class _ContactModalState extends ConsumerState<ContactModal> {
                           DropdownMenuItem(value: 'Rent an Apartment', child: Text('Rent a House / Apartment')),
                           DropdownMenuItem(value: 'Buy a Property', child: Text('Buy a House or Land')),
                           DropdownMenuItem(value: 'Shortlet Booking', child: Text('Shortlet / Serviced Apartment')),
-                          DropdownMenuItem(value: 'List Property (Landlord)', child: Text('List My Property as a Landlord')),
+                          DropdownMenuItem(value: 'List Property (Agent / Owner)', child: Text('List Property as an Agent or Owner')),
                           DropdownMenuItem(value: 'Partnership / Realtor', child: Text('Realtor / Partner Program')),
                           DropdownMenuItem(value: 'General Inquiry', child: Text('General Inquiry')),
                         ],

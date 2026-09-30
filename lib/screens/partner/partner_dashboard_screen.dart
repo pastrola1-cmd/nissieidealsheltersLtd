@@ -43,48 +43,57 @@ class PartnerDashboardScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        // Company Logo
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.border),
-                            image: company?.logoUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(company!.logoUrl!),
-                                    fit: BoxFit.cover,
-                                  )
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Company Logo
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border),
+                              image: company?.logoUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(company!.logoUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: company?.logoUrl == null
+                                ? const Icon(Icons.business_rounded, size: 24, color: AppColors.textTertiary)
                                 : null,
                           ),
-                          child: company?.logoUrl == null
-                              ? const Icon(Icons.business_rounded, size: 24, color: AppColors.textTertiary)
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              company?.name ?? 'Loading Agency...',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textPrimary,
-                              ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  company?.name ?? 'Loading Agency...',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Partner Program Network',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            Text(
-                              'Partner Program Network',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
                       children: [
                         Stack(

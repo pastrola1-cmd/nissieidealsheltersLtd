@@ -8,8 +8,9 @@ import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/lead_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
-/// Sign-up screen for PPN.
+/// Sign-up screen for Nissie Ideal Shelters.
 class SignupScreen extends ConsumerStatefulWidget {
   final String? initialEmail;
   const SignupScreen({super.key, this.initialEmail});
@@ -122,17 +123,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
-          onPressed: () => context.go('/login'),
+    return SafeBackScope(
+      fallbackRoute: '/',
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+            onPressed: () => context.popOrGo('/'),
+          ),
         ),
-      ),
-      body: SafeArea(
+        body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 8),
           child: Form(
@@ -312,7 +315,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
-                                  'Are you a Landlord or Agent? ',
+                                  'Are you an Agent or Property Owner? ',
                                   style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
                                 ),
                                 InkWell(
@@ -370,7 +373,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.go('/login'),
+                      onPressed: () => context.push('/login'),
                       child: Text(
                         AppStrings.login,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -387,7 +390,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   // ── Shared Input Decoration ──

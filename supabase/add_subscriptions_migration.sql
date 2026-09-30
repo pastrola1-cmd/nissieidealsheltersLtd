@@ -1,5 +1,5 @@
 -- =====================================================================
--- PPN: ADD SUBSCRIPTION COLUMNS & UPDATE TRIGGERS
+-- NISSIE: ADD SUBSCRIPTION COLUMNS & UPDATE TRIGGERS
 -- Run this script in the Supabase SQL Editor of your project
 -- =====================================================================
 

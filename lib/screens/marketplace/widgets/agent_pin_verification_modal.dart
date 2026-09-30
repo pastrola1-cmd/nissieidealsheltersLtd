@@ -234,7 +234,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
         ),
         const SizedBox(height: 6),
         const Text(
-          'Enter the Renter\'s 4-digit PIN to complete the tour and receive ₦2,000 instantly in your wallet.',
+          'Enter the Renter\'s 4-digit PIN to verify and complete the inspection.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B), height: 1.35),
         ),
@@ -293,7 +293,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : const Icon(Icons.verified, size: 18),
             label: Text(
-              _isVerifying ? 'Verifying PIN & Crediting...' : 'Verify & Claim ₦2,000 Payout',
+              _isVerifying ? 'Verifying PIN...' : 'Verify Inspection PIN',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             onPressed: _isVerifying ? null : _handleVerify,
@@ -301,7 +301,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
         ),
         const SizedBox(height: 12),
         const Text(
-          'Automated settlement. Funds arrive in your digital wallet immediately upon PIN match.',
+          'Automated verification. Inspection will be marked completed immediately upon PIN match.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 11, color: Colors.grey),
         ),
@@ -325,7 +325,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
         ),
         const SizedBox(height: 16),
         const Text(
-          'PIN Verified & Tour Completed!',
+          'PIN Verified & Inspection Completed!',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
         ),
         const SizedBox(height: 6),
@@ -335,7 +335,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
         ),
         const SizedBox(height: 20),
 
-        // Payout Banner
+        // Success Confirmation Banner
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -351,7 +351,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
                   color: Colors.green,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 22),
+                child: const Icon(Icons.verified_outlined, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 14),
               const Expanded(
@@ -359,11 +359,11 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '+₦2,000 Credited Instantly',
+                      'Inspection Verified',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                     Text(
-                      'Your digital wallet has been funded. You can withdraw to your bank account anytime.',
+                      'The on-site inspection has been verified and recorded successfully.',
                       style: TextStyle(fontSize: 11.5, color: Color(0xFF1E293B)),
                     ),
                   ],

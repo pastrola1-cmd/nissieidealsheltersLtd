@@ -15,6 +15,7 @@ import 'package:nissie_ideal_shelters/screens/wallet/agent_withdrawal_modal.dart
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/agent_pin_verification_modal.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/contact_modal.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 class MarketplaceLandingScreen extends ConsumerStatefulWidget {
   const MarketplaceLandingScreen({super.key});
@@ -51,15 +52,6 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
     }
   }
 
-  /// APK download URL: local server serves the fresh build when testing on
-  /// localhost, otherwise points at the production file on the main site.
-  String _apkDownloadUrl() {
-    final base = Uri.base;
-    if (base.host == 'localhost' || base.host == '127.0.0.1') {
-      return '${base.origin}/app/nissie-app.apk';
-    }
-    return AppStrings.androidApkUrl;
-  }
 
   void _showPolicyDialog(BuildContext context, String title, String content) {
     showDialog(
@@ -92,8 +84,9 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
     final isWide = MediaQuery.of(context).size.width > 900;
     final isTablet = MediaQuery.of(context).size.width > 600 && !isWide;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return DoubleBackExitScope(
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF25D366),
         foregroundColor: Colors.white,
@@ -466,7 +459,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         foregroundColor: const Color(0xFF0F172A),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      onPressed: () => context.go('/login'),
+                      onPressed: () => context.push('/login'),
                       child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     ),
                   ),
@@ -480,7 +473,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
                       ),
-                      onPressed: () => context.go('/signup'),
+                      onPressed: () => context.push('/signup'),
                       child: const Text('Sign Up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     ),
                   ),
@@ -533,7 +526,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           children: [
                             Icon(Icons.add_home_outlined, size: 18, color: Color(0xFF475569)),
                             SizedBox(width: 10),
-                            Text('List Property (Landlord)'),
+                            Text('List Property (Agent / Owner)'),
                           ],
                         ),
                       ),
@@ -581,11 +574,11 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                     ],
                     onSelected: (val) {
                       if (val == 'login') {
-                        context.go('/login');
+                        context.push('/login');
                       } else if (val == 'signup') {
-                        context.go('/signup');
+                        context.push('/signup');
                       } else if (val == 'staff_login') {
-                        context.go('/login');
+                        context.push('/login');
                       } else if (val == 'about') {
                         context.push('/about');
                       } else if (val == 'contact') {
@@ -999,7 +992,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => MarketplacePropertyCard(
                           property: properties[index],
-                          onTap: () => context.go('/properties/${properties[index].id}'),
+                          onTap: () => context.push('/properties/${properties[index].id}'),
                         ),
                         childCount: properties.length,
                       ),
@@ -1015,7 +1008,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => MarketplacePropertyCard(
                               property: properties[index],
-                              onTap: () => context.go('/properties/${properties[index].id}'),
+                              onTap: () => context.push('/properties/${properties[index].id}'),
                             ),
                             childCount: properties.length,
                           ),
@@ -1024,7 +1017,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => MarketplacePropertyCard(
                               property: properties[index],
-                              onTap: () => context.go('/properties/${properties[index].id}'),
+                              onTap: () => context.push('/properties/${properties[index].id}'),
                             ),
                             childCount: properties.length,
                           ),
@@ -1098,7 +1091,8 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildListingTypeTab({
@@ -1542,7 +1536,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
           },
         ),
         _buildFooterLink(
-          'List Your Property (Landlords)',
+          'List Your Property (Agents & Owners)',
           onTap: () => context.push('/list-property'),
         ),
         _buildFooterLink(
@@ -1573,7 +1567,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         ),
         _buildFooterLink(
           'Staff & Partner Portal',
-          onTap: () => context.go('/login'),
+          onTap: () => context.push('/login'),
         ),
         _buildFooterLink(
           'Tenant / Buyer Digital Wallet',
@@ -1769,15 +1763,6 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
         onPressed: () => context.push('/about'),
         child: const Text('Anti-Extortion Guarantee', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11.5)),
-      ),
-      TextButton.icon(
-        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
-        onPressed: () => _launchExternalUrl(_apkDownloadUrl()),
-        icon: const Icon(Icons.android_rounded, color: Color(0xFF22C55E), size: 15),
-        label: Text(
-          'Download Android App (v${AppStrings.androidApkVersion})',
-          style: const TextStyle(color: Color(0xFF22C55E), fontSize: 11.5, fontWeight: FontWeight.bold),
-        ),
       ),
     ];
 

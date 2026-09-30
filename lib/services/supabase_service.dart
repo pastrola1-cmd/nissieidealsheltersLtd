@@ -28,6 +28,9 @@ class SupabaseService {
   /// The Supabase client used for all database operations.
   final SupabaseClient _client = SupabaseConfig.client;
 
+  /// Currently authenticated user from Supabase auth session
+  User? get currentUser => _client.auth.currentUser;
+
   /// Fetches all rows from [table].
   ///
   /// If [companyId] is provided the query is filtered to rows whose

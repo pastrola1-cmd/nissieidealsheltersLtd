@@ -1,5 +1,5 @@
 -- =====================================================================
--- PPN: UPDATE AUTH SIGNUP TRIGGER TO SUPPORT MULTI-TENANCY
+-- NISSIE: UPDATE AUTH SIGNUP TRIGGER TO SUPPORT MULTI-TENANCY
 -- Run this script in the Supabase SQL Editor to update the trigger
 -- =====================================================================
 

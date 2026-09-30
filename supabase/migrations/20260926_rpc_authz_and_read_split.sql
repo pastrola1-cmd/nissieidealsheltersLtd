@@ -282,6 +282,7 @@ CREATE TRIGGER trg_protect_profile_privilege
 
 -- ══ 5) Companies: staff-only base reads, safe view for everyone else ══
 DROP POLICY IF EXISTS companies_select ON public.companies;
+DROP POLICY IF EXISTS companies_staff_select ON public.companies;
 CREATE POLICY companies_staff_select ON public.companies
   FOR SELECT TO authenticated
   USING (

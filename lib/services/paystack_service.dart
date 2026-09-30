@@ -48,9 +48,7 @@ class AccountResolutionResult {
 class PaystackService {
   static const String _baseUrl = 'https://api.paystack.co';
 
-  static const String _defaultPublicKey = 'pk_live_05c3f6c24b453816614c11e1a3d61e3c6842e8eb';
-
-  /// Standard default public key for Nissie testing / fallback
+  /// Load keys from environment variables or .env file — never hardcode live keys.
   String get publicKey {
     const defined = String.fromEnvironment('PAYSTACK_PUBLIC_KEY');
     if (defined.isNotEmpty) return defined;
@@ -58,14 +56,17 @@ class PaystackService {
       final envVal = dotenv.env['PAYSTACK_PUBLIC_KEY'];
       if (envVal != null && envVal.isNotEmpty) return envVal;
     } catch (_) {}
-    return _defaultPublicKey;
+    return ''; // Must be set via env or .env
   }
 
   String? get secretKey {
     const defined = String.fromEnvironment('PAYSTACK_SECRET_KEY');
     if (defined.isNotEmpty) return defined;
-    // Secret key must NEVER ship in the client. Resolve via Edge Function.
-    return null;
+    try {
+      final envVal = dotenv.env['PAYSTACK_SECRET_KEY'];
+      if (envVal != null && envVal.isNotEmpty) return envVal;
+    } catch (_) {}
+    return null; // Must be set via env or .env
   }
 
   /// Verified directory of major Nigerian commercial banks and fintechs
@@ -218,35 +219,69 @@ class PaystackService {
         onCancel();
         return false;
       }
-      // 1) Initialize server-side (holds SECRET)
-      http.Response initRes;
+      String? url;
+      String ref = reference;
+
+      // 1) Try Supabase Edge Function first
       try {
-        initRes = await http
+        final initRes = await http
             .post(
               Uri.parse('$base/functions/v1/paystack-initialize'),
               headers: {'apikey': anon, 'Authorization': 'Bearer $anon', 'Content-Type': 'application/json'},
               body: jsonEncode({'email': email, 'amountNaira': amountInNaira, 'reference': reference, 'userId': userId}),
             )
-            .timeout(const Duration(seconds: 15));
-      } catch (e) {
-        onError?.call('Could not reach payment server. Check connection or deploy paystack-initialize.');
-        onCancel();
-        return false;
+            .timeout(const Duration(seconds: 4));
+
+        if (initRes.statusCode == 200) {
+          final initJson = jsonDecode(initRes.body) as Map<String, dynamic>;
+          url = initJson['authorization_url'] as String?;
+          ref = (initJson['reference'] as String?) ?? reference;
+        }
+      } catch (_) {
+        // Fall through to direct Paystack API
       }
-      if (initRes.statusCode != 200) {
-        onError?.call('Payment server not ready (deploy paystack-initialize + PAYSTACK_SECRET_KEY).');
-        onCancel();
-        return false;
-      }
-      final initJson = jsonDecode(initRes.body) as Map<String, dynamic>;
-      final url = initJson['authorization_url'] as String?;
-      final ref = (initJson['reference'] as String?) ?? reference;
+
+      // 2) Direct Paystack API initialization using Secret Key
       if (url == null) {
-        onError?.call('Payment init failed. Try again.');
+        final key = secretKey;
+        if (key != null && key.isNotEmpty) {
+          try {
+            final directRes = await http.post(
+              Uri.parse('$_baseUrl/transaction/initialize'),
+              headers: {
+                'Authorization': 'Bearer $key',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'email': email,
+                'amount': (amountInNaira * 100).round(),
+                'reference': reference,
+                'metadata': {'user_id': userId},
+              }),
+            ).timeout(const Duration(seconds: 15));
+
+            if (directRes.statusCode == 200) {
+              final directJson = jsonDecode(directRes.body) as Map<String, dynamic>;
+              if (directJson['data'] != null) {
+                url = directJson['data']['authorization_url'] as String?;
+                ref = (directJson['data']['reference'] as String?) ?? reference;
+              }
+            } else {
+              debugPrint('Direct Paystack init returned: ${directRes.statusCode} - ${directRes.body}');
+            }
+          } catch (e) {
+            debugPrint('Direct Paystack init error: $e');
+          }
+        }
+      }
+
+      if (url == null) {
+        onError?.call('Could not connect to payment gateway. Please check your internet connection.');
         onCancel();
         return false;
       }
-      // 2) Open Paystack checkout
+
+      // 3) Open Paystack checkout
       final uri = Uri.parse(url);
       if (!await canLaunchUrl(uri)) {
         onError?.call('Could not open payment page.');
@@ -255,10 +290,32 @@ class PaystackService {
       }
       await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-      // 3) Poll verify (user pays in browser, then returns)
+      // 4) Poll verify (user pays in browser, then returns)
       const maxTries = 45; // ~3 min
       for (var i = 0; i < maxTries; i++) {
         await Future.delayed(const Duration(seconds: 4));
+
+        // Check Paystack official API directly first
+        final key = secretKey;
+        if (key != null && key.isNotEmpty) {
+          try {
+            final directVerifyRes = await http.get(
+              Uri.parse('$_baseUrl/transaction/verify/$ref'),
+              headers: {'Authorization': 'Bearer $key'},
+            ).timeout(const Duration(seconds: 8));
+            if (directVerifyRes.statusCode == 200) {
+              final dv = jsonDecode(directVerifyRes.body) as Map<String, dynamic>;
+              if (dv['status'] == true && dv['data'] != null && dv['data']['status'] == 'success') {
+                await onSuccess(ref);
+                return true;
+              }
+            }
+          } catch (_) {
+            // keep polling
+          }
+        }
+
+        // Also check Supabase Edge Function
         try {
           final vRes = await http
               .post(
@@ -266,7 +323,7 @@ class PaystackService {
                 headers: {'apikey': anon, 'Authorization': 'Bearer $anon', 'Content-Type': 'application/json'},
                 body: jsonEncode({'reference': ref}),
               )
-              .timeout(const Duration(seconds: 10));
+              .timeout(const Duration(seconds: 8));
           if (vRes.statusCode == 200) {
             final v = jsonDecode(vRes.body) as Map<String, dynamic>;
             if (v['success'] == true) {

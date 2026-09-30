@@ -8,6 +8,7 @@ import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/providers/inspection_provider.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 class BookInspectionScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -142,16 +143,22 @@ class _BookInspectionScreenState extends ConsumerState<BookInspectionScreen> {
 
     final currencyFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Book Inspection'),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        foregroundColor: AppColors.textPrimary,
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
+    return SafeBackScope(
+      fallbackRoute: '/properties/${widget.propertyId}',
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Book Inspection'),
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+          foregroundColor: AppColors.textPrimary,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.popOrGo('/properties/${widget.propertyId}'),
+          ),
+        ),
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
@@ -391,6 +398,7 @@ class _BookInspectionScreenState extends ConsumerState<BookInspectionScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

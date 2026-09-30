@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Shell screen for Buyer users.
 ///
@@ -13,7 +14,15 @@ class BuyerShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return DoubleBackExitScope(
+      onIntercept: () {
+        if (navigationShell.currentIndex != 0) {
+          navigationShell.goBranch(0);
+          return true;
+        }
+        return false;
+      },
+      child: Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -64,7 +73,8 @@ class BuyerShell extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

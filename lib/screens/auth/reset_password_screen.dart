@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nissie_ideal_shelters/config/supabase_config.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Screen allowing users to set a new password following a recovery link.
 class ResetPasswordScreen extends ConsumerStatefulWidget {
@@ -103,9 +104,11 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final size = MediaQuery.of(context).size;
     final isWide = size.width > 600;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return SafeBackScope(
+      fallbackRoute: '/login',
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
@@ -315,7 +318,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       const SizedBox(height: 16),
                       // Back to Login link
                       TextButton.icon(
-                        onPressed: () => context.go('/login'),
+                        onPressed: () => context.popOrGo('/login'),
                         icon: const Icon(Icons.arrow_back, size: 16),
                         label: const Text('Back to Sign In'),
                         style: TextButton.styleFrom(
@@ -330,6 +333,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

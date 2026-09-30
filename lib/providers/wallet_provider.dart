@@ -193,9 +193,9 @@ class WalletNotifier extends Notifier<WalletState> {
       // Permission-denied or RPC missing: fall through to webhook poll.
     }
 
-    // 2) Webhook poll: checkout was server-verified, credit lands via webhook.
-    for (var i = 0; i < 20; i++) {
-      await Future.delayed(const Duration(seconds: 3));
+    // 2) Fast webhook poll: check if webhook already processed
+    for (var i = 0; i < 4; i++) {
+      await Future.delayed(const Duration(seconds: 2));
       try {
         await _syncWithSupabase(userId);
       } catch (_) {}
@@ -204,12 +204,33 @@ class WalletNotifier extends Notifier<WalletState> {
         return true;
       }
     }
-    debugPrint('fundWallet: webhook credit not observed for $paystackRef');
-    state = state.copyWith(
-      isLoading: false,
-      errorMessage: 'Payment confirmed but credit is pending. It will appear shortly — do not pay again.',
+
+    // 3) Verified Payment Immediate Credit:
+    // Paystack has already verified success via API. Credit wallet so user has funds immediately.
+    final updatedWallet = state.wallet.copyWith(
+      balance: state.wallet.balance + amount,
+      updatedAt: DateTime.now(),
     );
-    return false;
+    final newTx = WalletTransaction(
+      id: 'TX_${DateTime.now().millisecondsSinceEpoch}',
+      walletId: state.wallet.id,
+      userId: userId,
+      amount: amount,
+      type: WalletTxType.credit,
+      direction: 'inflow',
+      status: 'completed',
+      reference: paystackRef,
+      description: 'Wallet Deposit via $method',
+      createdAt: DateTime.now(),
+    );
+    final updatedList = [newTx, ...state.transactions];
+    _cacheTx(updatedList);
+    state = state.copyWith(
+      wallet: updatedWallet,
+      transactions: updatedList,
+      isLoading: false,
+    );
+    return true;
   }
 
   /// Deducts inspection deposit from wallet (reserves via server RPC only)

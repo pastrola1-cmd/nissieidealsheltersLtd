@@ -17,6 +17,7 @@ import 'package:nissie_ideal_shelters/providers/partner_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -166,27 +167,34 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
 
     final property = _property;
     if (property == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('Property Details'),
-          backgroundColor: AppColors.surface,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.home_work_outlined, size: 64, color: AppColors.textTertiary),
-              const SizedBox(height: 16),
-              const Text('Property not found or deleted.', style: TextStyle(color: AppColors.textSecondary)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => context.pop(),
-                child: const Text('Go Back'),
-              ),
-            ],
+      return SafeBackScope(
+        fallbackRoute: '/',
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            title: const Text('Property Details'),
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.textPrimary,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.popOrGo('/'),
+            ),
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.home_work_outlined, size: 64, color: AppColors.textTertiary),
+                const SizedBox(height: 16),
+                const Text('Property not found or deleted.', style: TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => context.popOrGo('/'),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -207,7 +215,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
     // the PUBLIC property landing page without requiring login.
     final origin = kIsWeb ? Uri.base.origin : 'https://nissieidealshelters.com.ng';
     const portalPath = '/portal-new/#/lp';
-    final refCode = userProfile?.referralCode ?? 'PPN-PENDING';
+    final refCode = userProfile?.referralCode ?? 'NISSIE-PENDING';
     final referralLink = '$origin$portalPath/${property.id}?ref=$refCode';
 
     final isUserAdmin = userProfile?.role == UserRole.admin || userProfile?.role == UserRole.platformAdmin;
@@ -238,52 +246,54 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
         break;
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Image Carousel Top Area ──
-            Stack(
-              children: [
-                Container(
-                  height: 320,
-                  width: double.infinity,
-                  color: AppColors.surfaceVariant,
-                  child: property.images.isEmpty
-                      ? const Center(
-                          child: Icon(Icons.home_work_outlined, size: 80, color: AppColors.textTertiary),
-                        )
-                      : PageView.builder(
-                          controller: _pageController,
-                          itemCount: property.images.length,
-                          onPageChanged: (index) {
-                            setState(() => _currentPage = index);
-                          },
-                          itemBuilder: (context, index) {
-                            return Image.network(
-                              property.images[index],
-                              fit: BoxFit.cover,
-                            );
-                          },
-                        ),
-                ),
-                // Back Button Overlay
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 12,
-                  left: 16,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                      onPressed: () => context.pop(),
+    return SafeBackScope(
+      fallbackRoute: '/',
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Image Carousel Top Area ──
+              Stack(
+                children: [
+                  Container(
+                    height: 320,
+                    width: double.infinity,
+                    color: AppColors.surfaceVariant,
+                    child: property.images.isEmpty
+                        ? const Center(
+                            child: Icon(Icons.home_work_outlined, size: 80, color: AppColors.textTertiary),
+                          )
+                        : PageView.builder(
+                            controller: _pageController,
+                            itemCount: property.images.length,
+                            onPageChanged: (index) {
+                              setState(() => _currentPage = index);
+                            },
+                            itemBuilder: (context, index) {
+                              return Image.network(
+                                property.images[index],
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          ),
+                  ),
+                  // Back Button Overlay
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 12,
+                    left: 16,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                        onPressed: () => context.popOrGo('/'),
+                      ),
                     ),
                   ),
-                ),
                 // Page Indicator Overlay
                 if (property.images.length > 1)
                   Positioned(
@@ -743,7 +753,8 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildPropertyIntelligenceCard(
