@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/widgets/app_drawer.dart';
-import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Shell screen for Admin users.
 ///
@@ -17,13 +16,15 @@ class AdminShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
 
-    return DoubleBackExitScope(
-      onIntercept: () {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
         if (navigationShell.currentIndex != 0) {
           navigationShell.goBranch(0);
-          return true;
+        } else {
+          context.go('/');
         }
-        return false;
       },
       child: Scaffold(
       drawer: AppDrawer(currentRoute: location),

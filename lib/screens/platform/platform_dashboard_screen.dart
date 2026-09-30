@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
@@ -15,7 +16,13 @@ class PlatformDashboardScreen extends ConsumerWidget {
     final state = ref.watch(platformProvider);
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/');
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
@@ -25,6 +32,11 @@ class PlatformDashboardScreen extends ConsumerWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.storefront_outlined),
+            tooltip: 'Browse Marketplace',
+            onPressed: () => context.go('/'),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign Out',
@@ -148,6 +160,7 @@ class PlatformDashboardScreen extends ConsumerWidget {
                 ),
               ),
             ),
+      ),
     );
   }
 

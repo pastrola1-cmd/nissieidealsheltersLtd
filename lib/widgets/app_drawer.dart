@@ -98,6 +98,17 @@ class AppDrawer extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 children: [
+                  // ── 0. PUBLIC MARKETPLACE / HOME ──
+                  _buildMenuItem(
+                    context: context,
+                    icon: Icons.storefront_rounded,
+                    label: 'Marketplace & Homes',
+                    targetRoute: '/',
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: 8),
+
                   // ── 1. OPERATIONS SECTION ──
                   _buildSectionHeader('OPERATIONS'),
                   const SizedBox(height: 6),
@@ -347,7 +358,11 @@ class AppDrawer extends ConsumerWidget {
           onTap: () {
             Navigator.pop(context); // Close drawer
             if (currentRoute != targetRoute) {
-              context.push(targetRoute);
+              if (targetRoute == '/') {
+                context.go('/');
+              } else {
+                context.push(targetRoute);
+              }
             }
           },
           child: Padding(

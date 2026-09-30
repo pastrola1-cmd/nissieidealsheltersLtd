@@ -96,6 +96,11 @@ class PartnerDashboardScreen extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Row(
                       children: [
+                        IconButton(
+                          icon: const Icon(Icons.storefront_outlined, color: AppColors.textPrimary),
+                          tooltip: 'Marketplace / Home',
+                          onPressed: () => context.go('/'),
+                        ),
                         Stack(
                           clipBehavior: Clip.none,
                           children: [

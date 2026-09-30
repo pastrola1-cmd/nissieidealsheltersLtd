@@ -9,7 +9,6 @@ import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
-import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Comprehensive Landlord Host Dashboard
 class LandlordDashboardScreen extends ConsumerStatefulWidget {
@@ -149,7 +148,12 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
     final verifiedCount = mine.where((p) => p.isVerified).length;
     final pendingCount = mine.where((p) => !p.isVerified).length;
 
-    return DoubleBackExitScope(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/');
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(

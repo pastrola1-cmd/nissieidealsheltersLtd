@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
-import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
 /// Shell screen for Buyer users.
 ///
@@ -14,13 +13,15 @@ class BuyerShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DoubleBackExitScope(
-      onIntercept: () {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
         if (navigationShell.currentIndex != 0) {
           navigationShell.goBranch(0);
-          return true;
+        } else {
+          context.go('/');
         }
-        return false;
       },
       child: Scaffold(
       body: navigationShell,

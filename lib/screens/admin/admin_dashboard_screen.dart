@@ -110,6 +110,15 @@ class AdminDashboardScreen extends ConsumerWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Marketplace / Home Button
+                        IconButton(
+                          icon: const Icon(Icons.storefront_outlined, color: AppColors.textPrimary, size: 22),
+                          tooltip: 'Marketplace / Home',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                          onPressed: () => context.go('/'),
+                        ),
+                        const SizedBox(width: 2),
                         // Notification Bell
                         Stack(
                           clipBehavior: Clip.none,
