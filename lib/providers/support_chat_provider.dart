@@ -17,6 +17,10 @@ class ChatConversationSummary {
   final String lastMessage;
   final DateTime lastMessageTime;
   final int unreadCount;
+  final String? assignedToId;
+  final String? assignedToName;
+  final String status; // 'open', 'in_progress', 'resolved', 'closed'
+  final String? internalNotes;
 
   const ChatConversationSummary({
     required this.conversationId,
@@ -27,7 +31,41 @@ class ChatConversationSummary {
     required this.lastMessage,
     required this.lastMessageTime,
     required this.unreadCount,
+    this.assignedToId,
+    this.assignedToName,
+    this.status = 'open',
+    this.internalNotes,
   });
+
+  ChatConversationSummary copyWith({
+    String? conversationId,
+    String? clientName,
+    String? clientPhone,
+    String? clientEmail,
+    String? propertyTitle,
+    String? lastMessage,
+    DateTime? lastMessageTime,
+    int? unreadCount,
+    String? assignedToId,
+    String? assignedToName,
+    String? status,
+    String? internalNotes,
+  }) {
+    return ChatConversationSummary(
+      conversationId: conversationId ?? this.conversationId,
+      clientName: clientName ?? this.clientName,
+      clientPhone: clientPhone ?? this.clientPhone,
+      clientEmail: clientEmail ?? this.clientEmail,
+      propertyTitle: propertyTitle ?? this.propertyTitle,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageTime: lastMessageTime ?? this.lastMessageTime,
+      unreadCount: unreadCount ?? this.unreadCount,
+      assignedToId: assignedToId ?? this.assignedToId,
+      assignedToName: assignedToName ?? this.assignedToName,
+      status: status ?? this.status,
+      internalNotes: internalNotes ?? this.internalNotes,
+    );
+  }
 }
 
 class SupportChatState {
@@ -78,6 +116,7 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
   late SupabaseService _supabaseService;
   RealtimeChannel? _clientChannel;
   RealtimeChannel? _adminChannel;
+  RealtimeChannel? _adminConvChannel;
   static const _storage = FlutterSecureStorage();
   static const _sessionKey = 'nissie_client_chat_session_id';
 
@@ -90,6 +129,7 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
     ref.onDispose(() {
       _clientChannel?.unsubscribe();
       _adminChannel?.unsubscribe();
+      _adminConvChannel?.unsubscribe();
     });
 
     return const SupportChatState();
@@ -257,6 +297,20 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
       final updated = state.currentMessages.map((m) => m.id == tempId ? savedMessage : m).toList();
       state = state.copyWith(currentMessages: updated, isSending: false);
 
+      // Auto-upsert into support_conversations metadata
+      try {
+        await client.from('support_conversations').upsert({
+          'conversation_id': convId,
+          'client_name': name,
+          'client_phone': phone,
+          'client_email': email,
+          'property_title': propertyTitle,
+          'last_message': text,
+          'last_message_time': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'conversation_id');
+      } catch (_) {}
+
       // Auto-register lead in Supabase so Admin sees this inquiry under Leads & Inquiries
       if (phone != null && phone.isNotEmpty) {
         _supabaseService.submitPublicLead(
@@ -310,6 +364,19 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
           .map((item) => SupportMessage.fromJson(item as Map<String, dynamic>))
           .toList();
 
+      // Fetch metadata from support_conversations (assignee, status, notes)
+      final Map<String, Map<String, dynamic>> convMeta = {};
+      try {
+        final convResponse = await client.from('support_conversations').select();
+        for (final row in (convResponse as List<dynamic>)) {
+          if (row is Map<String, dynamic> && row['conversation_id'] != null) {
+            convMeta[row['conversation_id'].toString()] = row;
+          }
+        }
+      } catch (_) {
+        // Table might not exist yet or offline, continue gracefully
+      }
+
       final Map<String, List<SupportMessage>> grouped = {};
       for (final msg in list) {
         grouped.putIfAbsent(msg.conversationId, () => []).add(msg);
@@ -324,16 +391,21 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
         final clientMsg = msgs.firstWhere((m) => m.isFromClient, orElse: () => lastMsg);
         final unread = msgs.where((m) => m.isFromClient && !m.isReadByAdmin).length;
         unreadTotal += unread;
+        final meta = convMeta[convId];
 
         summaries.add(ChatConversationSummary(
           conversationId: convId,
-          clientName: clientMsg.senderName,
-          clientPhone: clientMsg.senderPhone,
-          clientEmail: clientMsg.senderEmail,
-          propertyTitle: clientMsg.propertyTitle,
+          clientName: meta?['client_name'] ?? clientMsg.senderName,
+          clientPhone: meta?['client_phone'] ?? clientMsg.senderPhone,
+          clientEmail: meta?['client_email'] ?? clientMsg.senderEmail,
+          propertyTitle: meta?['property_title'] ?? clientMsg.propertyTitle,
           lastMessage: lastMsg.message,
           lastMessageTime: lastMsg.createdAt,
           unreadCount: unread,
+          assignedToId: meta?['assigned_to_id'],
+          assignedToName: meta?['assigned_to_name'],
+          status: meta?['status'] ?? 'open',
+          internalNotes: meta?['internal_notes'],
         ));
       });
 
@@ -350,6 +422,7 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
 
   void _subscribeAdminRealtime() {
     _adminChannel?.unsubscribe();
+    _adminConvChannel?.unsubscribe();
     final client = _supabaseService.client;
 
     _adminChannel = client
@@ -363,6 +436,84 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
           },
         )
         .subscribe();
+
+    _adminConvChannel = client
+        .channel('public:support_conversations:admin_inbox')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'support_conversations',
+          callback: (_) {
+            _refreshAdminConversations();
+          },
+        )
+        .subscribe();
+  }
+
+  /// Claim or assign a conversation to an agent
+  Future<bool> assignConversation({
+    required String conversationId,
+    required String? agentId,
+    required String? agentName,
+    String? status,
+  }) async {
+    try {
+      final client = _supabaseService.client;
+      final payload = {
+        'conversation_id': conversationId,
+        'assigned_to_id': agentId,
+        'assigned_to_name': agentName,
+        'status': status ?? (agentId != null ? 'in_progress' : 'open'),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      await client.from('support_conversations').upsert(payload, onConflict: 'conversation_id');
+      await _refreshAdminConversations();
+      return true;
+    } catch (e) {
+      debugPrint('Error assigning conversation: $e');
+      return false;
+    }
+  }
+
+  /// Update conversation lifecycle status ('open', 'in_progress', 'resolved', 'closed')
+  Future<bool> updateStatus({
+    required String conversationId,
+    required String newStatus,
+  }) async {
+    try {
+      final client = _supabaseService.client;
+      await client.from('support_conversations').upsert({
+        'conversation_id': conversationId,
+        'status': newStatus,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'conversation_id');
+      await _refreshAdminConversations();
+      return true;
+    } catch (e) {
+      debugPrint('Error updating status: $e');
+      return false;
+    }
+  }
+
+  /// Update internal staff notes on conversation
+  Future<bool> updateInternalNotes({
+    required String conversationId,
+    required String notes,
+  }) async {
+    try {
+      final client = _supabaseService.client;
+      await client.from('support_conversations').upsert({
+        'conversation_id': conversationId,
+        'internal_notes': notes,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'conversation_id');
+      await _refreshAdminConversations();
+      return true;
+    } catch (e) {
+      debugPrint('Error updating internal notes: $e');
+      return false;
+    }
   }
 
   /// Send reply from Admin to Client
@@ -392,6 +543,16 @@ class SupportChatNotifier extends Notifier<SupportChatState> {
 
       final inserted = await client.from('support_messages').insert(row).select().single();
       final savedMessage = SupportMessage.fromJson(inserted);
+
+      // Upsert last message into support_conversations
+      try {
+        await client.from('support_conversations').upsert({
+          'conversation_id': conversationId,
+          'last_message': text,
+          'last_message_time': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'conversation_id');
+      } catch (_) {}
 
       if (state.activeConversationId == conversationId) {
         state = state.copyWith(

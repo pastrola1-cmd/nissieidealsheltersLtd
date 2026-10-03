@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
+import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/support_chat_provider.dart';
 
 class AdminSupportChatScreen extends ConsumerStatefulWidget {
@@ -20,6 +21,7 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
 
   String? _selectedConversationId;
   String _searchQuery = '';
+  String _filterTab = 'all'; // 'all', 'unassigned', 'mine', 'resolved'
 
   @override
   void initState() {
@@ -82,19 +84,188 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'open':
+        return const Color(0xFFF59E0B);
+      case 'in_progress':
+        return const Color(0xFF2563EB);
+      case 'resolved':
+        return const Color(0xFF10B981);
+      case 'closed':
+        return const Color(0xFF64748B);
+      default:
+        return const Color(0xFFF59E0B);
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'open':
+        return 'Open';
+      case 'in_progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      case 'closed':
+        return 'Closed';
+      default:
+        return 'Open';
+    }
+  }
+
+  void _showNotesDialog(BuildContext context, ChatConversationSummary conv) {
+    final controller = TextEditingController(text: conv.internalNotes ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.edit_note_rounded, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Internal Staff Note'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Private notes visible ONLY to Nissie team members. The client cannot see this.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'e.g. Client called via phone, budget 4.5M, looking for Lekki Phase 1 duplex...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              final notes = controller.text.trim();
+              Navigator.of(ctx).pop();
+              await ref.read(supportChatProvider.notifier).updateInternalNotes(
+                conversationId: conv.conversationId,
+                notes: notes,
+              );
+            },
+            child: const Text('Save Note', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomAssignDialog(BuildContext context, ChatConversationSummary conv) {
+    final controller = TextEditingController(text: conv.assignedToName ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.person_add_alt_1, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Assign Staff Member'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the name of the Nissie staff member handling this client:',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'e.g. Ahmed Musa, Helpdesk, Sarah',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              final name = controller.text.trim();
+              Navigator.of(ctx).pop();
+              if (name.isNotEmpty) {
+                await ref.read(supportChatProvider.notifier).assignConversation(
+                  conversationId: conv.conversationId,
+                  agentId: 'staff_${name.toLowerCase().replaceAll(' ', '_')}',
+                  agentName: name,
+                );
+              }
+            },
+            child: const Text('Assign', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(supportChatProvider);
+    final myProfile = ref.watch(authProvider).profile;
+    final myId = myProfile?.id ?? 'admin';
+    final myName = myProfile?.fullName?.isNotEmpty == true ? myProfile!.fullName! : 'Support Officer';
+
+    final totalCount = chatState.adminConversations.length;
+    final mineCount = chatState.adminConversations
+        .where((c) => c.assignedToId == myId || (c.assignedToName != null && c.assignedToName == myName))
+        .length;
+    final unassignedCount = chatState.adminConversations
+        .where((c) => c.assignedToId == null || c.assignedToId!.isEmpty)
+        .length;
+    final resolvedCount = chatState.adminConversations
+        .where((c) => c.status == 'resolved' || c.status == 'closed')
+        .length;
+
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width >= 900;
 
     // Filter conversations
     final filtered = chatState.adminConversations.where((c) {
       final q = _searchQuery.toLowerCase();
-      return c.clientName.toLowerCase().contains(q) ||
+      final matchesSearch = c.clientName.toLowerCase().contains(q) ||
           (c.clientPhone?.toLowerCase().contains(q) ?? false) ||
           (c.propertyTitle?.toLowerCase().contains(q) ?? false) ||
+          (c.assignedToName?.toLowerCase().contains(q) ?? false) ||
           c.lastMessage.toLowerCase().contains(q);
+      if (!matchesSearch) return false;
+
+      if (_filterTab == 'mine') {
+        return c.assignedToId == myId || (c.assignedToName != null && c.assignedToName == myName);
+      } else if (_filterTab == 'unassigned') {
+        return c.assignedToId == null || c.assignedToId!.isEmpty;
+      } else if (_filterTab == 'resolved') {
+        return c.status == 'resolved' || c.status == 'closed';
+      }
+      return true;
     }).toList();
 
     return SafeBackScope(
@@ -142,7 +313,14 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
                   // Left Conversations List
                   SizedBox(
                     width: 380,
-                    child: _buildConversationsList(filtered, chatState.isLoading),
+                    child: _buildConversationsList(
+                      filtered,
+                      chatState.isLoading,
+                      totalCount: totalCount,
+                      unassignedCount: unassignedCount,
+                      mineCount: mineCount,
+                      resolvedCount: resolvedCount,
+                    ),
                   ),
                   const VerticalDivider(width: 1, color: Color(0xFFE2E8F0)),
                   // Right Chat Area
@@ -154,24 +332,59 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
                 ],
               )
             : (_selectedConversationId == null
-                ? _buildConversationsList(filtered, chatState.isLoading)
+                ? _buildConversationsList(
+                    filtered,
+                    chatState.isLoading,
+                    totalCount: totalCount,
+                    unassignedCount: unassignedCount,
+                    mineCount: mineCount,
+                    resolvedCount: resolvedCount,
+                  )
                 : _buildActiveChatArea(chatState, onBack: () => setState(() => _selectedConversationId = null))),
       ),
     );
   }
 
-  Widget _buildConversationsList(List<ChatConversationSummary> list, bool isLoading) {
+  Widget _buildFilterChip(String tabKey, String label) {
+    final isSelected = _filterTab == tabKey;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected ? Colors.white : const Color(0xFF334155),
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppColors.primary,
+      backgroundColor: const Color(0xFFF1F5F9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      onSelected: (_) => setState(() => _filterTab = tabKey),
+    );
+  }
+
+  Widget _buildConversationsList(
+    List<ChatConversationSummary> list,
+    bool isLoading, {
+    required int totalCount,
+    required int unassignedCount,
+    required int mineCount,
+    required int resolvedCount,
+  }) {
     return Container(
       color: Colors.white,
       child: Column(
         children: [
           // Search box
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search client, phone, or listing...',
+                hintText: 'Search client, phone, or agent...',
                 prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF94A3B8)),
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
@@ -184,7 +397,25 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
               onChanged: (val) => setState(() => _searchQuery = val.trim()),
             ),
           ),
+
+          // Multi-agent Quick Filter Tabs
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: [
+                _buildFilterChip('all', 'All ($totalCount)'),
+                const SizedBox(width: 6),
+                _buildFilterChip('unassigned', 'Unassigned ($unassignedCount)'),
+                const SizedBox(width: 6),
+                _buildFilterChip('mine', 'Mine ($mineCount)'),
+                const SizedBox(width: 6),
+                _buildFilterChip('resolved', 'Resolved ($resolvedCount)'),
+              ],
+            ),
+          ),
           const Divider(height: 1),
+
           // List
           Expanded(
             child: isLoading && list.isEmpty
@@ -196,9 +427,15 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
                           children: [
                             Icon(Icons.mark_chat_unread_outlined, size: 48, color: Colors.grey.shade400),
                             const SizedBox(height: 10),
-                            const Text(
-                              'No conversations yet',
-                              style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                            Text(
+                              _filterTab == 'unassigned'
+                                  ? 'No unassigned conversations'
+                                  : _filterTab == 'mine'
+                                      ? 'No conversations assigned to you'
+                                      : _filterTab == 'resolved'
+                                          ? 'No resolved conversations'
+                                          : 'No conversations yet',
+                              style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                             ),
                           ],
                         ),
@@ -244,6 +481,43 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: _statusColor(item.status).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        _statusLabel(item.status),
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: _statusColor(item.status),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        item.assignedToName?.isNotEmpty == true
+                                            ? '👤 ${item.assignedToName}'
+                                            : '⚠️ Unassigned',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: item.assignedToName?.isNotEmpty == true
+                                              ? const Color(0xFF475569)
+                                              : Colors.amber.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 if (item.propertyTitle != null) ...[
                                   const SizedBox(height: 2),
                                   Container(
@@ -322,6 +596,13 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
       (c) => c.conversationId == _selectedConversationId,
     ).firstOrNull;
 
+    final myProfile = ref.watch(authProvider).profile;
+    final myId = myProfile?.id ?? 'admin';
+    final myName = myProfile?.fullName?.isNotEmpty == true ? myProfile!.fullName! : 'Support Officer';
+    final isAssignedToMe = activeConv?.assignedToId == myId ||
+        (activeConv?.assignedToName != null && activeConv?.assignedToName == myName);
+    final isUnassigned = activeConv?.assignedToId == null || activeConv!.assignedToId!.isEmpty;
+
     return Container(
       color: const Color(0xFFF8FAFC),
       child: Column(
@@ -379,6 +660,199 @@ class _AdminSupportChatScreenState extends ConsumerState<AdminSupportChatScreen>
               ],
             ),
           ),
+
+          // Multi-agent Action Bar: Status + Claim / Assign + Staff Notes
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(
+              children: [
+                // 1. Status Dropdown
+                PopupMenuButton<String>(
+                  tooltip: 'Change Status',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _statusColor(activeConv?.status ?? 'open').withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _statusColor(activeConv?.status ?? 'open')),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, size: 7.5, color: _statusColor(activeConv?.status ?? 'open')),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${_statusLabel(activeConv?.status ?? 'open')} ▾',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _statusColor(activeConv?.status ?? 'open'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  onSelected: (val) {
+                    if (activeConv != null) {
+                      ref.read(supportChatProvider.notifier).updateStatus(
+                        conversationId: activeConv.conversationId,
+                        newStatus: val,
+                      );
+                    }
+                  },
+                  itemBuilder: (ctx) => const [
+                    PopupMenuItem(value: 'open', child: Text('🟡 Open (New inquiry)')),
+                    PopupMenuItem(value: 'in_progress', child: Text('🔵 In Progress (Under active assistance)')),
+                    PopupMenuItem(value: 'resolved', child: Text('🟢 Resolved (Issue solved)')),
+                    PopupMenuItem(value: 'closed', child: Text('⚪ Closed (Archived)')),
+                  ],
+                ),
+                const SizedBox(width: 8),
+
+                // 2. Claim Button (if not assigned to me)
+                if (activeConv != null && !isAssignedToMe) ...[
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.touch_app, size: 13),
+                    label: const Text('Claim Chat', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      ref.read(supportChatProvider.notifier).assignConversation(
+                        conversationId: activeConv.conversationId,
+                        agentId: myId,
+                        agentName: myName,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                ],
+
+                // 3. Assign / Reassign Dropdown
+                PopupMenuButton<String>(
+                  tooltip: 'Assign Staff Member',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isUnassigned ? const Color(0xFFF1F5F9) : const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isUnassigned ? const Color(0xFFCBD5E1) : const Color(0xFFBAE6FD),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 13,
+                          color: isUnassigned ? const Color(0xFF64748B) : const Color(0xFF0369A1),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isUnassigned
+                              ? 'Assign Agent ▾'
+                              : isAssignedToMe
+                                  ? 'Assigned: You ▾'
+                                  : 'Assigned: ${activeConv.assignedToName} ▾',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isUnassigned ? const Color(0xFF475569) : const Color(0xFF0369A1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  onSelected: (val) {
+                    if (activeConv == null) return;
+                    if (val == 'me') {
+                      ref.read(supportChatProvider.notifier).assignConversation(
+                        conversationId: activeConv.conversationId,
+                        agentId: myId,
+                        agentName: myName,
+                      );
+                    } else if (val == 'unassign') {
+                      ref.read(supportChatProvider.notifier).assignConversation(
+                        conversationId: activeConv.conversationId,
+                        agentId: null,
+                        agentName: null,
+                        status: 'open',
+                      );
+                    } else if (val == 'custom') {
+                      _showCustomAssignDialog(context, activeConv);
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    PopupMenuItem(value: 'me', child: Text('Assign to Me ($myName)')),
+                    const PopupMenuItem(value: 'custom', child: Text('Assign to Staff Member...')),
+                    const PopupMenuItem(
+                      value: 'unassign',
+                      child: Text('Unassign (Move to Queue)', style: TextStyle(color: Colors.redAccent)),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+
+                // 4. Staff Notes Button
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.edit_note, size: 14),
+                  label: Text(
+                    activeConv?.internalNotes?.isNotEmpty == true ? 'Staff Note' : 'Add Note',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF475569),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () {
+                    if (activeConv != null) _showNotesDialog(context, activeConv);
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Internal Staff Notes Banner (if any)
+          if (activeConv?.internalNotes?.isNotEmpty == true)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              color: const Color(0xFFFEF3C7),
+              child: Row(
+                children: [
+                  const Icon(Icons.sticky_note_2_outlined, size: 14, color: Color(0xFFB45309)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Staff Note: ${activeConv!.internalNotes!}',
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => _showNotesDialog(context, activeConv),
+                    child: const Text(
+                      'Edit',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           // Messages
           Expanded(
