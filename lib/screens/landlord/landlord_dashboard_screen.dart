@@ -120,15 +120,17 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
     }
   }
 
-  Future<void> _contactRenter(String phone) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-    final uri = Uri.parse('tel:$cleanPhone');
+  Future<void> _contactNissieDesk({String? bookingRef}) async {
+    final msg = bookingRef != null
+        ? 'Hello Nissie Support, I am an agent/landlord inquiring about inspection booking $bookingRef.'
+        : 'Hello Nissie Support, I am an agent/landlord inquiring about an inspection booking.';
+    final uri = Uri.parse('https://wa.me/2349135598800?text=${Uri.encodeComponent(msg)}');
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to dial $phone')),
+          const SnackBar(content: Text('Contact Nissie Support Desk: +234 913 559 8800')),
         );
       }
     }
@@ -640,6 +642,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
   }
 
   Widget _buildBookingCard(InspectionBooking b) {
+    final shortId = b.id.length > 8 ? b.id.substring(0, 8).toUpperCase() : b.id.toUpperCase();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -656,7 +659,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
               color: Color(0xFFEFF6FF),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person, color: AppColors.primary, size: 20),
+            child: const Icon(Icons.shield_outlined, color: AppColors.primary, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -666,7 +669,7 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                 Row(
                   children: [
                     Text(
-                      b.renterName,
+                      'Verified Client (Ref: #$shortId)',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
                     ),
                     const SizedBox(width: 8),
@@ -685,16 +688,16 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${b.renterPhone} • ${DateFormat('EEE, dd MMM').format(b.scheduledDate)} at ${b.scheduledTime}',
+                  '${DateFormat('EEE, dd MMM').format(b.scheduledDate)} at ${b.scheduledTime} • Accompanied by Nissie Field Desk',
                   style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.phone_in_talk, color: Color(0xFF059669), size: 20),
-            tooltip: 'Call Renter',
-            onPressed: () => _contactRenter(b.renterPhone),
+            icon: const Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 22),
+            tooltip: 'Inquire with Nissie Desk',
+            onPressed: () => _contactNissieDesk(bookingRef: '#$shortId'),
           ),
         ],
       ),

@@ -702,7 +702,7 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Sign up or log in to schedule an inspection with one of our verified partners.',
+                            'Sign up or log in to schedule a verified inspection with Nissie Ideal Shelters.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),

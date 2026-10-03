@@ -330,7 +330,7 @@ class _AgentPinVerificationModalState extends ConsumerState<AgentPinVerification
         ),
         const SizedBox(height: 6),
         Text(
-          'Renter: ${_verifiedBooking?.renterName ?? 'Client'}',
+          'Inspection Ref: #${_verifiedBooking != null && _verifiedBooking!.id.length > 8 ? _verifiedBooking!.id.substring(0, 8).toUpperCase() : (_verifiedBooking?.id.toUpperCase() ?? 'VERIFIED')}',
           style: TextStyle(fontSize: 13, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 20),

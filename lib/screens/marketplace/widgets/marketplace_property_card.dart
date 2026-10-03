@@ -41,7 +41,7 @@ class MarketplacePropertyCard extends StatelessWidget {
                       ? CachedNetworkImage(
                           imageUrl: property.images.first,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Container(
+                          errorWidget: (_, _, _) => Container(
                             color: Colors.grey.shade200,
                             child: const Center(
                               child: Icon(Icons.apartment_rounded, size: 48, color: Colors.grey),
@@ -216,7 +216,7 @@ class MarketplacePropertyCard extends StatelessWidget {
                           Icon(Icons.shield_outlined, size: 15, color: Colors.blue.shade700),
                           const SizedBox(width: 4),
                           Text(
-                            isDeveloperEstate ? 'Direct Nissie Estate' : 'Shielded Agent Contact',
+                            isDeveloperEstate ? 'Direct Nissie Signature' : 'Managed by Nissie Shelters',
                             style: TextStyle(
                               fontSize: 11.5,
                               color: Colors.blue.shade900,

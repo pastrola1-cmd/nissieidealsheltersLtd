@@ -673,7 +673,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
                       ),
                       const SizedBox(height: 3),
                       const Text(
-                        'Your inspection deposit is protected. Pay to receive your secret 4-Digit PIN. The agent only receives payout after you meet on-site and provide this PIN.',
+                        'Your inspection deposit is 100% protected in escrow. Pay to receive your secret 4-Digit PIN. Escrow is only released after you meet our Nissie representative physically on-site.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF1E40AF),
@@ -924,7 +924,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
           const SizedBox(height: 10),
           Center(
             child: Text(
-              '100% Refundable if the agent fails to show up.',
+              '100% Refundable if inspection does not hold as scheduled.',
               style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
             ),
           ),
@@ -1018,7 +1018,7 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
               ),
               const SizedBox(height: 14),
               const Text(
-                '🛡️ DO NOT give this PIN to anyone until you meet the agent physically at the property and complete the inspection.',
+                '🛡️ DO NOT give this PIN to anyone until you meet our Nissie representative physically at the property and complete the inspection.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,

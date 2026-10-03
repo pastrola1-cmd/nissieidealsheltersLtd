@@ -43,17 +43,14 @@ class _PartnerInspectionsScreenState extends ConsumerState<PartnerInspectionsScr
 
     // Resolvers
     final properties = ref.watch(propertyProvider).properties;
-    final leads = ref.watch(leadProvider).leads;
 
     // Filter by search & status
     final filtered = state.inspections.where((i) {
       final property = properties.cast<Property?>().firstWhere((p) => p?.id == i.propertyId, orElse: () => null);
-      final lead = leads.cast<Lead?>().firstWhere((l) => l?.id == i.leadId, orElse: () => null);
-
       final propTitle = property?.title.toLowerCase() ?? '';
-      final buyerName = lead?.buyerName.toLowerCase() ?? '';
+      final inspId = i.id.toLowerCase();
 
-      final matchesSearch = propTitle.contains(_searchQuery) || buyerName.contains(_searchQuery);
+      final matchesSearch = propTitle.contains(_searchQuery) || inspId.contains(_searchQuery);
 
       final matchesStatus = _selectedStatusFilter == 'All' ||
           i.status.value.toLowerCase() == _selectedStatusFilter.replaceAll(' ', '_').toLowerCase();
@@ -195,8 +192,7 @@ class _PartnerInspectionsScreenState extends ConsumerState<PartnerInspectionsScr
                             itemBuilder: (context, index) {
                               final inspection = filtered[index];
                               final property = properties.cast<Property?>().firstWhere((p) => p?.id == inspection.propertyId, orElse: () => null);
-                              final lead = leads.cast<Lead?>().firstWhere((l) => l?.id == inspection.leadId, orElse: () => null);
-                              return _buildPartnerInspectionCard(inspection, property, lead, theme);
+                              return _buildPartnerInspectionCard(inspection, property, theme);
                             },
                           ),
                   ),
@@ -209,7 +205,6 @@ class _PartnerInspectionsScreenState extends ConsumerState<PartnerInspectionsScr
   Widget _buildPartnerInspectionCard(
     Inspection inspection,
     Property? property,
-    Lead? lead,
     ThemeData theme,
   ) {
     Color statusColor;
@@ -250,8 +245,7 @@ class _PartnerInspectionsScreenState extends ConsumerState<PartnerInspectionsScr
       timeLabel = 'Evening (3:00 PM - 6:00 PM)';
     }
 
-    final buyerName = lead?.buyerName ?? 'Buyer Client';
-    final buyerPhone = lead?.buyerPhone ?? 'No Phone';
+    final clientRef = inspection.id.length > 8 ? inspection.id.substring(0, 8).toUpperCase() : inspection.id.toUpperCase();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -296,7 +290,9 @@ class _PartnerInspectionsScreenState extends ConsumerState<PartnerInspectionsScr
           const Divider(height: 1),
           const SizedBox(height: 16),
 
-          _buildItemRow(label: 'BUYER', value: '$buyerName ($buyerPhone)', icon: Icons.person_outline_rounded),
+          _buildItemRow(label: 'CLIENT', value: 'Shielded Client (Ref #$clientRef)', icon: Icons.shield_outlined),
+          const SizedBox(height: 8),
+          _buildItemRow(label: 'COORDINATION', value: 'Managed by Nissie Inspection Desk', icon: Icons.support_agent_rounded),
           const SizedBox(height: 8),
           _buildItemRow(label: 'PROPERTY', value: property?.title ?? 'Unknown Property Listing', icon: Icons.home_work_outlined),
           const SizedBox(height: 8),
