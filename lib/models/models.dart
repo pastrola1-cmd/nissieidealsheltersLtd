@@ -18,3 +18,4 @@ export 'attendance_record.dart';
 export 'payment_plan.dart';
 export 'wallet.dart';
 export 'inspection_booking.dart';
+export 'support_message.dart';

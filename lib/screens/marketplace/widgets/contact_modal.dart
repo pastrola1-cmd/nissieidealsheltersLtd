@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/live_support_chat_modal.dart';
 
 /// Interactive Contact & Inquiry Modal for Nissie Ideal Shelters
 class ContactModal extends ConsumerStatefulWidget {
@@ -214,6 +215,73 @@ class _ContactModalState extends ConsumerState<ContactModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+
+              // Live In-App Chat Banner
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      LiveSupportChatModal.show(context);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.forum_rounded, color: Colors.amberAccent, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Live In-App Chat',
+                                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.5),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.circle, size: 8, color: Color(0xFF22C55E)),
+                                  ],
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Chat directly with a Nissie officer right now',
+                                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
               // Direct Quick Action Buttons
               Row(

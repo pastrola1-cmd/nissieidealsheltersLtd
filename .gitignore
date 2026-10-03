@@ -58,4 +58,5 @@ android/key.properties
 android/*.keystore
 android/*.jks
 supabase/.temp/
-
+.kotlin/
+android/.kotlin/

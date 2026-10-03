@@ -18,6 +18,7 @@ import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
 import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/live_support_chat_modal.dart';
 
 class PropertyDetailScreen extends ConsumerStatefulWidget {
   final String propertyId;
@@ -721,6 +722,21 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                               child: const Text('Get Started & Book Inspection', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () => LiveSupportChatModal.show(context, property: property),
+                              icon: const Icon(Icons.forum_outlined, size: 16),
+                              label: const Text('Live Chat about this Property', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF0F172A),
+                                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -743,6 +759,21 @@ class _PropertyDetailScreenState extends ConsumerState<PropertyDetailScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () => LiveSupportChatModal.show(context, property: property),
+                        icon: const Icon(Icons.forum_outlined, size: 18),
+                        label: const Text('Live Chat about this Property', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0F172A),
+                          side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),

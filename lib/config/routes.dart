@@ -49,6 +49,7 @@ import 'package:nissie_ideal_shelters/screens/buyer/buyer_inspections_screen.dar
 import 'package:nissie_ideal_shelters/screens/buyer/book_inspection_screen.dart';
 import 'package:nissie_ideal_shelters/screens/buyer/inspection_confirmation_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_inspections_screen.dart';
+import 'package:nissie_ideal_shelters/screens/admin/admin_support_chat_screen.dart';
 import 'package:nissie_ideal_shelters/screens/partner/partner_inspections_screen.dart';
 import 'package:nissie_ideal_shelters/screens/partner/earnings_screen.dart';
 import 'package:nissie_ideal_shelters/screens/admin/admin_commissions_screen.dart';
@@ -238,6 +239,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           location.startsWith('/admin/properties') || 
           location == '/admin/billing' ||
           location == '/admin/transactions' ||
+          location == '/admin/support-chat' ||
           location.startsWith('/admin/staff/')
         );
         if (!isAdminOrPlatform && !isManagerAllowedPath) {
@@ -421,6 +423,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/inspections',
         name: 'adminInspections',
         builder: (context, state) => const AdminInspectionsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/support-chat',
+        name: 'adminSupportChat',
+        builder: (context, state) => const AdminSupportChatScreen(),
       ),
       GoRoute(
         path: '/admin/commissions',

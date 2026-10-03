@@ -8,6 +8,7 @@ import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/company_provider.dart';
 import 'package:nissie_ideal_shelters/providers/dashboard_provider.dart';
 import 'package:nissie_ideal_shelters/providers/notification_provider.dart';
+import 'package:nissie_ideal_shelters/providers/support_chat_provider.dart';
 import 'package:nissie_ideal_shelters/widgets/lead_usage_progress_bar.dart';
 import 'package:nissie_ideal_shelters/widgets/goals_dashboard_list.dart';
 
@@ -22,10 +23,12 @@ class AdminDashboardScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final dashboardState = ref.watch(dashboardProvider);
     final notificationState = ref.watch(notificationProvider);
+    final chatState = ref.watch(supportChatProvider);
 
     final company = companyState.company;
     final profile = authState.profile;
     final unreadNotifications = notificationState.notifications.where((n) => !n.read).length;
+    final unreadChats = chatState.totalUnreadForAdmin;
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
     final isSmall = screenWidth < 400;
@@ -117,6 +120,45 @@ class AdminDashboardScreen extends ConsumerWidget {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                           onPressed: () => context.go('/'),
+                        ),
+                        const SizedBox(width: 2),
+                        // Support Chat Inbox
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.forum_outlined, color: AppColors.textPrimary, size: 21),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                              tooltip: 'Live Support Inbox',
+                              onPressed: () => context.push('/admin/support-chat'),
+                            ),
+                            if (unreadChats > 0)
+                              Positioned(
+                                right: 6,
+                                top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    '$unreadChats',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(width: 2),
                         // Notification Bell
@@ -372,6 +414,38 @@ class AdminDashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.forum_rounded, color: AppColors.primary),
+                          ),
+                          title: Row(
+                            children: [
+                              const Text('Live Support Inbox', style: TextStyle(fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 8),
+                              if (unreadChats > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$unreadChats new',
+                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: const Text('Reply to live user chats & property inquiries in real time'),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push('/admin/support-chat'),
+                        ),
+                        const Divider(),
                         ListTile(
                           leading: Container(
                             padding: const EdgeInsets.all(8),

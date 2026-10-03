@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
-import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/marketplace_provider.dart';
@@ -13,7 +12,7 @@ import 'package:nissie_ideal_shelters/screens/marketplace/widgets/my_inspections
 import 'package:nissie_ideal_shelters/screens/wallet/renter_wallet_modal.dart';
 import 'package:nissie_ideal_shelters/screens/wallet/agent_withdrawal_modal.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/agent_pin_verification_modal.dart';
-import 'package:nissie_ideal_shelters/screens/marketplace/widgets/contact_modal.dart';
+import 'package:nissie_ideal_shelters/screens/marketplace/widgets/live_support_chat_modal.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:nissie_ideal_shelters/core/utils/navigation_helpers.dart';
 
@@ -91,12 +90,12 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
         backgroundColor: const Color(0xFF25D366),
         foregroundColor: Colors.white,
         elevation: 4,
-        icon: const Icon(Icons.chat_bubble_rounded),
+        icon: const Icon(Icons.forum_rounded),
         label: const Text(
-          'Chat / Inquire',
+          'Live Chat',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
         ),
-        onPressed: () => ContactModal.show(context),
+        onPressed: () => LiveSupportChatModal.show(context),
       ),
       body: CustomScrollView(
         controller: _scrollController,
