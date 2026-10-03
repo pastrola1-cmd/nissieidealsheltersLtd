@@ -12,6 +12,7 @@ import 'package:nissie_ideal_shelters/providers/wallet_provider.dart';
 import 'package:nissie_ideal_shelters/screens/marketplace/widgets/my_inspections_modal.dart';
 import 'package:nissie_ideal_shelters/services/paystack_service.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InspectionBookingModal extends ConsumerStatefulWidget {
   final Property property;
@@ -491,6 +492,21 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
       if (serverId != null && mounted) {
         ref.read(marketplaceProvider.notifier).replaceBookingId(booking.id, serverId);
         setState(() => _createdBooking = booking.copyWith(id: serverId));
+      }
+
+      // Also register as a lead under Nissie company so Admin sees it immediately under Leads & Dashboard
+      try {
+        await ref.read(supabaseServiceProvider).submitPublicLead(
+          companyId: AppStrings.defaultCompanyId,
+          propertyId: uuidRe.hasMatch(widget.property.id) ? widget.property.id : null,
+          buyerName: booking.renterName,
+          buyerPhone: booking.renterPhone,
+          buyerEmail: booking.renterEmail,
+          notes: 'Inspection booked for ${DateFormat('EEE, dd MMM yyyy').format(booking.scheduledDate)} at ${booking.scheduledTime}. Status: ${booking.status.value}. ${booking.notes ?? ''}',
+          consentText: 'Booked inspection via Nissie Marketplace.',
+        );
+      } catch (e) {
+        debugPrint('Lead submission for inspection failed: $e');
       }
     } catch (e) {
       debugPrint('Booking DB persist failed (local-only): $e');
@@ -1089,6 +1105,22 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
         SizedBox(
           width: double.infinity,
           height: 48,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 1,
+            ),
+            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+            label: const Text('Notify Nissie Desk on WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+            onPressed: () => _notifyNissieWhatsApp(booking),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F172A),
@@ -1100,5 +1132,15 @@ class _InspectionBookingModalState extends ConsumerState<InspectionBookingModal>
         ),
       ],
     );
+  }
+
+  Future<void> _notifyNissieWhatsApp(InspectionBooking booking) async {
+    final shortId = booking.id.length > 8 ? booking.id.substring(0, 8).toUpperCase() : booking.id.toUpperCase();
+    final dateStr = DateFormat('EEE, dd MMM yyyy').format(booking.scheduledDate);
+    final msg = 'Hello Nissie Shelters, I just booked an inspection for "${widget.property.title}" on $dateStr at ${booking.scheduledTime}.\nBooking Ref: #$shortId.\nPlease assign my field escort.';
+    final url = Uri.parse('https://wa.me/2349135598800?text=${Uri.encodeComponent(msg)}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 }
