@@ -285,7 +285,9 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         final row = newProp.toJson()
           ..remove('id')
           ..remove('created_at')
-          ..remove('updated_at');
+          ..remove('updated_at')
+          ..remove('documents')
+          ..remove('payment_plans');
         // Explicitly set created_by to match auth.uid()
         row['created_by'] = creatorId;
         final saved = await ref.read(supabaseServiceProvider).insert('properties', row);

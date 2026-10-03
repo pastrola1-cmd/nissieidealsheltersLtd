@@ -196,8 +196,6 @@ class Property {
       'commission_type': commissionType.value,
       'commission_value': commissionValue,
       'target_audience': targetAudience,
-      'documents': documents,
-      'payment_plans': paymentPlans,
       'listing_type': listingType,
       'property_category': propertyCategory,
       'bedrooms': bedrooms,
