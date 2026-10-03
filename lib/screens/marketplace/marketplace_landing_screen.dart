@@ -733,7 +733,7 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                                       setState(() {});
                                     },
                                     decoration: InputDecoration(
-                                      hintText: 'Search district (e.g. Maitama, Lekki, Guzape, Gwarinpa)...',
+                                      hintText: 'Search city, district, or location (e.g. Abuja, Lagos, Lekki, Maitama)...',
                                       prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
                                       suffixIcon: _searchController.text.isNotEmpty
                                           ? IconButton(
@@ -759,26 +759,11 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
                             ),
                             const SizedBox(height: 12),
 
-                            // 3. City Quick Filters & Bedroom Counts
+                            // 3. Bedroom Counts Filter
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
                                 children: [
-                                  const Text(
-                                    'City:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: Color(0xFF475569),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildCityChip('All', filter.selectedCity, () => notifier.setCity('All')),
-                                  _buildCityChip('Abuja', filter.selectedCity, () => notifier.setCity('Abuja')),
-                                  _buildCityChip('Lagos', filter.selectedCity, () => notifier.setCity('Lagos')),
-                                  _buildCityChip('PH', filter.selectedCity, () => notifier.setCity('Port Harcourt')),
-                                  _buildCityChip('Ibadan', filter.selectedCity, () => notifier.setCity('Ibadan')),
-                                  const SizedBox(width: 16),
                                   const Text(
                                     'Beds:',
                                     style: TextStyle(
@@ -1121,24 +1106,6 @@ class _MarketplaceLandingScreenState extends ConsumerState<MarketplaceLandingScr
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCityChip(String city, String current, VoidCallback onTap) {
-    final isSelected = current == city;
-    return Padding(
-      padding: const EdgeInsets.only(right: 6.0),
-      child: ChoiceChip(
-        label: Text(city),
-        selected: isSelected,
-        selectedColor: AppColors.primary.withValues(alpha: 0.15),
-        labelStyle: TextStyle(
-          color: isSelected ? AppColors.primary : const Color(0xFF334155),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          fontSize: 12,
-        ),
-        onSelected: (_) => onTap(),
       ),
     );
   }

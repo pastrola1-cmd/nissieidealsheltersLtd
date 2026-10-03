@@ -100,14 +100,27 @@ class MarketplaceState {
         return false;
       }
 
-      // Search query
+      // Search query across all 36 Nigerian states, cities, districts, and locations
       if (filter.searchQuery.trim().isNotEmpty) {
-        final q = filter.searchQuery.toLowerCase().trim();
-        final matchTitle = prop.title.toLowerCase().contains(q);
-        final matchDistrict = (prop.district ?? '').toLowerCase().contains(q);
-        final matchLocation = (prop.location ?? '').toLowerCase().contains(q);
-        final matchCity = prop.city.toLowerCase().contains(q);
-        if (!matchTitle && !matchDistrict && !matchLocation && !matchCity) {
+        final rawQuery = filter.searchQuery.toLowerCase().trim();
+        final tokens = rawQuery
+            .split(RegExp(r'[\s,]+'))
+            .where((t) => t.isNotEmpty && t != 'in' && t != 'at' && t != 'for' && t != 'the')
+            .toList();
+
+        final searchable = '${prop.title} ${prop.city} ${prop.stateLocation} ${prop.district ?? ''} ${prop.location ?? ''} ${prop.propertyCategory} ${prop.description ?? ''}'.toLowerCase();
+
+        bool allTokensMatch = true;
+        for (final token in tokens) {
+          final isAliasFct = (token == 'fct' || token == 'abuja') && (searchable.contains('abuja') || searchable.contains('fct'));
+          final isAliasPh = (token == 'ph' || token == 'phc') && (searchable.contains('port harcourt') || searchable.contains('rivers'));
+          final matches = searchable.contains(token) || isAliasFct || isAliasPh;
+          if (!matches) {
+            allTokensMatch = false;
+            break;
+          }
+        }
+        if (!allTokensMatch) {
           return false;
         }
       }
