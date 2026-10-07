@@ -20,11 +20,52 @@ class LandlordDashboardScreen extends ConsumerStatefulWidget {
 
 class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScreen> {
   bool _isRefreshing = false;
+  List<Property> _directProperties = [];
+  bool _isLoadingDirect = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLandlordProperties();
+  }
+
+  Future<void> _loadLandlordProperties() async {
+    setState(() => _isLoadingDirect = true);
+    try {
+      final service = ref.read(supabaseServiceProvider);
+      final uid = ref.read(authProvider).profile?.id ?? service.currentUser?.id;
+      if (uid != null) {
+        final res = await service.client
+            .from('properties')
+            .select()
+            .eq('created_by', uid)
+            .order('created_at', ascending: false);
+        final list = List<Map<String, dynamic>>.from(res)
+            .map((json) => Property.fromJson(json))
+            .toList();
+        if (mounted) {
+          setState(() {
+            _directProperties = list;
+            _isLoadingDirect = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingDirect = false);
+      }
+    } catch (e) {
+      debugPrint('Error loading landlord direct properties: $e');
+      if (mounted) setState(() => _isLoadingDirect = false);
+    }
+    // Also load marketplace in background
+    try {
+      await ref.read(marketplaceProvider.notifier).loadMarketplace();
+    } catch (_) {}
+  }
 
   Future<void> _refresh() async {
     setState(() => _isRefreshing = true);
     try {
-      await ref.read(marketplaceProvider.notifier).loadMarketplace();
+      await _loadLandlordProperties();
     } finally {
       if (mounted) setState(() => _isRefreshing = false);
     }
@@ -139,9 +180,18 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(authProvider).profile;
-    final userId = profile?.id;
+    final userId = profile?.id ?? ref.watch(supabaseServiceProvider).currentUser?.id;
     final all = ref.watch(marketplaceProvider).allProperties;
-    final mine = userId == null ? <Property>[] : all.where((p) => p.createdBy == userId).toList();
+    
+    // Deduplicate and combine properties from direct fetch and marketplace
+    final map = <String, Property>{};
+    for (final p in all.where((p) => userId != null && p.createdBy == userId)) {
+      map[p.id] = p;
+    }
+    for (final p in _directProperties) {
+      map[p.id] = p;
+    }
+    final mine = map.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final bookings = ref.watch(marketplaceProvider).myBookings;
     final myIds = mine.map((p) => p.id).toSet();
     final requests = bookings.where((b) => myIds.contains(b.propertyId)).toList();
@@ -383,7 +433,14 @@ class _LandlordDashboardScreenState extends ConsumerState<LandlordDashboardScree
                   ),
                   const SizedBox(height: 8),
 
-                  if (mine.isEmpty)
+                  if (_isLoadingDirect && mine.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: CircularProgressIndicator(color: AppColors.primary),
+                      ),
+                    )
+                  else if (mine.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(

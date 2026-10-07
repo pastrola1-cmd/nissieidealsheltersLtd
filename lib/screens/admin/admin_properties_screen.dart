@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:nissie_ideal_shelters/core/constants/app_colors.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/core/enums/enums.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/property_provider.dart';
@@ -23,9 +24,18 @@ class AdminPropertiesScreen extends ConsumerStatefulWidget {
 
 class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
   final _searchController = TextEditingController();
-  String _selectedStatusFilter = 'All'; // 'All', 'Available', 'Reserved', 'Sold'
+  String _selectedStatusFilter = 'All'; // 'All', 'Pending Review', 'Available', 'Reserved', 'Sold'
   String _searchQuery = '';
   Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final companyId = ref.read(selectedCompanyIdProvider) ?? AppStrings.defaultCompanyId;
+      ref.read(propertyProvider.notifier).loadProperties(companyId);
+    });
+  }
 
   @override
   void dispose() {
@@ -207,6 +217,10 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
       final matchesSearch = property.title.toLowerCase().contains(_searchQuery) ||
           (property.location?.toLowerCase().contains(_searchQuery) ?? false);
 
+      if (_selectedStatusFilter == 'Pending Review') {
+        return matchesSearch && !property.isVerified;
+      }
+
       final matchesStatus = _selectedStatusFilter == 'All' ||
           property.status.value.toLowerCase() == _selectedStatusFilter.toLowerCase();
 
@@ -260,10 +274,8 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
             )
           : RefreshIndicator(
               onRefresh: () async {
-                final companyId = ref.read(propertyProvider).properties.firstOrNull?.companyId;
-                if (companyId != null) {
-                  await ref.read(propertyProvider.notifier).loadProperties(companyId);
-                }
+                final companyId = ref.read(selectedCompanyIdProvider) ?? AppStrings.defaultCompanyId;
+                await ref.read(propertyProvider.notifier).loadProperties(companyId);
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -484,12 +496,17 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: ['All', 'Available', 'Reserved', 'Sold'].map((status) {
+            children: ['All', 'Pending Review', 'Available', 'Reserved', 'Sold'].map((status) {
               final isSelected = _selectedStatusFilter == status;
+              final pendingCount = ref.watch(propertyProvider).properties.where((p) => !p.isVerified).length;
+              final chipLabel = (status == 'Pending Review' && pendingCount > 0)
+                  ? 'Pending Review ($pendingCount)'
+                  : status;
+
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ChoiceChip(
-                  label: Text(status),
+                  label: Text(chipLabel),
                   selected: isSelected,
                   onSelected: (selected) {
                     if (selected) {
@@ -498,15 +515,19 @@ class _AdminPropertiesScreenState extends ConsumerState<AdminPropertiesScreen> {
                       });
                     }
                   },
-                  selectedColor: AppColors.primary,
+                  selectedColor: status == 'Pending Review' ? Colors.amber.shade800 : AppColors.primary,
                   backgroundColor: AppColors.surface,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.textSecondary,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.white : (status == 'Pending Review' && pendingCount > 0 ? Colors.amber.shade900 : AppColors.textSecondary),
+                    fontWeight: isSelected || (status == 'Pending Review' && pendingCount > 0) ? FontWeight.bold : FontWeight.normal,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+                    side: BorderSide(
+                      color: isSelected
+                          ? (status == 'Pending Review' ? Colors.amber.shade800 : AppColors.primary)
+                          : (status == 'Pending Review' && pendingCount > 0 ? Colors.amber.shade400 : AppColors.border),
+                    ),
                   ),
                   showCheckmark: false,
                   elevation: 0,

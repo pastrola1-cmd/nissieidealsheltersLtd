@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/services/supabase_service.dart';
@@ -31,7 +32,7 @@ class SelectedCompanyIdNotifier extends Notifier<String?> {
   @override
   String? build() {
     final authState = ref.watch(authProvider);
-    return authState.profile?.companyId;
+    return authState.profile?.companyId ?? AppStrings.defaultCompanyId;
   }
 
   @override

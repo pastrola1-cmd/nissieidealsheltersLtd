@@ -29,7 +29,15 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _operatingCity = 'Abuja';
+
+  static const List<String> _nigerianStates = [
+    'Abuja (FCT)', 'Lagos', 'Rivers', 'Oyo', 'Kano', 'Kaduna', 'Enugu', 'Delta', 'Edo',
+    'Ogun', 'Anambra', 'Akwa Ibom', 'Abia', 'Adamawa', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+    'Cross River', 'Ebonyi', 'Ekiti', 'Gombe', 'Imo', 'Jigawa', 'Katsina', 'Kebbi', 'Kogi',
+    'Kwara', 'Nasarawa', 'Niger', 'Ondo', 'Osun', 'Plateau', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+  ];
+  String _selectedState = 'Abuja (FCT)';
+  final _cityController = TextEditingController(text: 'Abuja');
 
   // Property Details
   final _propTitleController = TextEditingController();
@@ -102,6 +110,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _cityController.dispose();
     _propTitleController.dispose();
     _districtController.dispose();
     _priceController.dispose();
@@ -244,6 +253,19 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
       final shouldBeVerified = isAdmin;
       final companyId = currentProfile?.companyId ?? AppStrings.defaultCompanyId;
 
+      // Upgrade buyer account to landlord role if they submit a listing
+      if (currentProfile?.role == UserRole.buyer) {
+        try {
+          await ref.read(supabaseServiceProvider).update('profiles', creatorId, {'role': 'landlord'});
+          await ref.read(authProvider.notifier).refreshProfile();
+        } catch (_) {}
+      }
+
+      final cityVal = _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : _selectedState;
+      final stateVal = _selectedState.replaceAll(' (FCT)', '');
+      final districtVal = _districtController.text.trim();
+      final fullLocation = districtVal.isNotEmpty ? '$districtVal, $cityVal, $stateVal' : '$cityVal, $stateVal';
+
       final inspectionFee = double.tryParse(
             _inspectionFeeController.text.replaceAll(',', '').trim(),
           ) ??
@@ -255,7 +277,7 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         description: _descController.text.trim().isNotEmpty
             ? _descController.text.trim()
             : 'Listing submitted by $fullName ($_hostType). Pending Nissie verification.',
-        location: '${_districtController.text.trim()}, $_operatingCity',
+        location: fullLocation,
         price: price,
         status: PropertyStatus.available,
         images: imageUrls,
@@ -265,9 +287,9 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
         propertyCategory: _propertyCategory,
         bedrooms: _propertyCategory == 'land' ? 0 : _bedrooms,
         bathrooms: _bathrooms,
-        city: _operatingCity,
-        stateLocation: _operatingCity == 'Lagos' ? 'Lagos' : 'FCT',
-        district: _districtController.text.trim(),
+        city: cityVal,
+        stateLocation: stateVal,
+        district: districtVal.isNotEmpty ? districtVal : null,
         rentPeriod: _listingType == 'rent' ? 'year' : 'total',
         inspectionFee: inspectionFee,
         isMarketplace: true,
@@ -310,12 +332,13 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
       final displayProp = newProp.copyWith(id: serverId ?? newProp.id);
       ref.read(marketplaceProvider.notifier).addProperty(displayProp);
 
-      // Refresh admin property provider if submitted by admin
-      if (isAdmin) {
-        try {
-          await ref.read(propertyProvider.notifier).loadProperties(companyId);
-        } catch (_) {}
-      }
+      // Refresh providers so both landlord dashboard and admin see it immediately
+      try {
+        await ref.read(marketplaceProvider.notifier).loadMarketplace();
+      } catch (_) {}
+      try {
+        await ref.read(propertyProvider.notifier).loadProperties(companyId);
+      } catch (_) {}
 
       setState(() {
         _isLoading = false;
@@ -545,24 +568,52 @@ class _LandlordRegistrationScreenState extends ConsumerState<LandlordRegistratio
                       const SizedBox(height: 16),
                     ],
 
-                    // Operating City
-                    const Text('Operating City', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      initialValue: _operatingCity,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 'Abuja', child: Text('Abuja (FCT)')),
-                        DropdownMenuItem(value: 'Lagos', child: Text('Lagos State')),
-                        DropdownMenuItem(value: 'Port Harcourt', child: Text('Port Harcourt')),
-                        DropdownMenuItem(value: 'Ibadan', child: Text('Ibadan')),
+                    // Operating State & City (Nationwide Nigeria)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Operating State', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              const SizedBox(height: 6),
+                              DropdownButtonFormField<String>(
+                                initialValue: _selectedState,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                ),
+                                items: _nigerianStates.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedState = val);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('City / Town', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _cityController,
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. Maitama, Ikeja, Lekki...',
+                                  prefixIcon: const Icon(Icons.location_city_rounded, size: 20),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                ),
+                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter city/town' : null,
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
-                      onChanged: (val) {
-                        if (val != null) setState(() => _operatingCity = val);
-                      },
                     ),
                   ],
                 ),

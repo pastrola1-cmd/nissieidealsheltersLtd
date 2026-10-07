@@ -118,7 +118,12 @@ class SupabaseService {
 
   /// Fetches properties with optional company filtering.
   Future<List<Property>> getProperties({String? companyId}) async {
-    final list = await getAll('properties', companyId: companyId);
+    var query = _client.from('properties').select();
+    if (companyId != null) {
+      query = query.or('company_id.eq.$companyId,company_id.is.null');
+    }
+    final response = await query;
+    final list = List<Map<String, dynamic>>.from(response);
     return list.map((json) => Property.fromJson(json)).toList();
   }
 

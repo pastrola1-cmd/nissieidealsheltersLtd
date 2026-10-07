@@ -261,7 +261,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (location == '/training/manage' && profile.role != UserRole.admin && profile.role != UserRole.manager) {
         return _getDefaultRouteForRole(profile.role);
       }
-      if (location.startsWith('/landlord') && profile.role != UserRole.landlord && profile.role != UserRole.admin && profile.role != UserRole.platformAdmin) {
+      if (location.startsWith('/landlord') && profile.role != UserRole.landlord && profile.role != UserRole.admin && profile.role != UserRole.platformAdmin && profile.role != UserRole.buyer) {
         return _getDefaultRouteForRole(profile.role);
       }
       if (location == '/settings' && profile.role != UserRole.admin && profile.role != UserRole.platformAdmin && profile.role != UserRole.manager) {

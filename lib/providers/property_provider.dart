@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nissie_ideal_shelters/core/constants/app_strings.dart';
 import 'package:nissie_ideal_shelters/models/models.dart';
 import 'package:nissie_ideal_shelters/providers/auth_provider.dart';
 import 'package:nissie_ideal_shelters/providers/company_provider.dart';
@@ -39,25 +40,21 @@ class PropertyNotifier extends Notifier<PropertyState> {
   PropertyState build() {
     _supabaseService = ref.watch(supabaseServiceProvider);
     
-    final companyId = ref.watch(selectedCompanyIdProvider);
+    final companyId = ref.watch(selectedCompanyIdProvider) ?? AppStrings.defaultCompanyId;
 
-    if (companyId != null) {
-      if (_loadedCompanyId != companyId) {
-        _loadedCompanyId = companyId;
-        Future.microtask(() => loadProperties(companyId));
-        return const PropertyState(isLoading: true);
-      }
-      return state;
-    } else {
-      _loadedCompanyId = null;
-      return const PropertyState();
+    if (_loadedCompanyId != companyId) {
+      _loadedCompanyId = companyId;
+      Future.microtask(() => loadProperties(companyId));
+      return const PropertyState(isLoading: true);
     }
+    return state;
   }
 
-  Future<void> loadProperties(String companyId) async {
-    state = state.copyWith(isLoading: true);
+  Future<void> loadProperties([String? companyId]) async {
+    final cid = companyId ?? ref.read(selectedCompanyIdProvider) ?? AppStrings.defaultCompanyId;
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final list = await _supabaseService.getProperties(companyId: companyId);
+      final list = await _supabaseService.getProperties(companyId: cid);
       // Sort by createdAt descending
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       state = PropertyState(properties: list, isLoading: false);
@@ -93,11 +90,7 @@ class PropertyNotifier extends Notifier<PropertyState> {
     bool shieldedContact = true,
   }) async {
     final profile = ref.read(authProvider).profile;
-    final companyId = profile?.companyId;
-    if (companyId == null) {
-      state = state.copyWith(errorMessage: 'Authentication error: Company ID not found.');
-      return false;
-    }
+    final companyId = profile?.companyId ?? AppStrings.defaultCompanyId;
 
     final company = ref.read(authProvider).company;
     if (company != null) {
