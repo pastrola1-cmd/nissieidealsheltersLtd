@@ -4,6 +4,18 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <script>
+    // Safeguard: Ensure document base matches deployment subdirectory if loaded under /portal-new/
+    (function() {
+      var base = document.querySelector('base');
+      var path = window.location.pathname;
+      if (base) {
+        var currentHref = base.getAttribute('href');
+        if ((currentHref === '/' || currentHref === '$FLUTTER_BASE_HREF') && path.indexOf('/portal-new') !== -1) {
+          base.setAttribute('href', '/portal-new/');
+        }
+      }
+    })();
+
     // Force clear all legacy service workers and cache storage to prevent blank screen from stale caches
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -19,6 +31,15 @@
         }
       });
     }
+
+    // Dismiss branded loading indicator once Flutter renders its first frame
+    window.addEventListener('flutter-first-frame', function() {
+      var el = document.getElementById('loading-indicator');
+      if (el) {
+        el.style.opacity = '0';
+        setTimeout(function() { el.remove(); }, 400);
+      }
+    });
   </script>
 
   <meta charset="UTF-8">
@@ -38,8 +59,47 @@
 
   <title>Nissie Ideal Shelters Ltd</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0F172A;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #loading-indicator {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #0F172A;
+      color: #F8FAFC;
+      z-index: 999999;
+      transition: opacity 0.4s ease;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(217, 119, 6, 0.2);
+      border-top: 3px solid #D97706;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
+  <div id="loading-indicator">
+    <div class="spinner"></div>
+    <div style="font-weight: 600; font-size: 15px; letter-spacing: 0.5px; color: #F8FAFC;">Nissie Ideal Shelters</div>
+    <div style="font-size: 12px; color: #94A3B8; margin-top: 4px;">Loading portal...</div>
+  </div>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
