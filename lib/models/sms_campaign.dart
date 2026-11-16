@@ -110,7 +110,9 @@ class SmsMessageLog {
       status: json['status'] as String,
       termiiMessageId: json['termii_message_id'] as String?,
       errorMessage: json['error_message'] as String?,
-      sentAt: DateTime.parse(json['sent_at'] as String),
+      sentAt: json['sent_at'] != null 
+          ? DateTime.parse(json['sent_at'] as String) 
+          : (json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now()),
     );
   }
 

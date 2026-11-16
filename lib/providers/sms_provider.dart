@@ -282,6 +282,23 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
       return false;
     }
   }
+
+  /// Fetch individual recipient logs for a specific campaign
+  Future<List<SmsMessageLog>> getCampaignMessages(String campaignId) async {
+    try {
+      final response = await _supabaseService.client
+          .from('sms_messages')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('created_at', ascending: true);
+
+      return (response as List)
+          .map((json) => SmsMessageLog.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
 }
 
 final smsCampaignProvider = NotifierProvider<SmsCampaignNotifier, SmsCampaignState>(() {
