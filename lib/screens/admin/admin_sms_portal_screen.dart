@@ -111,6 +111,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
   String _selectedGroup = 'leads'; // 'leads', 'partners', 'custom'
   String _selectedStageFilter = 'all'; // 'all' or specific stage name
   final List<String> _selectedIndividualIds = []; // empty means all matching targets selected
+  double _costPerUnit = 6.76; // SmartSMS Fixed Sender Bind DND rate (AIRTEL, MTN, GLO, 9MOBILE: N6.76/unit) // SmartSMS Corporate Route verified rate (N12.86 / 2 pages = N6.76/unit)
 
   @override
   void initState() {
@@ -192,6 +193,63 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
                 _buildHistoryTab(smsState),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editUnitRateDialog(BuildContext context) {
+    final controller = TextEditingController(text: _costPerUnit.toStringAsFixed(2));
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.tune_rounded, color: AppColors.accent),
+            SizedBox(width: 8),
+            Text('Set Cost per SMS Unit'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'SmartSMS Solutions deducts ₦6.76 per SMS page on the Corporate Route (to bypass DND and guarantee delivery). You can adjust this rate anytime:',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Unit Price in Naira (₦)',
+                prefixText: '₦ ',
+                filled: true,
+                fillColor: AppColors.surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final parsed = double.tryParse(controller.text.trim());
+              if (parsed != null && parsed > 0) {
+                setState(() {
+                  _costPerUnit = parsed;
+                });
+              }
+              Navigator.pop(dialogCtx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white),
+            child: const Text('Update Rate'),
           ),
         ],
       ),
@@ -544,7 +602,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
   Widget _buildSmsMetricsCard(SmsMetrics metrics, int recipientCount, double walletBalance) {
     final pages = metrics.pages == 0 ? 1 : metrics.pages;
     final estimatedUnits = recipientCount * pages;
-    final estimatedCost = estimatedUnits * 4.5;
+    final estimatedCost = estimatedUnits * _costPerUnit;
     final hasShortage = walletBalance > 0 && walletBalance < estimatedCost;
 
     return Container(
@@ -701,16 +759,41 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Estimated Broadcast Cost', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$recipientCount contacts × $pages page${pages > 1 ? 's' : ''} = $estimatedUnits units (≈ ₦${estimatedCost.toStringAsFixed(2)})',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('Estimated Cost', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: () => _editUnitRateDialog(context),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '@ ₦${_costPerUnit.toStringAsFixed(2)}/unit',
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  const Icon(Icons.edit_outlined, size: 10, color: AppColors.accent),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$recipientCount contacts × $pages page${pages > 1 ? 's' : ''} = $estimatedUnits units (≈ ₦${estimatedCost.toStringAsFixed(2)})',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -804,7 +887,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     final smsState = ref.read(smsCampaignProvider);
     final pages = metrics.pages == 0 ? 1 : metrics.pages;
     final estimatedUnits = count * pages;
-    final estimatedCost = estimatedUnits * 4.5; // ~N4.50 per unit on corporate route
+    final estimatedCost = estimatedUnits * _costPerUnit; // N6.76 per unit verified SmartSMS Corporate rate
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -827,6 +910,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
                   _confirmRow('Recipients', '$count contacts'),
                   _confirmRow('Pages per Recipient', '$pages SMS page${pages > 1 ? 's' : ''}'),
                   _confirmRow('Total Units Required', '$estimatedUnits units'),
+                  _confirmRow('Rate per Unit', '₦${_costPerUnit.toStringAsFixed(2)} (SmartSMS Fixed Bind)'),
                   _confirmRow('Estimated Cost', '≈ ₦${estimatedCost.toStringAsFixed(2)}'),
                   _confirmRow('Wallet Balance', '₦${smsState.walletBalance.toStringAsFixed(2)}'),
                 ],
@@ -867,7 +951,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             ],
           ),
           content: Text(
-            'Your SmartSMS wallet balance is ₦${smsState.walletBalance.toStringAsFixed(2)}, but sending to $count contacts ($pages page${pages > 1 ? 's' : ''} each = $estimatedUnits units) will cost approx ₦${estimatedCost.toStringAsFixed(2)}.\n\nSmartSMS will reject the broadcast if the balance is too low.\n\nWould you like to try sending anyway, or top up first?',
+            'Your SmartSMS wallet balance is ₦${smsState.walletBalance.toStringAsFixed(2)}, but sending to $count contacts ($pages page${pages > 1 ? 's' : ''} each = $estimatedUnits units @ ₦${_costPerUnit.toStringAsFixed(2)}/unit) will cost approx ₦${estimatedCost.toStringAsFixed(2)}.\n\nSmartSMS will reject the broadcast if the balance is too low.\n\nWould you like to try sending anyway, or top up first?',
           ),
           actions: [
             TextButton(
