@@ -133,12 +133,20 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
     final company = authState.company;
     if (profile == null || profile.companyId == null) return false;
 
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final apiKey = _getEffectiveApiKey(company);
       final senderId = (company?.termiiSenderId != null && company!.termiiSenderId!.trim().isNotEmpty)
           ? company.termiiSenderId!.trim()
           : 'NIS LTD';
+
+      if (apiKey == null || apiKey.trim().isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'SmartSMS API Token not configured. Please enter your SmartSMS Token in Admin -> Settings.',
+        );
+        return false;
+      }
 
       // 1. Insert SMS campaign record if table exists
       SmsCampaign? campaign;
@@ -163,9 +171,11 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
 
       int delivered = 0;
       int failed = 0;
+      String? lastFailureReason;
 
       // 2. Dispatch SMS messages
-      for (final rec in recipients) {
+      for (int i = 0; i < recipients.length; i++) {
+        final rec = recipients[i];
         final recName = rec.name ?? 'Contact';
         final firstName = recName.split(' ').first;
         final personalised = message.replaceAll('{{name}}', firstName);
@@ -173,33 +183,25 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
         bool success = false;
         String? errorMsg;
 
-        if (apiKey == null || apiKey.trim().isEmpty) {
-          state = state.copyWith(
-            isLoading: false,
-            errorMessage: 'SmartSMS API Token not configured. Please enter your SmartSMS Token in Admin -> Settings.',
+        try {
+          final result = await _smsService.sendSmsResult(
+            to: rec.phone,
+            message: personalised,
+            apiKey: apiKey,
+            senderId: senderId,
           );
-          return false;
-        } else {
-          try {
-            // Sequential sending with delay
-            final result = await _smsService.sendSmsResult(
-              to: rec.phone,
-              message: personalised,
-              apiKey: apiKey,
-              senderId: senderId,
-            );
-            success = result.success;
-            if (success) {
-              delivered++;
-            } else {
-              failed++;
-              errorMsg = result.message;
-            }
-          } catch (e) {
+          success = result.success;
+          if (success) {
+            delivered++;
+          } else {
             failed++;
-            errorMsg = e.toString();
+            errorMsg = result.message;
+            lastFailureReason = result.message;
           }
-          await Future.delayed(const Duration(milliseconds: 100));
+        } catch (e) {
+          failed++;
+          errorMsg = e.toString();
+          lastFailureReason = e.toString();
         }
 
         // 3. Log individual message if campaign record exists
@@ -216,13 +218,44 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
             });
           } catch (_) {}
         }
+
+        // Fast abort on critical account-level errors (insufficient balance, invalid token, route rejected)
+        if (!success && lastFailureReason != null) {
+          final lower = lastFailureReason.toLowerCase();
+          if (lower.contains('insufficient') ||
+              lower.contains('invalid token') ||
+              lower.contains('not allowed') ||
+              lower.contains('unregistered')) {
+            // Mark remaining recipients as failed due to the same account-level barrier
+            for (int j = i + 1; j < recipients.length; j++) {
+              failed++;
+              if (campaign != null) {
+                try {
+                  await _supabaseService.client.from('sms_messages').insert({
+                    'campaign_id': campaign.id,
+                    'recipient_name': recipients[j].name ?? 'Contact',
+                    'recipient_phone': recipients[j].phone,
+                    'recipient_type': recipients[j].type,
+                    'message_body': message,
+                    'status': 'failed',
+                    'error_message': lastFailureReason,
+                  });
+                } catch (_) {}
+              }
+            }
+            break;
+          }
+        }
+
+        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       // 4. Update SMS campaign record status & counts if campaign record exists
       if (campaign != null) {
+        final campaignStatus = delivered == 0 ? 'failed' : (failed > 0 ? 'partial' : 'sent');
         try {
           await _supabaseService.client.from('sms_campaigns').update({
-            'status': 'sent',
+            'status': campaignStatus,
             'delivered_count': delivered,
             'failed_count': failed,
             'sent_at': DateTime.now().toIso8601String(),
@@ -233,6 +266,15 @@ class SmsCampaignNotifier extends Notifier<SmsCampaignState> {
       // Refresh data
       await loadSmsCampaigns();
       await refreshWalletBalance();
+
+      if (delivered == 0 && failed > 0) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: lastFailureReason ?? 'All messages failed to deliver. Check SmartSMS balance or Sender ID.',
+        );
+        return false;
+      }
+
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {

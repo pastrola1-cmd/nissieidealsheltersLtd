@@ -30,7 +30,6 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
   String _selectedGroup = 'leads'; // 'leads', 'partners', 'custom'
   String _selectedStageFilter = 'all'; // 'all' or specific stage name
   final List<String> _selectedIndividualIds = []; // empty means all matching targets selected
-  int _charCount = 0;
 
   @override
   void initState() {
@@ -38,7 +37,6 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
     _tabController = TabController(length: 2, vsync: this);
     _messageController.addListener(() {
       setState(() {
-        _charCount = _messageController.text.length;
       });
     });
     _customNumbersController.addListener(() {
@@ -442,16 +440,24 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
             ),
             const SizedBox(height: 4),
             Builder(builder: (context) {
-              final pages = _charCount == 0 ? 0 : (_charCount <= 160 ? 1 : ((_charCount - 1) ~/ 153) + 1);
+              final cleanLen = _messageController.text.replaceAll('₦', 'N').length;
+              final pages = cleanLen == 0 ? 0 : (cleanLen <= 160 ? 1 : ((cleanLen - 1) ~/ 153) + 1);
+              final hasNaira = _messageController.text.contains('₦');
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Tag: Use {{name}} for partner/buyer name.',
-                    style: TextStyle(color: AppColors.textTertiary, fontSize: 11),
+                  Text(
+                    hasNaira
+                        ? 'Tag: {{name}} | ₦ auto-optimized to N (saves 60% fee)'
+                        : 'Tag: Use {{name}} for partner/buyer name.',
+                    style: TextStyle(
+                      color: hasNaira ? AppColors.accent : AppColors.textTertiary,
+                      fontSize: 11,
+                      fontWeight: hasNaira ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
                   Text(
-                    '$_charCount chars ($pages SMS page${pages == 1 ? '' : 's'})',
+                    '$cleanLen chars ($pages SMS page${pages == 1 ? '' : 's'})',
                     style: TextStyle(
                       color: pages > 1 ? AppColors.accent : AppColors.textSecondary,
                       fontSize: 11,
@@ -566,6 +572,57 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
 
     if (confirm != true) return;
 
+    // Pre-flight balance check against estimated broadcast units
+    final smsState = ref.read(smsCampaignProvider);
+    final cleanMsg = _messageController.text.replaceAll('₦', 'N');
+    final cleanLen = cleanMsg.length;
+    final pages = cleanLen == 0 ? 1 : (cleanLen <= 160 ? 1 : ((cleanLen - 1) ~/ 153) + 1);
+    final estimatedUnits = count * pages;
+    final estimatedCost = estimatedUnits * 4.5; // ~N4.50 per unit on corporate route
+
+    if (smsState.walletBalance > 0 && smsState.walletBalance < estimatedCost) {
+      if (!mounted) return;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Low Wallet Balance'),
+            ],
+          ),
+          content: Text(
+            'Your SmartSMS wallet balance is ₦${smsState.walletBalance.toStringAsFixed(2)}, but sending to $count contacts ($pages page${pages > 1 ? 's' : ''} each = $estimatedUnits units) will cost approx ₦${estimatedCost.toStringAsFixed(2)}.\n\nSmartSMS will reject the broadcast if the balance is too low.\n\nWould you like to try sending anyway, or top up first?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Top Up Wallet First', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
+              child: const Text('Send Anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
+    String normalizePhone(String raw) {
+      String digits = raw.replaceAll(RegExp(r'\D'), '');
+      if (digits.startsWith('0') && digits.length == 11) {
+        return '234${digits.substring(1)}';
+      } else if (digits.length == 10 && RegExp(r'^[789]').hasMatch(digits)) {
+        return '234$digits';
+      } else if (digits.startsWith('234') && digits.length == 13) {
+        return digits;
+      }
+      return '';
+    }
+
     final List<({String? name, String phone, String? type})> recipients = [];
 
     if (_selectedGroup == 'leads') {
@@ -573,10 +630,11 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
           ? leadsMatchingFilter 
           : leadsMatchingFilter.where((l) => _selectedIndividualIds.contains(l.id)).toList();
       for (final lead in targets) {
-        if (lead.buyerPhone.isNotEmpty) {
+        final normalized = normalizePhone(lead.buyerPhone);
+        if (normalized.isNotEmpty) {
           recipients.add((
             name: lead.buyerName,
-            phone: lead.buyerPhone,
+            phone: normalized,
             type: 'lead',
           ));
         }
@@ -586,10 +644,11 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
           ? partnersWithPhone 
           : partnersWithPhone.where((p) => _selectedIndividualIds.contains(p.id)).toList();
       for (final p in targets) {
-        if (p.phone != null && p.phone!.isNotEmpty) {
+        final normalized = normalizePhone(p.phone ?? "");
+        if (normalized.isNotEmpty) {
           recipients.add((
             name: p.fullName,
-            phone: p.phone!,
+            phone: normalized,
             type: 'partner',
           ));
         }
@@ -641,7 +700,7 @@ class _AdminSmsPortalScreenState extends ConsumerState<AdminSmsPortalScreen> wit
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Failed to send broadcast: ${ref.read(smsCampaignProvider).errorMessage}'),
+            content: Text('❌ Failed to send broadcast: ${ref.read(smsCampaignProvider).errorMessage ?? "Check SmartSMS balance or Sender ID"}'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppColors.error,
           ),

@@ -28,7 +28,9 @@ if ($action === 'send') {
     $apiKey = $postData['api_key'] ?? $postData['token'] ?? $_GET['api_key'] ?? $_GET['token'] ?? '';
     $rawTo  = $postData['to'] ?? $_GET['to'] ?? '';
     $from   = $postData['from'] ?? $postData['sender'] ?? $_GET['sender'] ?? 'NIS LTD';
-    $sms    = $postData['sms'] ?? $postData['message'] ?? $_GET['message'] ?? '';
+    $rawSms = $postData['sms'] ?? $postData['message'] ?? $_GET['message'] ?? '';
+    // Normalize unicode Naira symbol ₦ to standard ASCII 'N' to prevent 5x UCS-2 unicode charge explosion
+    $sms    = str_replace(["\xE2\x82\xA6", '₦'], 'N', $rawSms);
     $to     = formatNigerianPhone($rawTo);
 
     if (empty($apiKey) || empty($to) || empty($sms)) {
@@ -37,14 +39,20 @@ if ($action === 'send') {
         exit();
     }
 
-    // ── SmartSMS Solutions Gateway Only ──
-    $smartSmsUrl = 'https://smartsmssolutions.com/api/json.php';
+    if (strlen($to) !== 13 || substr($to, 0, 3) !== '234') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid Nigerian phone number format: ' . $rawTo]);
+        exit();
+    }
+
+    // ── SmartSMS Solutions Gateway (Primary: app.smartsmssolutions.com/io/api, Fallback: smartsmssolutions.com/api) ──
+    $smartSmsUrl = 'https://app.smartsmssolutions.com/io/api/client/v1/sms/';
     $smartParams = [
         'token'   => $apiKey,
         'sender'  => $from,
         'to'      => $to,
         'message' => $sms,
-        'routing' => '3' // Corporate DND Route
+        'routing' => '3' // Smart / Mixed DND Route
     ];
 
     $ch = curl_init();
@@ -59,14 +67,47 @@ if ($action === 'send') {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
+    // Fallback to legacy endpoint if v1 returned server error or 404
+    if ($response === false || $httpCode === 404 || $httpCode >= 500) {
+        $smartSmsUrl = 'https://smartsmssolutions.com/api/json.php';
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $smartSmsUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($smartParams));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+    }
+
     if ($response !== false && ($httpCode === 200 || $httpCode === 201)) {
         $data = json_decode($response, true);
         $code = isset($data['code']) ? (string)$data['code'] : '';
         $comment = isset($data['comment']) ? (string)$data['comment'] : '';
-        $isOk = ($code === '1000' || strpos($code, '100') === 0) ||
-                !empty($data['successful']) ||
-                (isset($data['status']) && strtoupper((string)$data['status']) === 'OK') ||
-                (stripos($comment, 'success') !== false);
+        $successField = $data['success'] ?? null;
+        $statusField = strtoupper((string)($data['status'] ?? ''));
+
+        // Strict error checks: detect explicit failure phrases
+        $lowerComment = strtolower($comment);
+        $hasFailureWord = (
+            strpos($lowerComment, 'unsuccessful') !== false ||
+            strpos($lowerComment, 'insufficient') !== false ||
+            strpos($lowerComment, 'fail') !== false ||
+            strpos($lowerComment, 'invalid') !== false ||
+            strpos($lowerComment, 'error') !== false ||
+            strpos($lowerComment, 'rejected') !== false ||
+            strpos($lowerComment, 'not allowed') !== false
+        );
+
+        $isOk = false;
+        if (!$hasFailureWord && $successField !== false && $statusField !== 'ERROR') {
+            // ONLY code 1000 is success in SmartSMS! 1001, 1002, 1003 etc. are error codes.
+            if ($code === '1000' || !empty($data['successful']) || $successField === true || $statusField === 'OK' || $statusField === 'SUCCESS') {
+                $isOk = true;
+            }
+        }
 
         if ($isOk) {
             http_response_code(200);
@@ -74,7 +115,7 @@ if ($action === 'send') {
             exit();
         }
 
-        $errMsg = !empty($comment) ? $comment : (!empty($data['error']) ? $data['error'] : 'SmartSMS Error (Code ' . $code . ')');
+        $errMsg = !empty($comment) ? $comment : (!empty($data['error']) ? $data['error'] : (!empty($data['message']) ? $data['message'] : 'SmartSMS Error (Code ' . $code . ')'));
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'SmartSMS Gateway: ' . $errMsg, 'raw' => $data]);
         exit();

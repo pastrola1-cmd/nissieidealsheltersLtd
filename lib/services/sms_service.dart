@@ -8,19 +8,25 @@ class SmsService {
 
   SmsService({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Sends a single SMS via Termii API.
-  /// Returns true if Termii responds with a success status (e.g. 200 OK containing "ok" or message id).
+  /// Sends a single SMS via SmartSMS Solutions API.
   Future<({bool success, String message})> sendSmsResult({
     required String to,
     required String message,
     required String apiKey,
     required String senderId,
   }) async {
+    // Normalize Unicode Naira symbol ₦ to ASCII 'N' to prevent 5x UCS-2 unicode charge explosion
+    final cleanMessage = message.replaceAll('₦', 'N');
+
     String formattedTo = to.replaceAll(RegExp(r'\D'), '');
     if (formattedTo.startsWith('0') && formattedTo.length == 11) {
       formattedTo = '234${formattedTo.substring(1)}';
     } else if (formattedTo.length == 10 && (formattedTo.startsWith('7') || formattedTo.startsWith('8') || formattedTo.startsWith('9'))) {
       formattedTo = '234$formattedTo';
+    }
+
+    if (formattedTo.length != 13 || !formattedTo.startsWith('234')) {
+      return (success: false, message: 'Invalid phone number format: $to (must be 11 Nigerian digits)');
     }
 
     final fromSender = senderId.isEmpty ? 'NIS LTD' : senderId;
@@ -37,65 +43,100 @@ class SmsService {
             'api_key': apiKey,
             'to': formattedTo,
             'from': fromSender,
-            'sms': message,
+            'sms': cleanMessage,
           }),
         ).timeout(const Duration(seconds: 15));
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          if (data['success'] == true) {
-            return (success: true, message: data['message']?.toString() ?? 'Delivered via Gateway');
-          }
+        final data = jsonDecode(response.body);
+        if (response.statusCode == 200 && data['success'] == true) {
+          return (success: true, message: data['message']?.toString() ?? 'Delivered via Gateway');
+        } else {
+          final errorMsg = data['message']?.toString() ?? data['error']?.toString() ?? 'Gateway error (${response.statusCode})';
+          return (success: false, message: errorMsg);
         }
       } catch (e) {
         debugPrint('Web SMS Proxy note: $e');
+        return (success: false, message: 'Web SMS Proxy error: $e');
       }
     }
 
     // ── 1. SmartSMS Solutions Direct API Gateway (Mobile / Non-Web) ──
     try {
-      final smartSmsUri = Uri.parse('https://smartsmssolutions.com/api/json.php');
+      final smartSmsUri = Uri.parse('https://app.smartsmssolutions.com/io/api/client/v1/sms/');
       final response = await _client.post(
         smartSmsUri,
         body: {
           'token': apiKey,
           'sender': fromSender,
           'to': formattedTo,
-          'message': message,
-          'routing': '3', // Corporate DND Route
+          'message': cleanMessage,
+          'routing': '3', // Smart / Mixed DND Route
         },
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final code = data['code']?.toString();
-        final comment = data['comment']?.toString();
-        if (code == '1000' || data['status'] == 'OK' || data['successful'] != null || (code != null && code.startsWith('100'))) {
-          return (success: true, message: 'Delivered via SmartSMS');
+        final comment = (data['comment']?.toString() ?? '').toLowerCase();
+        final successField = data['success'];
+        final statusField = (data['status']?.toString() ?? '').toUpperCase();
+
+        final hasFailure = comment.contains('unsuccessful') ||
+            comment.contains('insufficient') ||
+            comment.contains('fail') ||
+            comment.contains('invalid') ||
+            comment.contains('error') ||
+            comment.contains('rejected') ||
+            comment.contains('not allowed');
+
+        if (!hasFailure && successField != false && statusField != 'ERROR') {
+          // ONLY code 1000 is success in SmartSMS!
+          if (code == '1000' || data['successful'] != null || successField == true || statusField == 'OK' || statusField == 'SUCCESS') {
+            return (success: true, message: 'Delivered via SmartSMS');
+          }
         }
-        if (comment != null && comment.toLowerCase().contains('success')) {
-          return (success: true, message: 'Delivered via SmartSMS');
-        }
+
+        final errorMsg = data['comment']?.toString() ?? data['message']?.toString() ?? data['error']?.toString() ?? 'SmartSMS Error (Code $code)';
+        return (success: false, message: 'SmartSMS Gateway: $errorMsg');
       }
     } catch (e) {
-      // Dual-Method Fallback: Retry via HTTP GET if POST encounters network restrictions
+      // Dual-Method Fallback: Retry via legacy endpoint if modern endpoint encounters network restrictions
       try {
-        final encodedMsg = Uri.encodeComponent(message);
-        final encodedSender = Uri.encodeComponent(fromSender);
-        final getUri = Uri.parse(
-          'https://smartsmssolutions.com/api/json.php?token=$apiKey&sender=$encodedSender&to=$formattedTo&message=$encodedMsg&routing=3',
-        );
-        final getResponse = await _client.get(getUri).timeout(const Duration(seconds: 15));
+        final legacyUri = Uri.parse('https://smartsmssolutions.com/api/json.php');
+        final getResponse = await _client.post(
+          legacyUri,
+          body: {
+            'token': apiKey,
+            'sender': fromSender,
+            'to': formattedTo,
+            'message': cleanMessage,
+            'routing': '3',
+          },
+        ).timeout(const Duration(seconds: 15));
+
         if (getResponse.statusCode == 200) {
           final data = jsonDecode(getResponse.body);
           final code = data['code']?.toString();
-          final comment = data['comment']?.toString();
-          if (code == '1000' || data['status'] == 'OK' || data['successful'] != null || (code != null && code.startsWith('100'))) {
-            return (success: true, message: 'Delivered via SmartSMS');
+          final comment = (data['comment']?.toString() ?? '').toLowerCase();
+          final successField = data['success'];
+          final statusField = (data['status']?.toString() ?? '').toUpperCase();
+
+          final hasFailure = comment.contains('unsuccessful') ||
+              comment.contains('insufficient') ||
+              comment.contains('fail') ||
+              comment.contains('invalid') ||
+              comment.contains('error') ||
+              comment.contains('rejected') ||
+              comment.contains('not allowed');
+
+          if (!hasFailure && successField != false && statusField != 'ERROR') {
+            if (code == '1000' || data['successful'] != null || successField == true || statusField == 'OK' || statusField == 'SUCCESS') {
+              return (success: true, message: 'Delivered via SmartSMS');
+            }
           }
-          if (comment != null && comment.toLowerCase().contains('success')) {
-            return (success: true, message: 'Delivered via SmartSMS');
-          }
+
+          final errorMsg = data['comment']?.toString() ?? data['message']?.toString() ?? 'SmartSMS Error (Code $code)';
+          return (success: false, message: 'SmartSMS Gateway: $errorMsg');
         }
         return (success: false, message: 'SmartSMS Solutions error: Check API Token in Settings');
       } catch (ge) {
@@ -135,7 +176,7 @@ class SmsService {
 
     if (apiKey == null || apiKey.trim().isEmpty) {
       debugPrint('--- SMS SIMULATION MODE ACTIVE ---');
-      for (final phone in phoneNumbers) {
+      for (final _ in phoneNumbers) {
         successCount++;
         await Future.delayed(const Duration(milliseconds: 50));
       }
@@ -213,4 +254,3 @@ class SmsService {
 final smsServiceProvider = Provider<SmsService>((ref) {
   return SmsService();
 });
-
